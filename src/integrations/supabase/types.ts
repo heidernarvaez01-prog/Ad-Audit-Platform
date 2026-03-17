@@ -14,7 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaign_tracking: {
+        Row: {
+          account_name: string | null
+          budget_approved: number
+          campaign_name: string
+          created_at: string
+          end_date: string
+          id: string
+          lab_days: Database["public"]["Enums"]["lab_days_type"]
+          platform: Database["public"]["Enums"]["ad_platform"]
+          programmed_budget: number
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          budget_approved?: number
+          campaign_name: string
+          created_at?: string
+          end_date: string
+          id?: string
+          lab_days?: Database["public"]["Enums"]["lab_days_type"]
+          platform: Database["public"]["Enums"]["ad_platform"]
+          programmed_budget?: number
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          budget_approved?: number
+          campaign_name?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          lab_days?: Database["public"]["Enums"]["lab_days_type"]
+          platform?: Database["public"]["Enums"]["ad_platform"]
+          programmed_budget?: number
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      data_sources: {
+        Row: {
+          created_at: string
+          csv_url: string
+          id: string
+          is_valid: boolean | null
+          last_validated_at: string | null
+          platform: Database["public"]["Enums"]["ad_platform"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          csv_url: string
+          id?: string
+          is_valid?: boolean | null
+          last_validated_at?: string | null
+          platform: Database["public"]["Enums"]["ad_platform"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          csv_url?: string
+          id?: string
+          is_valid?: boolean | null
+          last_validated_at?: string | null
+          platform?: Database["public"]["Enums"]["ad_platform"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +100,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      ad_platform:
+        | "meta"
+        | "google"
+        | "tiktok"
+        | "linkedin"
+        | "extra1"
+        | "extra2"
+      lab_days_type: "mon_fri" | "mon_sat" | "all"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +234,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ad_platform: ["meta", "google", "tiktok", "linkedin", "extra1", "extra2"],
+      lab_days_type: ["mon_fri", "mon_sat", "all"],
+    },
   },
 } as const
