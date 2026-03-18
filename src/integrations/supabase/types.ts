@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_records: {
+        Row: {
+          account_id: string
+          campaign_name: string
+          created_at: string
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          presupuesto_total: number
+          tipo_calendario: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          campaign_name: string
+          created_at?: string
+          fecha_fin: string
+          fecha_inicio: string
+          id?: string
+          presupuesto_total?: number
+          tipo_calendario?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          campaign_name?: string
+          created_at?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          presupuesto_total?: number
+          tipo_calendario?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaign_tracking: {
         Row: {
           account_name: string | null
