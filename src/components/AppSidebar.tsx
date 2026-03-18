@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { BarChart3, Settings, Link2, LogOut, ClipboardCheck } from 'lucide-react';
+import { LogOut, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [

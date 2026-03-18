@@ -31,9 +31,7 @@ function AppLayout() {
         <main className="flex-1 p-6 overflow-auto">
           <Routes>
             <Route path="/" element={<AuditPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/config" element={<ConfigPage />} />
-            <Route path="/campaigns" element={<CampaignsPage />} />
+            <Route path="*" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
