@@ -41,14 +41,17 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
   // Normalize rows
   cachedData = data.map((row: any) => ({
     account_id: row.account_id || row.accountId || '',
+    account_name: row.account_name || row.accountName || '',
     campaign_name: row.campaign_name || row.campaignName || '',
+    platform: row.platform || '',
     date: row.date || row.Date || '',
     metrics: {
       cost: parseFloat(row.metrics?.cost ?? row.cost ?? 0),
-      clicks: parseInt(row.metrics?.clicks ?? row.clicks ?? 0),
-      impressions: parseInt(row.metrics?.impressions ?? row.impressions ?? 0),
-      cpc: parseFloat(row.metrics?.cpc ?? row.cpc ?? 0),
-      cpm: parseFloat(row.metrics?.cpm ?? row.cpm ?? 0),
+      clicks: parseInt(row.metrics?.clicks ?? row.clicks ?? 0, 10) || 0,
+      impressions: parseInt(row.metrics?.impressions ?? row.impressions ?? 0, 10) || 0,
+      reach: parseInt(row.metrics?.reach ?? row.reach ?? 0, 10) || 0,
+      cpc: parseFloat(row.metrics?.cpc ?? row.cpc ?? 0) || 0,
+      cpm: parseFloat(row.metrics?.cpm ?? row.cpm ?? 0) || 0,
     },
   }));
   cacheTime = now;
