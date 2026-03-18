@@ -48,6 +48,8 @@ export function calculateAuditMetrics(
 
   // Expected spend based on elapsed time proportion
   const gastoEsperado = diasTotales > 0 ? (diasTranscurridos / diasTotales) * presupuestoTotal : 0;
+  const gastoDiarioActual = diasTranscurridos > 0 ? gastoActual / diasTranscurridos : 0;
+  const porcentajeTiempo = diasTotales > 0 ? (diasTranscurridos / diasTotales) * 100 : 0;
 
   // Pacing: compare actual vs expected
   const pacingPct = gastoEsperado > 0 ? ((gastoActual - gastoEsperado) / gastoEsperado) * 100 : 0;
