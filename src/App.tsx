@@ -6,9 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
 import AuditPage from "@/pages/AuditPage";
-import DashboardPage from "@/pages/DashboardPage";
-import ConfigPage from "@/pages/ConfigPage";
-import CampaignsPage from "@/pages/CampaignsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
 
