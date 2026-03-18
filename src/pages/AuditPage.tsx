@@ -38,19 +38,11 @@ export default function AuditPage() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadRecords(), loadApiData()]);
+    await loadRecords();
     setLoading(false);
-  }, [loadRecords, loadApiData]);
+  }, [loadRecords]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
-
-  // Auto-refresh every 5 minutes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadApiData();
-    }, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [loadApiData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
