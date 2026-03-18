@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
+import AuditPage from "@/pages/AuditPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ConfigPage from "@/pages/ConfigPage";
 import CampaignsPage from "@/pages/CampaignsPage";
@@ -32,7 +33,8 @@ function AppLayout() {
         <AppSidebar />
         <main className="flex-1 p-6 overflow-auto">
           <Routes>
-            <Route path="/" element={<DashboardPage />} />
+            <Route path="/" element={<AuditPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/campaigns" element={<CampaignsPage />} />
             <Route path="*" element={<NotFound />} />
