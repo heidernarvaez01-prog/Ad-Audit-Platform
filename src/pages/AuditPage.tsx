@@ -141,6 +141,14 @@ export default function AuditPage() {
         <span className="text-xs text-muted-foreground">{auditRows.length} registros</span>
       </div>
 
+      {/* Campaign summary from API */}
+      {apiData.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-foreground mb-2">Resumen de Campañas (API)</h2>
+          <CampaignSummaryTable data={apiData} />
+        </div>
+      )}
+
       {/* Audit table/cards */}
       <AuditTable
         rows={auditRows}
