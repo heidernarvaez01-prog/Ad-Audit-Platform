@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, RefreshCw } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
+import CampaignSummaryTable from '@/components/CampaignSummaryTable';
 import type { ApiCampaignRow } from '@/lib/api';
 import { toast } from 'sonner';
 
