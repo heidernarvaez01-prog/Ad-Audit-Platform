@@ -4,6 +4,7 @@ export interface ApiCampaignRow {
   account_id: string;
   account_name: string;
   campaign_name: string;
+  adset_name: string;
   platform: string;
   date: string;
   metrics: {
@@ -43,6 +44,7 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
     account_id: row.account_id || row.accountId || '',
     account_name: row.account_name || row.accountName || '',
     campaign_name: row.campaign_name || row.campaignName || '',
+    adset_name: row.adset_name || row.adsetName || row.ad_set_name || '',
     platform: row.platform || '',
     date: row.date || row.Date || '',
     metrics: {
@@ -64,6 +66,14 @@ export function getUniqueCampaignNames(data: ApiCampaignRow[]): string[] {
 
 export function getUniqueAccountIds(data: ApiCampaignRow[]): string[] {
   return [...new Set(data.map(r => r.account_id).filter(Boolean))].sort();
+}
+
+export function getUniquePlatforms(data: ApiCampaignRow[]): string[] {
+  return [...new Set(data.map(r => r.platform).filter(Boolean))].sort();
+}
+
+export function getUniqueAccountNames(data: ApiCampaignRow[]): string[] {
+  return [...new Set(data.map(r => r.account_name).filter(Boolean))].sort();
 }
 
 export function getCampaignCost(
