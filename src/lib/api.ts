@@ -68,6 +68,14 @@ export function getUniqueAccountIds(data: ApiCampaignRow[]): string[] {
   return [...new Set(data.map(r => r.account_id).filter(Boolean))].sort();
 }
 
+export function getUniquePlatforms(data: ApiCampaignRow[]): string[] {
+  return [...new Set(data.map(r => r.platform).filter(Boolean))].sort();
+}
+
+export function getUniqueAccountNames(data: ApiCampaignRow[]): string[] {
+  return [...new Set(data.map(r => r.account_name).filter(Boolean))].sort();
+}
+
 export function getCampaignCost(
   data: ApiCampaignRow[],
   campaignName: string,
