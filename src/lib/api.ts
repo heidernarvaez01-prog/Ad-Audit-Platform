@@ -2,12 +2,15 @@ const API_URL = 'https://script.googleusercontent.com/a/macros/apachestudio.mx/e
 
 export interface ApiCampaignRow {
   account_id: string;
+  account_name: string;
   campaign_name: string;
+  platform: string;
   date: string;
   metrics: {
     cost: number;
     clicks: number;
     impressions: number;
+    reach: number;
     cpc: number;
     cpm: number;
   };
