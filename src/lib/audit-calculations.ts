@@ -21,8 +21,10 @@ export interface AuditMetrics {
   presupuestoRestante: number;
   presupuestoDiarioIdeal: number;
   gastoEsperado: number;
+  gastoDiarioActual: number;
+  porcentajeTiempo: number;
   pacingStatus: 'OK' | 'SUBGASTANDO' | 'SOBREGASTANDO';
-  pacingPct: number; // how far off from expected (negative = under, positive = over)
+  pacingPct: number;
 }
 
 export function calculateAuditMetrics(
@@ -46,6 +48,8 @@ export function calculateAuditMetrics(
 
   // Expected spend based on elapsed time proportion
   const gastoEsperado = diasTotales > 0 ? (diasTranscurridos / diasTotales) * presupuestoTotal : 0;
+  const gastoDiarioActual = diasTranscurridos > 0 ? gastoActual / diasTranscurridos : 0;
+  const porcentajeTiempo = diasTotales > 0 ? (diasTranscurridos / diasTotales) * 100 : 0;
 
   // Pacing: compare actual vs expected
   const pacingPct = gastoEsperado > 0 ? ((gastoActual - gastoEsperado) / gastoEsperado) * 100 : 0;
@@ -67,6 +71,8 @@ export function calculateAuditMetrics(
     presupuestoRestante,
     presupuestoDiarioIdeal,
     gastoEsperado,
+    gastoDiarioActual,
+    porcentajeTiempo,
     pacingStatus,
     pacingPct,
   };

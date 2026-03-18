@@ -22,6 +22,7 @@ export type Database = {
           fecha_fin: string
           fecha_inicio: string
           id: string
+          platform: string | null
           presupuesto_total: number
           tipo_calendario: string
           updated_at: string
@@ -34,6 +35,7 @@ export type Database = {
           fecha_fin: string
           fecha_inicio: string
           id?: string
+          platform?: string | null
           presupuesto_total?: number
           tipo_calendario?: string
           updated_at?: string
@@ -46,6 +48,7 @@ export type Database = {
           fecha_fin?: string
           fecha_inicio?: string
           id?: string
+          platform?: string | null
           presupuesto_total?: number
           tipo_calendario?: string
           updated_at?: string
