@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, RefreshCw } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
+import CampaignSummaryTable from '@/components/CampaignSummaryTable';
 import type { ApiCampaignRow } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -139,6 +140,14 @@ export default function AuditPage() {
         </Select>
         <span className="text-xs text-muted-foreground">{auditRows.length} registros</span>
       </div>
+
+      {/* Campaign summary from API */}
+      {apiData.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-foreground mb-2">Resumen de Campañas (API)</h2>
+          <CampaignSummaryTable data={apiData} />
+        </div>
+      )}
 
       {/* Audit table/cards */}
       <AuditTable
