@@ -21,8 +21,10 @@ export interface AuditMetrics {
   presupuestoRestante: number;
   presupuestoDiarioIdeal: number;
   gastoEsperado: number;
+  gastoDiarioActual: number;
+  porcentajeTiempo: number;
   pacingStatus: 'OK' | 'SUBGASTANDO' | 'SOBREGASTANDO';
-  pacingPct: number; // how far off from expected (negative = under, positive = over)
+  pacingPct: number;
 }
 
 export function calculateAuditMetrics(
