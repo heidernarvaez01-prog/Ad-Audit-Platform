@@ -4,6 +4,7 @@ export interface ApiCampaignRow {
   account_id: string;
   account_name: string;
   campaign_name: string;
+  adset_name: string;
   platform: string;
   date: string;
   metrics: {
