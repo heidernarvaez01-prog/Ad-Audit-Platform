@@ -44,6 +44,7 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
     account_id: row.account_id || row.accountId || '',
     account_name: row.account_name || row.accountName || '',
     campaign_name: row.campaign_name || row.campaignName || '',
+    adset_name: row.adset_name || row.adsetName || row.ad_set_name || '',
     platform: row.platform || '',
     date: row.date || row.Date || '',
     metrics: {
