@@ -71,6 +71,8 @@ export function calculateAuditMetrics(
     presupuestoRestante,
     presupuestoDiarioIdeal,
     gastoEsperado,
+    gastoDiarioActual,
+    porcentajeTiempo,
     pacingStatus,
     pacingPct,
   };
