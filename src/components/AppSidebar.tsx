@@ -4,9 +4,6 @@ import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [
   { to: '/', label: 'Auditoría', icon: ClipboardCheck },
-  { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-  { to: '/config', label: 'Fuentes de Datos', icon: Settings },
-  { to: '/campaigns', label: 'Campañas', icon: Link2 },
 ];
 
 export default function AppSidebar() {
