@@ -10,8 +10,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
 
     const { campaignData } = await req.json();
 
@@ -42,14 +42,14 @@ Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CR
 
 Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -63,25 +63,18 @@ Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos agotados. Agrega fondos en Settings > Workspace > Usage." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      console.error("OpenAI API error:", response.status, t);
+      throw new Error("OpenAI API error");
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // Extract risk level from tag
     let riskLevel: "critical" | "moderate" | "none" = "none";
     if (content.includes("[RIESGO_CRITICO]")) riskLevel = "critical";
     else if (content.includes("[RIESGO_MODERADO]")) riskLevel = "moderate";
 
-    // Clean the insight text (remove the tag line)
     const insight = content
       .replace(/\[RIESGO_CRITICO\]/g, "")
       .replace(/\[RIESGO_MODERADO\]/g, "")
