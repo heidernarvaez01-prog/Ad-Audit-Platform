@@ -17,12 +17,13 @@ export default function AuditPage() {
   const { user } = useAuth();
   const [records, setRecords] = useState<any[]>([]);
   const [apiData, setApiData] = useState<ApiCampaignRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('general');
   const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const loadRecords = useCallback(async () => {
     if (!user) return;
@@ -39,13 +40,8 @@ export default function AuditPage() {
     }
   }, []);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    await Promise.all([loadRecords(), loadApiData()]);
-    setLoading(false);
-  }, [loadRecords, loadApiData]);
-
-  useEffect(() => { loadAll(); }, [loadAll]);
+  // Load only audit records on mount (no API fetch)
+  useEffect(() => { loadRecords(); }, [loadRecords]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
