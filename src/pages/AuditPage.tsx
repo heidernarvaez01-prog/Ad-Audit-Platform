@@ -6,9 +6,10 @@ import { calculateAuditMetrics } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, LayoutGrid, Layers } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
+import AdSetTable from '@/components/AdSetTable';
 import type { ApiCampaignRow } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -21,6 +22,7 @@ export default function AuditPage() {
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('general');
+  const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
 
   const loadRecords = useCallback(async () => {
     if (!user) return;
@@ -149,21 +151,40 @@ export default function AuditPage() {
         </div>
       )}
 
-      {/* Platform tabs + Audit table */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      {/* Top-level view mode tabs */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'campaigns' | 'adsets')}>
         <TabsList>
-          <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
-          {platformTabs.map(p => (
-            <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
-          ))}
+          <TabsTrigger value="campaigns" className="text-xs gap-1.5">
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Campañas
+          </TabsTrigger>
+          <TabsTrigger value="adsets" className="text-xs gap-1.5">
+            <Layers className="h-3.5 w-3.5" />
+            Conjuntos de Anuncios
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-3">
-          <AuditTable
-            rows={filteredRows}
-            onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
-            onDelete={handleDelete}
-          />
+        <TabsContent value="campaigns" className="mt-3">
+          {/* Platform filter tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
+              {platformTabs.map(p => (
+                <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
+              ))}
+            </TabsList>
+            <TabsContent value={activeTab} className="mt-3">
+              <AuditTable
+                rows={filteredRows}
+                onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
+                onDelete={handleDelete}
+              />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="adsets" className="mt-3">
+          <AdSetTable auditRows={auditRows} apiData={apiData} />
         </TabsContent>
       </Tabs>
 
