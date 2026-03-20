@@ -151,21 +151,40 @@ export default function AuditPage() {
         </div>
       )}
 
-      {/* Platform tabs + Audit table */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      {/* Top-level view mode tabs */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'campaigns' | 'adsets')}>
         <TabsList>
-          <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
-          {platformTabs.map(p => (
-            <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
-          ))}
+          <TabsTrigger value="campaigns" className="text-xs gap-1.5">
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Campañas
+          </TabsTrigger>
+          <TabsTrigger value="adsets" className="text-xs gap-1.5">
+            <Layers className="h-3.5 w-3.5" />
+            Conjuntos de Anuncios
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-3">
-          <AuditTable
-            rows={filteredRows}
-            onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
-            onDelete={handleDelete}
-          />
+        <TabsContent value="campaigns" className="mt-3">
+          {/* Platform filter tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
+              {platformTabs.map(p => (
+                <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
+              ))}
+            </TabsList>
+            <TabsContent value={activeTab} className="mt-3">
+              <AuditTable
+                rows={filteredRows}
+                onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
+                onDelete={handleDelete}
+              />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="adsets" className="mt-3">
+          <AdSetTable auditRows={auditRows} apiData={apiData} />
         </TabsContent>
       </Tabs>
 
