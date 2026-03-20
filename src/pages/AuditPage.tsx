@@ -45,8 +45,9 @@ export default function AuditPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadApiData();
+    await Promise.all([loadRecords(), loadApiData()]);
     setRefreshing(false);
+    setHasLoaded(true);
     toast.success('Datos actualizados');
   };
 
