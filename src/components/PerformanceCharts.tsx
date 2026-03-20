@@ -89,23 +89,6 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 export default function PerformanceCharts({ apiRows, budget, level = 'campaign' }: Props) {
   const data = useMemo(() => buildChartData(apiRows), [apiRows]);
 
-  if (data.length < 2) {
-    return (
-      <div className="rounded-lg border border-border p-6 text-center text-muted-foreground text-xs">
-        Se necesitan al menos 2 días de datos para mostrar gráficos.
-      </div>
-    );
-  }
-
-  const primary = level === 'campaign' ? 'hsl(217, 91%, 60%)' : 'hsl(271, 91%, 65%)';
-  const secondary = level === 'campaign' ? 'hsl(199, 89%, 48%)' : 'hsl(292, 84%, 61%)';
-  const tertiary = level === 'campaign' ? 'hsl(142, 71%, 45%)' : 'hsl(330, 81%, 60%)';
-  const quaternary = 'hsl(38, 92%, 50%)';
-
-  const commonXAxis = { dataKey: 'date', tick: { fontSize: 10 }, stroke: 'hsl(var(--muted-foreground))' };
-  const commonYAxis = { tick: { fontSize: 10 }, stroke: 'hsl(var(--muted-foreground))', width: 50 };
-  const commonGrid = { strokeDasharray: '3 3', stroke: 'hsl(var(--border))' };
-
   // Cumulative spend for budget line
   const cumulativeData = useMemo(() => {
     let acc = 0;
