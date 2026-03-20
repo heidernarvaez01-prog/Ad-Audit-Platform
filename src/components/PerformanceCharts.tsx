@@ -98,6 +98,14 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
     });
   }, [data]);
 
+  if (data.length < 2) {
+    return (
+      <div className="rounded-lg border border-border p-6 text-center text-muted-foreground text-xs">
+        Se necesitan al menos 2 días de datos para mostrar gráficos.
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {/* 1. Spend vs Budget */}
