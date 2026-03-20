@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PacingBar from '@/components/PacingBar';
 import { supabase } from '@/integrations/supabase/client';
+import PerformanceCharts from '@/components/PerformanceCharts';
 import { toast } from 'sonner';
 import type { AuditMetrics } from '@/lib/audit-calculations';
 import type { AuditAlert } from '@/lib/audit-alerts';
@@ -139,7 +140,13 @@ function ExpandedDetails({
   const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
 
   return (
-    <div className="px-4 pb-4 space-y-3">
+    <div className="px-4 pb-4 space-y-4">
+      {/* Performance Charts */}
+      <PerformanceCharts
+        apiRows={apiData}
+        budget={row.presupuesto_total}
+        level="campaign"
+      />
       {/* API Metrics */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 p-3 rounded-md bg-muted/50 border border-border">
         <MetricMini label="Clicks" value={fmtNum(totalClicks)} />

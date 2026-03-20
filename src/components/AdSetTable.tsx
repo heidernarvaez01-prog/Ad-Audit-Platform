@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import PerformanceCharts from '@/components/PerformanceCharts';
 import type { ApiCampaignRow } from '@/lib/api';
 import type { AuditRowData } from '@/components/AuditTable';
 
@@ -21,8 +22,8 @@ interface AdSetRow {
   cpc: number;
   cpm: number;
   ctr: number;
-  /** Percentage of campaign total spend this ad set represents */
   shareOfSpend: number;
+  rawRows: ApiCampaignRow[];
 }
 
 interface InsightData {
@@ -116,7 +117,9 @@ function ExpandedAdSetDetails({
   onGenerateInsight: () => void;
 }) {
   return (
-    <div className="px-4 pb-4 space-y-3">
+    <div className="px-4 pb-4 space-y-4">
+      {/* Performance Charts */}
+      <PerformanceCharts apiRows={row.rawRows} level="adset" />
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 p-3 rounded-md bg-muted/50 border border-border">
         <MetricMini label="Clicks" value={fmtNum(row.clicks)} />
         <MetricMini label="Impressions" value={fmtNum(row.impressions)} />
@@ -203,6 +206,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
           cpm,
           ctr,
           shareOfSpend,
+          rawRows: rows,
           campaignBudget: audit.presupuesto_total,
         });
       }
