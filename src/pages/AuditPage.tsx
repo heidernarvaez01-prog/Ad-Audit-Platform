@@ -22,6 +22,7 @@ export default function AuditPage() {
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('general');
+  const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
 
   const loadRecords = useCallback(async () => {
     if (!user) return;
