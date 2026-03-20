@@ -206,6 +206,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
           cpm,
           ctr,
           shareOfSpend,
+          rawRows: rows,
           campaignBudget: audit.presupuesto_total,
         });
       }
