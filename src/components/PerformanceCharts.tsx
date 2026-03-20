@@ -25,7 +25,6 @@ interface ChartDataPoint {
 interface Props {
   apiRows: ApiCampaignRow[];
   budget?: number;
-  /** 'campaign' uses primary blues, 'adset' uses purple tones */
   level?: 'campaign' | 'adset';
 }
 
@@ -49,7 +48,7 @@ function buildChartData(rows: ApiCampaignRow[]): ChartDataPoint[] {
       const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
 
       return {
-        date: date.slice(5), // MM-DD
+        date: date.slice(5),
         spend: +spend.toFixed(2),
         clicks,
         impressions,
@@ -79,9 +78,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   return (
     <div className="rounded-lg border border-border bg-card p-3 space-y-2">
       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</p>
-      <div className="h-[200px] w-full">
-        {children}
-      </div>
+      <div className="h-[200px] w-full">{children}</div>
     </div>
   );
 }
@@ -89,7 +86,6 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 export default function PerformanceCharts({ apiRows, budget, level = 'campaign' }: Props) {
   const data = useMemo(() => buildChartData(apiRows), [apiRows]);
 
-  // Cumulative spend for budget line
   const cumulativeData = useMemo(() => {
     let acc = 0;
     return data.map(d => {
@@ -106,9 +102,17 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
     );
   }
 
+  const primary = level === 'campaign' ? 'hsl(217, 91%, 60%)' : 'hsl(271, 91%, 65%)';
+  const secondary = level === 'campaign' ? 'hsl(199, 89%, 48%)' : 'hsl(292, 84%, 61%)';
+  const tertiary = level === 'campaign' ? 'hsl(142, 71%, 45%)' : 'hsl(330, 81%, 60%)';
+  const quaternary = 'hsl(38, 92%, 50%)';
+
+  const commonXAxis = { dataKey: 'date' as const, tick: { fontSize: 10 }, stroke: 'hsl(var(--muted-foreground))' };
+  const commonYAxis = { tick: { fontSize: 10 }, stroke: 'hsl(var(--muted-foreground))', width: 50 };
+  const commonGrid = { strokeDasharray: '3 3', stroke: 'hsl(var(--border))' };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {/* 1. Spend vs Budget */}
       <ChartCard title="Gasto Acumulado">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={cumulativeData}>
@@ -117,31 +121,14 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
             <YAxis {...commonYAxis} />
             <Tooltip {...tooltipStyle} />
             <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
-            <Line
-              type="monotone"
-              dataKey="cumulativeSpend"
-              name="Gasto"
-              stroke={primary}
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 3 }}
-            />
+            <Line type="monotone" dataKey="cumulativeSpend" name="Gasto" stroke={primary} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
             {budget && (
-              <Line
-                type="monotone"
-                dataKey={() => budget}
-                name="Presupuesto"
-                stroke="hsl(var(--destructive))"
-                strokeWidth={1.5}
-                strokeDasharray="6 3"
-                dot={false}
-              />
+              <Line type="monotone" dataKey={() => budget} name="Presupuesto" stroke="hsl(var(--destructive))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
             )}
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* 2. Performance */}
       <ChartCard title="Rendimiento (Clicks · Impressions · Reach)">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={data}>
@@ -157,7 +144,6 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* 3. Efficiency */}
       <ChartCard title="Eficiencia (CTR · CPC · CPM)">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={data}>
@@ -173,7 +159,6 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* 4. Daily Spend */}
       <ChartCard title="Gasto Diario">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={data}>
@@ -181,15 +166,7 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
             <XAxis {...commonXAxis} />
             <YAxis {...commonYAxis} />
             <Tooltip {...tooltipStyle} />
-            <Line
-              type="monotone"
-              dataKey="spend"
-              name="Gasto/día"
-              stroke={secondary}
-              strokeWidth={2}
-              dot={{ r: 2, fill: secondary }}
-              activeDot={{ r: 4 }}
-            />
+            <Line type="monotone" dataKey="spend" name="Gasto/día" stroke={secondary} strokeWidth={2} dot={{ r: 2, fill: secondary }} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
