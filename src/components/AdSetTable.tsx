@@ -22,8 +22,8 @@ interface AdSetRow {
   cpc: number;
   cpm: number;
   ctr: number;
-  /** Percentage of campaign total spend this ad set represents */
   shareOfSpend: number;
+  rawRows: ApiCampaignRow[];
 }
 
 interface InsightData {
