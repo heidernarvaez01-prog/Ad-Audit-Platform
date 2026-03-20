@@ -156,17 +156,22 @@ function ExpandedAdSetDetails({
 
 export default function AdSetTable({ auditRows, apiData }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [insights, setInsights] = useState<Record<string, InsightData>>({});
   const [loadingInsights, setLoadingInsights] = useState<Record<string, boolean>>({});
 
-  const adSetRows: (AdSetRow & { campaignBudget: number })[] = useMemo(() => {
-    const result: (AdSetRow & { campaignBudget: number })[] = [];
+  // Group adsets by campaign
+  const campaignGroups = useMemo(() => {
+    const groups: {
+      campaign: AuditRowData;
+      totalCost: number;
+      adsets: (AdSetRow & { campaignBudget: number })[];
+    }[] = [];
 
     for (const audit of auditRows) {
       const campaignApiData = audit.campaignApiData;
       const campaignTotalCost = campaignApiData.reduce((s, r) => s + r.metrics.cost, 0);
 
-      // Group by adset_name
       const adsetMap = new Map<string, ApiCampaignRow[]>();
       for (const row of campaignApiData) {
         const name = row.adset_name || '(Sin nombre)';
@@ -174,6 +179,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
         adsetMap.get(name)!.push(row);
       }
 
+      const adsets: (AdSetRow & { campaignBudget: number })[] = [];
       for (const [adsetName, rows] of adsetMap) {
         const cost = rows.reduce((s, r) => s + r.metrics.cost, 0);
         const clicks = rows.reduce((s, r) => s + r.metrics.clicks, 0);
@@ -184,7 +190,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
         const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
         const shareOfSpend = campaignTotalCost > 0 ? (cost / campaignTotalCost) * 100 : 0;
 
-        result.push({
+        adsets.push({
           key: `${audit.id}__${adsetName}`,
           campaignName: audit.campaign_name,
           adsetName,
@@ -200,9 +206,12 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
           campaignBudget: audit.presupuesto_total,
         });
       }
+
+      adsets.sort((a, b) => b.cost - a.cost);
+      groups.push({ campaign: audit, totalCost: campaignTotalCost, adsets });
     }
 
-    return result.sort((a, b) => a.campaignName.localeCompare(b.campaignName) || b.cost - a.cost);
+    return groups;
   }, [auditRows]);
 
   const toggleExpand = (key: string) => {
@@ -210,6 +219,15 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleCampaign = (id: string) => {
+    setExpandedCampaigns(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -250,7 +268,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
     }
   };
 
-  if (adSetRows.length === 0) {
+  if (campaignGroups.length === 0 || campaignGroups.every(g => g.adsets.length === 0)) {
     return (
       <div className="border border-border rounded-lg p-12 text-center text-muted-foreground">
         <p className="text-sm">No hay conjuntos de anuncios disponibles.</p>
@@ -265,8 +283,8 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
-            <TableHead className="text-xs">Conjunto de Anuncios</TableHead>
-            <TableHead className="text-xs">Campaña</TableHead>
+            <TableHead className="text-xs">Plataforma</TableHead>
+            <TableHead className="text-xs">Nombre</TableHead>
             <TableHead className="text-xs w-36">% del Gasto</TableHead>
             <TableHead className="text-xs text-right">Gasto</TableHead>
             <TableHead className="text-xs text-right">CPC</TableHead>
@@ -274,62 +292,109 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {adSetRows.map(row => {
-            const isExpanded = expandedIds.has(row.key);
-            const insight = insights[row.key] || null;
+          {campaignGroups.map(group => {
+            const isCampaignOpen = expandedCampaigns.has(group.campaign.id);
+            const m = group.campaign.metrics;
+            const statusClass = m.pacingStatus === 'SOBREGASTANDO'
+              ? 'text-destructive'
+              : m.pacingStatus === 'SUBGASTANDO'
+                ? 'text-warning'
+                : 'text-success';
+
             return (
-              <Collapsible key={row.key} open={isExpanded} onOpenChange={() => toggleExpand(row.key)} asChild>
-                <>
-                  <CollapsibleTrigger asChild>
-                    <TableRow className="cursor-pointer hover:bg-muted/30 transition-colors">
-                      <TableCell className="px-2">
-                        {isExpanded
-                          ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          : <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        }
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <PlatformBadge platform={row.platform} />
-                          <span className="text-sm font-medium text-foreground truncate max-w-[220px]">
-                            {row.adsetName}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs text-muted-foreground truncate max-w-[180px] block">
-                          {row.campaignName}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <ShareBar pct={row.shareOfSpend} />
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-foreground">
-                        {fmt(row.cost)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-foreground">
-                        {fmt(row.cpc)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-foreground">
-                        {row.ctr.toFixed(2)}%
-                      </TableCell>
-                    </TableRow>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent asChild>
-                    <tr>
-                      <td colSpan={7} className="p-0 bg-muted/20">
-                        <ExpandedAdSetDetails
-                          row={row}
-                          campaignBudget={row.campaignBudget}
-                          insight={insight}
-                          loadingInsight={loadingInsights[row.key] || false}
-                          onGenerateInsight={() => generateInsight(row)}
-                        />
-                      </td>
-                    </tr>
-                  </CollapsibleContent>
-                </>
-              </Collapsible>
+              <>
+                {/* Campaign row (Level 1) */}
+                <TableRow
+                  key={`camp-${group.campaign.id}`}
+                  className="cursor-pointer bg-muted/40 hover:bg-muted/60 transition-colors border-t-2 border-border"
+                  onClick={() => toggleCampaign(group.campaign.id)}
+                >
+                  <TableCell className="px-2">
+                    {isCampaignOpen
+                      ? <ChevronDown className="h-4 w-4 text-foreground" />
+                      : <ChevronRight className="h-4 w-4 text-foreground" />
+                    }
+                  </TableCell>
+                  <TableCell>
+                    <PlatformBadge platform={group.campaign.platform} />
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm font-bold text-foreground">
+                      {group.campaign.campaign_name}
+                    </span>
+                    <span className={`ml-2 text-[10px] font-semibold ${statusClass}`}>
+                      {m.pacingStatus === 'OK' ? '● En Ruta' : m.pacingStatus === 'SOBREGASTANDO' ? '● Sobregastando' : '● Subgastando'}
+                    </span>
+                  </TableCell>
+                  <TableCell></TableCell>
+                  <TableCell className="text-right font-mono text-xs font-bold text-foreground">
+                    {fmt(group.totalCost)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-[10px] text-muted-foreground">
+                    Presup: {fmt(group.campaign.presupuesto_total)}
+                  </TableCell>
+                  <TableCell className="text-right text-[10px] text-muted-foreground">
+                    {group.adsets.length} adsets
+                  </TableCell>
+                </TableRow>
+
+                {/* AdSet rows (Level 2) */}
+                {isCampaignOpen && group.adsets.map(row => {
+                  const isExpanded = expandedIds.has(row.key);
+                  const insight = insights[row.key] || null;
+                  return (
+                    <Collapsible key={row.key} open={isExpanded} onOpenChange={() => toggleExpand(row.key)} asChild>
+                      <>
+                        <CollapsibleTrigger asChild>
+                          <TableRow className="cursor-pointer hover:bg-accent/30 transition-colors">
+                            <TableCell className="px-2 pl-6">
+                              {isExpanded
+                                ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                              }
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-[10px] text-muted-foreground">↳</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-foreground/80 truncate max-w-[220px] block pl-2">
+                                {row.adsetName}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <ShareBar pct={row.shareOfSpend} />
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-foreground/80">
+                              {fmt(row.cost)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-foreground/80">
+                              {fmt(row.cpc)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-foreground/80">
+                              {row.ctr.toFixed(2)}%
+                            </TableCell>
+                          </TableRow>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent asChild>
+                          <tr>
+                            <td colSpan={7} className="p-0 bg-accent/10">
+                              <div className="pl-8">
+                                <ExpandedAdSetDetails
+                                  row={row}
+                                  campaignBudget={row.campaignBudget}
+                                  insight={insight}
+                                  loadingInsight={loadingInsights[row.key] || false}
+                                  onGenerateInsight={() => generateInsight(row)}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        </CollapsibleContent>
+                      </>
+                    </Collapsible>
+                  );
+                })}
+              </>
             );
           })}
         </TableBody>
