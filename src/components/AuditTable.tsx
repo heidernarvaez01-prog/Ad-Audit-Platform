@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PacingBar from '@/components/PacingBar';
 import { supabase } from '@/integrations/supabase/client';
+import PerformanceCharts from '@/components/PerformanceCharts';
 import { toast } from 'sonner';
 import type { AuditMetrics } from '@/lib/audit-calculations';
 import type { AuditAlert } from '@/lib/audit-alerts';
