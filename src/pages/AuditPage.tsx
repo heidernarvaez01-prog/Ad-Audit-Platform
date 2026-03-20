@@ -107,13 +107,7 @@ export default function AuditPage() {
     return { total, spent, over, under, ok };
   }, [auditRows]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  // No full-page loader — show empty state instead when not loaded
 
   return (
     <div className="space-y-5 max-w-7xl">
