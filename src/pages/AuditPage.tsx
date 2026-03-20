@@ -17,12 +17,13 @@ export default function AuditPage() {
   const { user } = useAuth();
   const [records, setRecords] = useState<any[]>([]);
   const [apiData, setApiData] = useState<ApiCampaignRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('general');
   const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const loadRecords = useCallback(async () => {
     if (!user) return;
@@ -39,18 +40,14 @@ export default function AuditPage() {
     }
   }, []);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    await Promise.all([loadRecords(), loadApiData()]);
-    setLoading(false);
-  }, [loadRecords, loadApiData]);
-
-  useEffect(() => { loadAll(); }, [loadAll]);
+  // Load only audit records on mount (no API fetch)
+  useEffect(() => { loadRecords(); }, [loadRecords]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadApiData();
+    await Promise.all([loadRecords(), loadApiData()]);
     setRefreshing(false);
+    setHasLoaded(true);
     toast.success('Datos actualizados');
   };
 
@@ -110,13 +107,7 @@ export default function AuditPage() {
     return { total, spent, over, under, ok };
   }, [auditRows]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  // No full-page loader — show empty state instead when not loaded
 
   return (
     <div className="space-y-5 max-w-7xl">
@@ -151,42 +142,55 @@ export default function AuditPage() {
         </div>
       )}
 
-      {/* Top-level view mode tabs */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'campaigns' | 'adsets')}>
-        <TabsList>
-          <TabsTrigger value="campaigns" className="text-xs gap-1.5">
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Campañas
-          </TabsTrigger>
-          <TabsTrigger value="adsets" className="text-xs gap-1.5">
-            <Layers className="h-3.5 w-3.5" />
-            Conjuntos de Anuncios
-          </TabsTrigger>
-        </TabsList>
+      {/* Empty state when no API data loaded */}
+      {!hasLoaded && !refreshing ? (
+        <div className="border border-border rounded-lg p-12 text-center text-muted-foreground">
+          <RefreshCw className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+          <p className="text-sm font-medium">Haz clic en "Actualizar" para cargar datos</p>
+          <p className="text-xs mt-1">Los datos de la API se cargarán bajo demanda.</p>
+        </div>
+      ) : refreshing ? (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        /* Top-level view mode tabs */
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'campaigns' | 'adsets')}>
+          <TabsList>
+            <TabsTrigger value="campaigns" className="text-xs gap-1.5">
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Campañas
+            </TabsTrigger>
+            <TabsTrigger value="adsets" className="text-xs gap-1.5">
+              <Layers className="h-3.5 w-3.5" />
+              Conjuntos de Anuncios
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="campaigns" className="mt-3">
-          {/* Platform filter tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
-              {platformTabs.map(p => (
-                <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
-              ))}
-            </TabsList>
-            <TabsContent value={activeTab} className="mt-3">
-              <AuditTable
-                rows={filteredRows}
-                onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
-                onDelete={handleDelete}
-              />
-            </TabsContent>
-          </Tabs>
-        </TabsContent>
+          <TabsContent value="campaigns" className="mt-3">
+            {/* Platform filter tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
+                {platformTabs.map(p => (
+                  <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
+                ))}
+              </TabsList>
+              <TabsContent value={activeTab} className="mt-3">
+                <AuditTable
+                  rows={filteredRows}
+                  onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
+                  onDelete={handleDelete}
+                />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
 
-        <TabsContent value="adsets" className="mt-3">
-          <AdSetTable auditRows={auditRows} apiData={apiData} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="adsets" className="mt-3">
+            <AdSetTable auditRows={auditRows} apiData={apiData} />
+          </TabsContent>
+        </Tabs>
+      )}
 
       {showForm && (
         <AuditForm
