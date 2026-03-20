@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PacingBar from '@/components/PacingBar';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { AuditMetrics } from '@/lib/audit-calculations';
 import type { AuditAlert } from '@/lib/audit-alerts';
 import type { ApiCampaignRow } from '@/lib/api';
@@ -27,6 +30,11 @@ interface Props {
   rows: AuditRowData[];
   onEdit: (row: AuditRowData) => void;
   onDelete: (id: string) => void;
+}
+
+interface InsightData {
+  insight: string;
+  riskLevel: 'critical' | 'moderate' | 'none';
 }
 
 function fmt(n: number) {
@@ -64,7 +72,63 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge className="text-[10px] px-1.5 bg-success text-success-foreground hover:bg-success/90">En Ruta</Badge>;
 }
 
-function ExpandedDetails({ row }: { row: AuditRowData }) {
+function RiskIndicator({ insight }: { insight: InsightData }) {
+  if (insight.riskLevel === 'none') return null;
+  const isCritical = insight.riskLevel === 'critical';
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`cursor-help text-base ${isCritical ? 'animate-pulse' : ''}`}>
+            {isCritical ? '🚨' : '⚠️'}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="max-w-xs text-xs whitespace-pre-line">
+          {insight.insight}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function MetricMini({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-xs font-semibold font-mono text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function InsightPanel({ insight }: { insight: InsightData }) {
+  const borderColor = insight.riskLevel === 'critical'
+    ? 'border-destructive/40 bg-destructive/5'
+    : insight.riskLevel === 'moderate'
+      ? 'border-warning/40 bg-warning/5'
+      : 'border-success/40 bg-success/5';
+
+  return (
+    <div className={`p-3 rounded-md border ${borderColor}`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <Sparkles className="h-3.5 w-3.5 text-primary" />
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Insight IA</p>
+      </div>
+      <p className="text-xs text-foreground leading-relaxed whitespace-pre-line">{insight.insight}</p>
+    </div>
+  );
+}
+
+function ExpandedDetails({
+  row,
+  insight,
+  loadingInsight,
+  onGenerateInsight,
+}: {
+  row: AuditRowData;
+  insight: InsightData | null;
+  loadingInsight: boolean;
+  onGenerateInsight: () => void;
+}) {
   const apiData = row.campaignApiData;
   const totalClicks = apiData.reduce((s, r) => s + r.metrics.clicks, 0);
   const totalImpressions = apiData.reduce((s, r) => s + r.metrics.impressions, 0);
@@ -94,6 +158,26 @@ function ExpandedDetails({ row }: { row: AuditRowData }) {
         <MetricMini label="Gasto Diario Actual" value={fmt(row.metrics.gastoDiarioActual)} />
       </div>
 
+      {/* AI Insight */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onGenerateInsight}
+          disabled={loadingInsight}
+          className="text-xs"
+        >
+          {loadingInsight ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          {loadingInsight ? 'Analizando...' : 'Generar Insight IA'}
+        </Button>
+      </div>
+
+      {insight && <InsightPanel insight={insight} />}
+
       {/* Alerts */}
       {row.alerts.length > 0 && (
         <div className="space-y-1.5">
@@ -117,17 +201,10 @@ function ExpandedDetails({ row }: { row: AuditRowData }) {
   );
 }
 
-function MetricMini({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="text-xs font-semibold font-mono text-foreground">{value}</p>
-    </div>
-  );
-}
-
 export default function AuditTable({ rows, onEdit, onDelete }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [insights, setInsights] = useState<Record<string, InsightData>>({});
+  const [loadingInsights, setLoadingInsights] = useState<Record<string, boolean>>({});
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -136,6 +213,56 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
       else next.add(id);
       return next;
     });
+  };
+
+  const generateInsight = async (row: AuditRowData) => {
+    setLoadingInsights(prev => ({ ...prev, [row.id]: true }));
+
+    const apiData = row.campaignApiData;
+    const totalClicks = apiData.reduce((s, r) => s + r.metrics.clicks, 0);
+    const totalImpressions = apiData.reduce((s, r) => s + r.metrics.impressions, 0);
+    const totalCost = apiData.reduce((s, r) => s + r.metrics.cost, 0);
+    const totalReach = apiData.reduce((s, r) => s + r.metrics.reach, 0);
+    const cpc = totalClicks > 0 ? totalCost / totalClicks : 0;
+    const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('audit-insight', {
+        body: {
+          campaignData: {
+            campaignName: row.campaign_name,
+            platform: row.platform,
+            presupuestoTotal: row.presupuesto_total.toFixed(2),
+            gastoActual: row.metrics.gastoActual.toFixed(2),
+            presupuestoRestante: row.metrics.presupuestoRestante.toFixed(2),
+            diasTranscurridos: row.metrics.diasTranscurridos,
+            diasRestantes: row.metrics.diasRestantes,
+            pacingStatus: row.metrics.pacingStatus,
+            pacingPct: row.metrics.pacingPct.toFixed(1),
+            gastoDiarioActual: row.metrics.gastoDiarioActual.toFixed(2),
+            presupuestoDiarioIdeal: row.metrics.presupuestoDiarioIdeal.toFixed(2),
+            ctr: ctr.toFixed(2),
+            cpc: cpc.toFixed(2),
+            impressions: totalImpressions,
+            clicks: totalClicks,
+            reach: totalReach,
+          },
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setInsights(prev => ({ ...prev, [row.id]: data as InsightData }));
+    } catch (e) {
+      toast.error('Error generando insight IA');
+      console.error(e);
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, [row.id]: false }));
+    }
   };
 
   if (rows.length === 0) {
@@ -158,6 +285,7 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
             <TableHead className="text-xs">Estado</TableHead>
             <TableHead className="text-xs text-right">Gasto / Aprobado</TableHead>
             <TableHead className="text-xs text-right">Diario Ideal</TableHead>
+            <TableHead className="text-xs w-10 text-center">IA</TableHead>
             <TableHead className="text-xs w-20"></TableHead>
           </TableRow>
         </TableHeader>
@@ -165,6 +293,7 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
           {rows.map(row => {
             const m = row.metrics;
             const isExpanded = expandedIds.has(row.id);
+            const insight = insights[row.id] || null;
             return (
               <Collapsible key={row.id} open={isExpanded} onOpenChange={() => toggleExpand(row.id)} asChild>
                 <>
@@ -206,6 +335,9 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                       <TableCell className="text-right font-mono text-xs text-foreground">
                         {fmt(m.presupuestoDiarioIdeal)}
                       </TableCell>
+                      <TableCell className="text-center" onClick={e => e.stopPropagation()}>
+                        {insight && <RiskIndicator insight={insight} />}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(row)}>
@@ -220,8 +352,13 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                   </CollapsibleTrigger>
                   <CollapsibleContent asChild>
                     <tr>
-                      <td colSpan={7} className="p-0 bg-muted/20">
-                        <ExpandedDetails row={row} />
+                      <td colSpan={8} className="p-0 bg-muted/20">
+                        <ExpandedDetails
+                          row={row}
+                          insight={insight}
+                          loadingInsight={loadingInsights[row.id] || false}
+                          onGenerateInsight={() => generateInsight(row)}
+                        />
                       </td>
                     </tr>
                   </CollapsibleContent>
