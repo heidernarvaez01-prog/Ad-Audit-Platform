@@ -48,7 +48,7 @@ function buildChartData(rows: ApiCampaignRow[]): ChartDataPoint[] {
       const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
 
       return {
-        date: new Date(date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }),
+        date: formatDateLabel(date),
         spend: +spend.toFixed(2),
         clicks,
         impressions,
