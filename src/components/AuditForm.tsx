@@ -60,13 +60,13 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     return [...new Set(apiData.map(r => r.platform).filter(Boolean))].sort();
   }, [apiData]);
 
-  // Campaigns filtered by selected platform AND account
+  // Campaigns filtered by selected platform AND account_name
   const filteredCampaigns = useMemo(() => {
     let filtered = apiData;
     if (platform) filtered = filtered.filter(r => r.platform === platform);
-    if (accountId) filtered = filtered.filter(r => r.account_id === accountId);
+    if (accountName) filtered = filtered.filter(r => r.account_name === accountName);
     return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
-  }, [apiData, platform, accountId]);
+  }, [apiData, platform, accountName]);
 
   // Account names from API (unique name -> id mapping)
   const accountOptions = useMemo(() => {
