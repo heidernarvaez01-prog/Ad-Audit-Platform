@@ -88,10 +88,10 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
         setFechaInicio(dates[0].slice(0, 10));
         setFechaFin(dates[dates.length - 1].slice(0, 10));
       }
-      // Prefill account_id if consistent
-      const accounts = [...new Set(campaignRows.map(r => r.account_id).filter(Boolean))];
-      if (accounts.length === 1 && !editRecord) {
-        setAccountId(accounts[0]);
+      // Prefill account_name if consistent
+      const accts = [...new Set(campaignRows.map(r => r.account_name).filter(Boolean))];
+      if (accts.length === 1 && !editRecord) {
+        setAccountName(accts[0]);
       }
       // Prefill platform if not set
       if (!platform) {
