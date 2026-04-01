@@ -68,10 +68,23 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
   }, [apiData, platform]);
 
-  // Account IDs from API
-  const accountIds = useMemo(() => {
-    return [...new Set(apiData.map(r => r.account_id).filter(Boolean))].sort();
-  }, [apiData]);
+  // Account names from API (unique name -> id mapping)
+  const accountOptions = useMemo(() => {
+    const filtered = platform
+      ? apiData.filter(r => r.platform === platform)
+      : apiData;
+    const map = new Map<string, string>();
+    filtered.forEach(r => {
+      if (r.account_name && r.account_id) map.set(r.account_name, r.account_id);
+    });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [apiData, platform]);
+
+  // Derive display name from accountId
+  const accountDisplayName = useMemo(() => {
+    const found = accountOptions.find(([, id]) => id === accountId);
+    return found ? found[0] : '';
+  }, [accountOptions, accountId]);
 
   // When a campaign is selected, prefill dates from API data
   const handleCampaignSelect = (name: string) => {
