@@ -168,7 +168,20 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
             </Select>
           </div>
 
-          {/* Campaign combobox */}
+          {/* Cuenta (Account Name) — depends on platform */}
+          <div>
+            <Label className="text-xs text-muted-foreground">Cuenta</Label>
+            <Select value={accountId} onValueChange={(v) => { setAccountId(v); setCampaignName(''); }}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
+              <SelectContent>
+                {accountOptions.map(([name, id]) => (
+                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Campaign combobox — depends on platform + account */}
           <div>
             <Label className="text-xs text-muted-foreground">Campaña</Label>
             <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -206,19 +219,6 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
                 </Command>
               </PopoverContent>
             </Popover>
-          </div>
-
-          {/* Cuenta (Account Name) — depends on platform */}
-          <div>
-            <Label className="text-xs text-muted-foreground">Cuenta</Label>
-            <Select value={accountId} onValueChange={(v) => { setAccountId(v); setCampaignName(''); }}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
-              <SelectContent>
-                {accountOptions.map(([name, id]) => (
-                  <SelectItem key={id} value={id}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div>
