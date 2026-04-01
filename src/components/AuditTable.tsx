@@ -287,7 +287,9 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
+            <TableHead className="text-xs">Plataforma</TableHead>
             <TableHead className="text-xs">Campaña</TableHead>
+            <TableHead className="text-xs">Cuenta</TableHead>
             <TableHead className="text-xs w-40">Pacing</TableHead>
             <TableHead className="text-xs">Estado</TableHead>
             <TableHead className="text-xs text-right">Gasto / Aprobado</TableHead>
@@ -313,15 +315,22 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                         }
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <PlatformBadge platform={row.platform} />
-                          <span className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                            {row.campaign_name}
-                          </span>
-                        </div>
+                        <PlatformBadge platform={row.platform} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium text-foreground truncate max-w-[200px] block">
+                          {row.campaign_name}
+                        </span>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {row.account_id} · {row.fecha_inicio} → {row.fecha_fin}
+                          {row.fecha_inicio} → {row.fecha_fin}
                         </p>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const apiRow = row.campaignApiData[0];
+                          const name = apiRow?.account_name || row.account_id;
+                          return <span className="text-xs text-muted-foreground">{name}</span>;
+                        })()}
                       </TableCell>
                       <TableCell>
                         <PacingBar
@@ -359,7 +368,7 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                   </CollapsibleTrigger>
                   <CollapsibleContent asChild>
                     <tr>
-                      <td colSpan={8} className="p-0 bg-muted/20">
+                      <td colSpan={10} className="p-0 bg-muted/20">
                         <ExpandedDetails
                           row={row}
                           insight={insight}
