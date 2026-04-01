@@ -109,7 +109,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     setLoading(true);
     const record = {
       user_id: user.id,
-      account_id: accountId,
+      account_id: accountName,
       campaign_name: campaignName,
       presupuesto_total: parseFloat(presupuesto),
       fecha_inicio: fechaInicio,
