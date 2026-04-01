@@ -46,7 +46,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
   useEffect(() => {
     if (editRecord) {
       setPlatform(editRecord.platform || '');
-      setAccountId(editRecord.account_id);
+      setAccountName(editRecord.account_id);
       setCampaignName(editRecord.campaign_name);
       setPresupuesto(editRecord.presupuesto_total.toString());
       setFechaInicio(editRecord.fecha_inicio);
