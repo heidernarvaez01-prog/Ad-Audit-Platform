@@ -46,7 +46,7 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
     campaign_name: row.campaign_name || row.campaignName || '',
     adset_name: row.adset_name || row.adsetName || row.ad_set_name || '',
     platform: row.platform || '',
-    date: row.date || row.Date || '',
+    date: normalizeDate(row.date || row.Date || ''),
     metrics: {
       cost: parseFloat(row.metrics?.cost ?? row.cost ?? 0),
       clicks: parseInt(row.metrics?.clicks ?? row.clicks ?? 0, 10) || 0,
