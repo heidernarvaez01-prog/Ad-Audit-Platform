@@ -208,10 +208,10 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
             </Popover>
           </div>
 
-          {/* Cuenta (Account Name) */}
+          {/* Cuenta (Account Name) — depends on platform */}
           <div>
             <Label className="text-xs text-muted-foreground">Cuenta</Label>
-            <Select value={accountId} onValueChange={(v) => setAccountId(v)}>
+            <Select value={accountId} onValueChange={(v) => { setAccountId(v); setCampaignName(''); }}>
               <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
               <SelectContent>
                 {accountOptions.map(([name, id]) => (
