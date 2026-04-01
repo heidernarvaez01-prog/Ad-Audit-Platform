@@ -315,15 +315,22 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                         }
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <PlatformBadge platform={row.platform} />
-                          <span className="text-sm font-medium text-foreground truncate max-w-[200px]">
-                            {row.campaign_name}
-                          </span>
-                        </div>
+                        <PlatformBadge platform={row.platform} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium text-foreground truncate max-w-[200px] block">
+                          {row.campaign_name}
+                        </span>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {row.account_id} · {row.fecha_inicio} → {row.fecha_fin}
+                          {row.fecha_inicio} → {row.fecha_fin}
                         </p>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const apiRow = row.campaignApiData[0];
+                          const name = apiRow?.account_name || row.account_id;
+                          return <span className="text-xs text-muted-foreground">{name}</span>;
+                        })()}
                       </TableCell>
                       <TableCell>
                         <PacingBar
