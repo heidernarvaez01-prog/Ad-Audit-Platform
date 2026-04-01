@@ -146,7 +146,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
           {/* Platform selector */}
           <div>
             <Label className="text-xs text-muted-foreground">Plataforma</Label>
-            <Select value={platform} onValueChange={(v) => { setPlatform(v); setAccountId(''); setCampaignName(''); }}>
+            <Select value={platform} onValueChange={(v) => { setPlatform(v); setAccountName(''); setCampaignName(''); }}>
               <SelectTrigger><SelectValue placeholder="Seleccionar plataforma" /></SelectTrigger>
               <SelectContent>
                 {platforms.map(p => (
