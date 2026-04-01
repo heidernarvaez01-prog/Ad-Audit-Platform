@@ -35,7 +35,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
   const [loading, setLoading] = useState(false);
 
   const [platform, setPlatform] = useState(editRecord?.platform || '');
-  const [accountId, setAccountId] = useState(editRecord?.account_id || '');
+  const [accountName, setAccountName] = useState(editRecord?.account_id || '');
   const [campaignName, setCampaignName] = useState(editRecord?.campaign_name || '');
   const [presupuesto, setPresupuesto] = useState(editRecord?.presupuesto_total?.toString() || '');
   const [fechaInicio, setFechaInicio] = useState(editRecord?.fecha_inicio || '');
