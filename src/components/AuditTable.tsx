@@ -368,7 +368,7 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                   </CollapsibleTrigger>
                   <CollapsibleContent asChild>
                     <tr>
-                      <td colSpan={8} className="p-0 bg-muted/20">
+                      <td colSpan={10} className="p-0 bg-muted/20">
                         <ExpandedDetails
                           row={row}
                           insight={insight}
