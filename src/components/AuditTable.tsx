@@ -287,7 +287,9 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
+            <TableHead className="text-xs">Plataforma</TableHead>
             <TableHead className="text-xs">Campaña</TableHead>
+            <TableHead className="text-xs">Cuenta</TableHead>
             <TableHead className="text-xs w-40">Pacing</TableHead>
             <TableHead className="text-xs">Estado</TableHead>
             <TableHead className="text-xs text-right">Gasto / Aprobado</TableHead>
