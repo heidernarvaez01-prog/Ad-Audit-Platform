@@ -40,8 +40,22 @@ export default function AuditPage() {
     }
   }, []);
 
-  // Load only audit records on mount (no API fetch)
-  useEffect(() => { loadRecords(); }, [loadRecords]);
+  // Load audit records and API data on mount
+  useEffect(() => {
+    if (!user) return;
+    const init = async () => {
+      setRefreshing(true);
+      try {
+        await Promise.all([loadRecords(), loadApiData()]);
+        setHasLoaded(true);
+      } catch {
+        // silent
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    init();
+  }, [user, loadRecords, loadApiData]);
 
   const handleRefresh = async () => {
     if (!user) {
