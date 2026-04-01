@@ -44,11 +44,20 @@ export default function AuditPage() {
   useEffect(() => { loadRecords(); }, [loadRecords]);
 
   const handleRefresh = async () => {
+    if (!user) {
+      toast.error('Debes iniciar sesión para actualizar datos');
+      return;
+    }
     setRefreshing(true);
-    await Promise.all([loadRecords(), loadApiData()]);
-    setRefreshing(false);
-    setHasLoaded(true);
-    toast.success('Datos actualizados');
+    try {
+      await Promise.all([loadRecords(), loadApiData()]);
+      setHasLoaded(true);
+      toast.success('Datos actualizados');
+    } catch {
+      toast.error('Error al actualizar datos');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
