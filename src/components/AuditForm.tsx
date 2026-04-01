@@ -208,13 +208,15 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
             </Popover>
           </div>
 
-          {/* Account ID */}
+          {/* Cuenta (Account Name) */}
           <div>
-            <Label className="text-xs text-muted-foreground">Account ID</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
+            <Label className="text-xs text-muted-foreground">Cuenta</Label>
+            <Select value={accountId} onValueChange={(v) => setAccountId(v)}>
               <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
               <SelectContent>
-                {accountIds.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                {accountOptions.map(([name, id]) => (
+                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
