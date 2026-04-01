@@ -35,7 +35,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
   const [loading, setLoading] = useState(false);
 
   const [platform, setPlatform] = useState(editRecord?.platform || '');
-  const [accountId, setAccountId] = useState(editRecord?.account_id || '');
+  const [accountName, setAccountName] = useState(editRecord?.account_id || '');
   const [campaignName, setCampaignName] = useState(editRecord?.campaign_name || '');
   const [presupuesto, setPresupuesto] = useState(editRecord?.presupuesto_total?.toString() || '');
   const [fechaInicio, setFechaInicio] = useState(editRecord?.fecha_inicio || '');
@@ -46,7 +46,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
   useEffect(() => {
     if (editRecord) {
       setPlatform(editRecord.platform || '');
-      setAccountId(editRecord.account_id);
+      setAccountName(editRecord.account_id);
       setCampaignName(editRecord.campaign_name);
       setPresupuesto(editRecord.presupuesto_total.toString());
       setFechaInicio(editRecord.fecha_inicio);
@@ -60,31 +60,21 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     return [...new Set(apiData.map(r => r.platform).filter(Boolean))].sort();
   }, [apiData]);
 
-  // Campaigns filtered by selected platform AND account
+  // Campaigns filtered by selected platform AND account_name
   const filteredCampaigns = useMemo(() => {
     let filtered = apiData;
     if (platform) filtered = filtered.filter(r => r.platform === platform);
-    if (accountId) filtered = filtered.filter(r => r.account_id === accountId);
+    if (accountName) filtered = filtered.filter(r => r.account_name === accountName);
     return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
-  }, [apiData, platform, accountId]);
+  }, [apiData, platform, accountName]);
 
-  // Account names from API (unique name -> id mapping)
-  const accountOptions = useMemo(() => {
+  // Unique account names filtered by platform
+  const accountNames = useMemo(() => {
     const filtered = platform
       ? apiData.filter(r => r.platform === platform)
       : apiData;
-    const map = new Map<string, string>();
-    filtered.forEach(r => {
-      if (r.account_name && r.account_id) map.set(r.account_name, r.account_id);
-    });
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [...new Set(filtered.map(r => r.account_name).filter(Boolean))].sort();
   }, [apiData, platform]);
-
-  // Derive display name from accountId
-  const accountDisplayName = useMemo(() => {
-    const found = accountOptions.find(([, id]) => id === accountId);
-    return found ? found[0] : '';
-  }, [accountOptions, accountId]);
 
   // When a campaign is selected, prefill dates from API data
   const handleCampaignSelect = (name: string) => {
@@ -98,10 +88,10 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
         setFechaInicio(dates[0].slice(0, 10));
         setFechaFin(dates[dates.length - 1].slice(0, 10));
       }
-      // Prefill account_id if consistent
-      const accounts = [...new Set(campaignRows.map(r => r.account_id).filter(Boolean))];
-      if (accounts.length === 1 && !editRecord) {
-        setAccountId(accounts[0]);
+      // Prefill account_name if consistent
+      const accts = [...new Set(campaignRows.map(r => r.account_name).filter(Boolean))];
+      if (accts.length === 1 && !editRecord) {
+        setAccountName(accts[0]);
       }
       // Prefill platform if not set
       if (!platform) {
@@ -119,7 +109,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     setLoading(true);
     const record = {
       user_id: user.id,
-      account_id: accountId,
+      account_id: accountName,
       campaign_name: campaignName,
       presupuesto_total: parseFloat(presupuesto),
       fecha_inicio: fechaInicio,
@@ -156,7 +146,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
           {/* Platform selector */}
           <div>
             <Label className="text-xs text-muted-foreground">Plataforma</Label>
-            <Select value={platform} onValueChange={(v) => { setPlatform(v); setAccountId(''); setCampaignName(''); }}>
+            <Select value={platform} onValueChange={(v) => { setPlatform(v); setAccountName(''); setCampaignName(''); }}>
               <SelectTrigger><SelectValue placeholder="Seleccionar plataforma" /></SelectTrigger>
               <SelectContent>
                 {platforms.map(p => (
@@ -171,11 +161,11 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
           {/* Cuenta (Account Name) — depends on platform */}
           <div>
             <Label className="text-xs text-muted-foreground">Cuenta</Label>
-            <Select value={accountId} onValueChange={(v) => { setAccountId(v); setCampaignName(''); }}>
+            <Select value={accountName} onValueChange={(v) => { setAccountName(v); setCampaignName(''); }}>
               <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
               <SelectContent>
-                {accountOptions.map(([name, id]) => (
-                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                {accountNames.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
