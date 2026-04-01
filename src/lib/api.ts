@@ -17,6 +17,28 @@ export interface ApiCampaignRow {
   };
 }
 
+function normalizeDate(raw: string): string {
+  if (!raw) return '';
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  // DD/MM/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(raw)) {
+    const [d, m, y] = raw.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // MM/DD/YYYY fallback
+  if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(raw)) {
+    const [d, m, y] = raw.split('/');
+    return `20${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // Try Date parse
+  const parsed = new Date(raw);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return raw;
+}
+
 let cachedData: ApiCampaignRow[] | null = null;
 let cacheTime = 0;
 const CACHE_TTL = 60_000; // 1 minute
@@ -46,7 +68,7 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
     campaign_name: row.campaign_name || row.campaignName || '',
     adset_name: row.adset_name || row.adsetName || row.ad_set_name || '',
     platform: row.platform || '',
-    date: row.date || row.Date || '',
+    date: normalizeDate(row.date || row.Date || ''),
     metrics: {
       cost: parseFloat(row.metrics?.cost ?? row.cost ?? 0),
       clicks: parseInt(row.metrics?.clicks ?? row.clicks ?? 0, 10) || 0,

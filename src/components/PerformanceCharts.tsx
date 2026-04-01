@@ -11,6 +11,22 @@ import {
 } from 'recharts';
 import type { ApiCampaignRow } from '@/lib/api';
 
+function formatDateLabel(raw: string): string {
+  // Try parsing different date formats
+  let d: Date;
+  // Handle DD/MM/YYYY or MM/DD/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(raw)) {
+    const parts = raw.split('/');
+    // Assume DD/MM/YYYY (common in Latin America)
+    d = new Date(+parts[2], +parts[1] - 1, +parts[0]);
+  } else {
+    // ISO or other formats
+    d = new Date(raw.includes('T') ? raw : raw + 'T00:00:00');
+  }
+  if (isNaN(d.getTime())) return raw; // fallback to raw string
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+}
+
 interface ChartDataPoint {
   date: string;
   spend: number;
@@ -48,7 +64,7 @@ function buildChartData(rows: ApiCampaignRow[]): ChartDataPoint[] {
       const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
 
       return {
-        date: new Date(date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }),
+        date: formatDateLabel(date),
         spend: +spend.toFixed(2),
         clicks,
         impressions,
