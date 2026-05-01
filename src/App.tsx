@@ -22,7 +22,8 @@ function AppLayout() {
     );
   }
 
-  if (!user) return <AuthPage />;
+  // Login removed — app is publicly accessible (anonymous session handled in useAuth)
+  void user;
 
   return (
     <BrowserRouter>
