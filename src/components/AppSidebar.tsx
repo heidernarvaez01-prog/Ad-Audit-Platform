@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LogOut, ClipboardCheck } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { ClipboardCheck } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Auditoría', icon: ClipboardCheck },
