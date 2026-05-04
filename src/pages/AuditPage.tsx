@@ -180,9 +180,16 @@ export default function AuditPage() {
           <h1 className="text-xl font-bold text-foreground">Matriz de Auditoría</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Pacing de gasto vs presupuesto aprobado por campaña
+            {lastSyncLabel && (
+              <span className="ml-2">· Última sincronización: <span className="font-medium text-foreground/70">{lastSyncLabel}</span></span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleSyncNow} disabled={syncing}>
+            <CloudUpload className={`h-3.5 w-3.5 mr-1.5 ${syncing ? 'animate-pulse' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar ahora'}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
             Actualizar
