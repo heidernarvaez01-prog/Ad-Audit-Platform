@@ -24,7 +24,18 @@ export default function AuditPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [lastSync, setLastSync] = useState<{ synced_at: string; status: string; rows_inserted: number } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
+  const loadLastSync = useCallback(async () => {
+    const { data } = await supabase
+      .from('sheet_sync_log')
+      .select('synced_at, status, rows_inserted')
+      .order('synced_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) setLastSync(data);
+  }, []);
   const loadRecords = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from('audit_records').select('*').eq('user_id', user.id);
