@@ -58,12 +58,15 @@ export default function AuditPage() {
       setRefreshing(true);
       try {
         await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
+        setHasLoaded(true);
+      } catch {
+        // silent
       } finally {
         setRefreshing(false);
       }
     };
     init();
-  }, [user, loadRecords, loadApiData]);
+  }, [user, loadRecords, loadApiData, loadLastSync]);
 
   const handleRefresh = async () => {
     if (!user) {
@@ -72,7 +75,8 @@ export default function AuditPage() {
     }
     setRefreshing(true);
     try {
-      await Promise.all([loadRecords(), loadApiData()]);
+      clearCampaignDataCache();
+      await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
       setHasLoaded(true);
       toast.success('Datos actualizados');
     } catch {
@@ -82,11 +86,39 @@ export default function AuditPage() {
     }
   };
 
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-sheet-data');
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || 'Sync failed');
+      toast.success(`Sincronizado: ${data?.rows ?? 0} filas`);
+      clearCampaignDataCache();
+      await Promise.all([loadApiData(), loadLastSync()]);
+    } catch (e) {
+      toast.error('Error sincronizando con Sheets');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     await supabase.from('audit_records').delete().eq('id', id);
     loadRecords();
     toast.success('Registro eliminado');
   };
+
+  // Format relative time for last sync
+  const lastSyncLabel = useMemo(() => {
+    if (!lastSync) return null;
+    const diffMs = Date.now() - new Date(lastSync.synced_at).getTime();
+    const min = Math.floor(diffMs / 60000);
+    if (min < 1) return 'hace segundos';
+    if (min < 60) return `hace ${min} min`;
+    const hrs = Math.floor(min / 60);
+    if (hrs < 24) return `hace ${hrs} h`;
+    return `hace ${Math.floor(hrs / 24)} d`;
+  }, [lastSync]);
 
   // Build audit rows with metrics + alerts
   const auditRows: AuditRowData[] = useMemo(() => {
