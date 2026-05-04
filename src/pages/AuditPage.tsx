@@ -57,10 +57,7 @@ export default function AuditPage() {
     const init = async () => {
       setRefreshing(true);
       try {
-        await Promise.all([loadRecords(), loadApiData()]);
-        setHasLoaded(true);
-      } catch {
-        // silent
+        await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
       } finally {
         setRefreshing(false);
       }
