@@ -1,4 +1,4 @@
-const API_URL = 'https://script.googleusercontent.com/a/macros/apachestudio.mx/echo?user_content_key=AWDtjMUeI_PaXfeETgAgk5airY4QxBiPU0-YO6QlNj2tocYs-0-KCOlKHvJgkVZvrvLfRF0QCVTwCMMHKuoWpiJ15VSaSkWiFVcJsWmVJRtzI2uF-eYCkwFenAN6MvYcidee7iT_Pfxyn7BymO5y9CC7lNWb2fqm1ZKvUW6raXowDHhpcMdQXXNUokLf53wVpznUv0TfgmvqcHzD_eLoXWAEpspWKcWG5pxgD6WygwmqWnMM2ySC_0A7pQXTjKiDxHrxRXLUtWoxwatPWZaPwPq1DUMUNs0YrJVB0VOKN4NCLySZgHkueYd3ph5zrSqkTAxf3i5vEyjh_SHtFiIHz93gq8GzN5PqPw&lib=Mkla_1qOnI1LwbK8wb2ccIbjB8koU5FJZ';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ApiCampaignRow {
   account_id: string;
@@ -17,65 +17,49 @@ export interface ApiCampaignRow {
   };
 }
 
-function normalizeDate(raw: string): string {
-  if (!raw) return '';
-  // Already YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  // DD/MM/YYYY
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(raw)) {
-    const [d, m, y] = raw.split('/');
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-  }
-  // MM/DD/YYYY fallback
-  if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(raw)) {
-    const [d, m, y] = raw.split('/');
-    return `20${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-  }
-  // Try Date parse
-  const parsed = new Date(raw);
-  if (!isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
-  }
-  return raw;
-}
-
 let cachedData: ApiCampaignRow[] | null = null;
 let cacheTime = 0;
 const CACHE_TTL = 60_000; // 1 minute
+
+export function clearCampaignDataCache() {
+  cachedData = null;
+  cacheTime = 0;
+}
 
 export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
   const now = Date.now();
   if (cachedData && now - cacheTime < CACHE_TTL) return cachedData;
 
-  const res = await fetch(API_URL);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  const raw = await res.json();
-
-  // Handle different possible response shapes
-  let data: any[] = [];
-  if (Array.isArray(raw)) {
-    data = raw;
-  } else if (raw.data && Array.isArray(raw.data)) {
-    data = raw.data;
-  } else if (raw.results && Array.isArray(raw.results)) {
-    data = raw.results;
+  const PAGE = 1000;
+  const all: any[] = [];
+  let from = 0;
+  // Paginate through sheet_sync_data (Supabase caps at 1000 rows per query)
+  while (true) {
+    const { data, error } = await supabase
+      .from('sheet_sync_data')
+      .select('account_id, account_name, campaign_name, adset_name, platform, date, cost, clicks, impressions, reach, cpc, cpm')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
   }
 
-  // Normalize rows
-  cachedData = data.map((row: any) => ({
-    account_id: row.account_id || row.accountId || '',
-    account_name: row.account_name || row.accountName || '',
-    campaign_name: row.campaign_name || row.campaignName || '',
-    adset_name: row.adset_name || row.adsetName || row.ad_set_name || '',
-    platform: row.platform || '',
-    date: normalizeDate(row.date || row.Date || ''),
+  cachedData = all.map((r: any) => ({
+    account_id: r.account_id ?? '',
+    account_name: r.account_name ?? '',
+    campaign_name: r.campaign_name ?? '',
+    adset_name: r.adset_name ?? '',
+    platform: r.platform ?? '',
+    date: r.date ?? '',
     metrics: {
-      cost: parseFloat(row.metrics?.cost ?? row.cost ?? 0),
-      clicks: parseInt(row.metrics?.clicks ?? row.clicks ?? 0, 10) || 0,
-      impressions: parseInt(row.metrics?.impressions ?? row.impressions ?? 0, 10) || 0,
-      reach: parseInt(row.metrics?.reach ?? row.reach ?? 0, 10) || 0,
-      cpc: parseFloat(row.metrics?.cpc ?? row.cpc ?? 0) || 0,
-      cpm: parseFloat(row.metrics?.cpm ?? row.cpm ?? 0) || 0,
+      cost: Number(r.cost) || 0,
+      clicks: Number(r.clicks) || 0,
+      impressions: Number(r.impressions) || 0,
+      reach: Number(r.reach) || 0,
+      cpc: Number(r.cpc) || 0,
+      cpm: Number(r.cpm) || 0,
     },
   }));
   cacheTime = now;

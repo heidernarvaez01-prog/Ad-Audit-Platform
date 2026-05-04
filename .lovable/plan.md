@@ -1,72 +1,82 @@
 ## Objetivo
 
-Crear una nueva tabla en Lovable Cloud que se llene automáticamente cada hora con los datos del Google Apps Script (Sheet). La UI seguirá leyendo en vivo del Sheet como ahora; la tabla queda como respaldo / histórico consultable.
+Cambiar la fuente de datos de la UI: en vez de leer en vivo del Google Apps Script, leer de la tabla `sheet_sync_data` de Lovable Cloud (que ya se sincroniza cada hora). Las tablas (Matriz, Ad Sets) y los formularios (selectores de plataforma/cuenta/campaña) seguirán funcionando igual, solo cambia el origen.
 
-## 1. Nueva tabla `sheet_sync_data`
+## Cambios
 
-Refleja la estructura de `ApiCampaignRow` (de `src/lib/api.ts`):
+### 1. `src/lib/api.ts` — leer de Supabase
 
-| Columna | Tipo | Notas |
-|---|---|---|
-| `id` | uuid PK | default `gen_random_uuid()` |
-| `account_id` | text | |
-| `account_name` | text | |
-| `campaign_name` | text | |
-| `adset_name` | text | |
-| `platform` | text | |
-| `date` | date | normalizada YYYY-MM-DD |
-| `cost` | numeric | |
-| `clicks` | integer | |
-| `impressions` | integer | |
-| `reach` | integer | |
-| `cpc` | numeric | |
-| `cpm` | numeric | |
-| `synced_at` | timestamptz | default `now()` |
+Reescribir `fetchCampaignData()` para que consulte `sheet_sync_data` en vez del GAS:
 
-Tabla pública (sin `user_id`): los datos vienen del Sheet compartido, no son por usuario.
+- Usar el cliente de Supabase ya disponible (`@/integrations/supabase/client`).
+- **Paginación obligatoria**: Supabase limita a 1000 filas por query y la tabla tiene ~42,000 filas. Iterar con `.range(from, to)` en bloques de 1000 hasta agotar.
+- Mapear cada fila plana de la tabla al shape `ApiCampaignRow` (anidando `metrics: { cost, clicks, impressions, reach, cpc, cpm }`) para no tocar nada río abajo.
+- Mantener el caché en memoria de 1 minuto (igual que hoy).
+- `normalizeDate` ya no hace falta porque la fecha viene como `date` desde Postgres (formato YYYY-MM-DD garantizado), pero la dejamos por compatibilidad si el campo viene null.
+- Las funciones `getUniqueCampaignNames`, `getUniqueAccountIds`, `getUniquePlatforms`, `getUniqueAccountNames`, `getCampaignCost` no cambian.
 
-**RLS:** habilitada. Política SELECT para `public` (lectura libre). Sin políticas de INSERT/UPDATE/DELETE — solo el edge function (con service role) puede escribir.
+Resultado: `AuditPage`, `AuditForm`, `AuditTable`, `AdSetTable` siguen recibiendo el mismo `ApiCampaignRow[]` sin modificaciones.
 
-Tabla auxiliar `sheet_sync_log`: registra `synced_at`, `rows_inserted`, `status`, `error` para auditar las corridas.
+### 2. `AuditPage.tsx` — indicador de última sync + botón sync manual
 
-## 2. Edge function `sync-sheet-data`
+Agregar arriba de la matriz:
 
-`supabase/functions/sync-sheet-data/index.ts`:
+- Texto pequeño "Última sincronización: hace X min" leyendo la fila más reciente de `sheet_sync_log` (`order by synced_at desc limit 1`).
+- Botón secundario "Sincronizar ahora" que llama a `supabase.functions.invoke('sync-sheet-data')`. Al terminar, recarga `apiData` y el log.
+- El botón "Actualizar" existente sigue funcionando (refresca tanto registros como `apiData`).
 
-1. Hace `fetch` al `API_URL` del GAS (mismo URL que ya usa `src/lib/api.ts`).
-2. Normaliza filas con la misma lógica de `normalizeDate` y mapeo de campos.
-3. Usa el cliente de Supabase con **service role key** para:
-   - `DELETE FROM sheet_sync_data` (truncate vía delete)
-   - `INSERT` el snapshot completo en lotes de 1000.
-4. Inserta una fila en `sheet_sync_log` con el resultado.
-5. Devuelve `{ ok, rows, duration_ms }`.
+### 3. Limpieza menor
 
-Configurada con `verify_jwt = false` para que el cron pueda llamarla sin token de usuario.
+- Quitar el `API_URL` del GAS de `src/lib/api.ts` (ya no se usa en cliente; solo lo usa el edge function).
+- No tocar el edge function `sync-sheet-data` ni el cron (siguen igual).
+- No tocar `AuditForm.tsx`, `AuditTable.tsx`, `AdSetTable.tsx` ni `audit-calculations.ts` — todos consumen `ApiCampaignRow[]` y seguirán funcionando.
 
-## 3. Cron job (cada hora)
+## Detalles técnicos
 
-Habilitar extensiones `pg_cron` y `pg_net`, luego programar:
+```ts
+// src/lib/api.ts (extracto)
+export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
+  const now = Date.now();
+  if (cachedData && now - cacheTime < CACHE_TTL) return cachedData;
 
-```sql
-select cron.schedule(
-  'sync-sheet-hourly',
-  '0 * * * *',
-  $$ select net.http_post(
-       url:='https://<project>.supabase.co/functions/v1/sync-sheet-data',
-       headers:='{"Content-Type":"application/json"}'::jsonb,
-       body:='{}'::jsonb
-     ); $$
-);
+  const PAGE = 1000;
+  const all: any[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('sheet_sync_data')
+      .select('account_id, account_name, campaign_name, adset_name, platform, date, cost, clicks, impressions, reach, cpc, cpm')
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  cachedData = all.map(r => ({
+    account_id: r.account_id ?? '',
+    account_name: r.account_name ?? '',
+    campaign_name: r.campaign_name ?? '',
+    adset_name: r.adset_name ?? '',
+    platform: r.platform ?? '',
+    date: r.date ?? '',
+    metrics: {
+      cost: Number(r.cost) || 0,
+      clicks: Number(r.clicks) || 0,
+      impressions: Number(r.impressions) || 0,
+      reach: Number(r.reach) || 0,
+      cpc: Number(r.cpc) || 0,
+      cpm: Number(r.cpm) || 0,
+    },
+  }));
+  cacheTime = now;
+  return cachedData!;
+}
 ```
-
-(Se inserta con el tool de insert, no migración, porque incluye URL específica del proyecto.)
-
-## 4. UI
-
-Cambio mínimo: agregar en `AuditPage` un indicador discreto "Última sincronización: hace X min" leyendo la fila más reciente de `sheet_sync_log`. La carga de datos sigue usando `fetchCampaignData()` del GAS — sin cambios funcionales.
 
 ## Resultado
 
-- Cada hora, en punto, la tabla `sheet_sync_data` queda con un snapshot fresco del Sheet.
-- Puedes consultarla con SQL o conectarla a otras herramientas.
-- La app sigue funcionando exactamente igual que ahora; la tabla es respaldo paralelo.
+- La UI deja de depender del GAS en cada carga (más rápido y sin riesgo de timeouts del Sheet).
+- Los datos se actualizan cada hora vía cron + manualmente con el botón "Sincronizar ahora".
+- Indicador visible de la última sync para que sepas cuán fresco está lo que ves.

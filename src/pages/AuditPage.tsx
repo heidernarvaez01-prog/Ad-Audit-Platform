@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchCampaignData, getCampaignCost } from '@/lib/api';
+import { fetchCampaignData, getCampaignCost, clearCampaignDataCache } from '@/lib/api';
 import { calculateAuditMetrics } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, RefreshCw, LayoutGrid, Layers } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, LayoutGrid, Layers, CloudUpload } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
@@ -24,7 +24,18 @@ export default function AuditPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [lastSync, setLastSync] = useState<{ synced_at: string; status: string; rows_inserted: number } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
+  const loadLastSync = useCallback(async () => {
+    const { data } = await supabase
+      .from('sheet_sync_log')
+      .select('synced_at, status, rows_inserted')
+      .order('synced_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) setLastSync(data);
+  }, []);
   const loadRecords = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from('audit_records').select('*').eq('user_id', user.id);
@@ -46,7 +57,7 @@ export default function AuditPage() {
     const init = async () => {
       setRefreshing(true);
       try {
-        await Promise.all([loadRecords(), loadApiData()]);
+        await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
         setHasLoaded(true);
       } catch {
         // silent
@@ -55,7 +66,7 @@ export default function AuditPage() {
       }
     };
     init();
-  }, [user, loadRecords, loadApiData]);
+  }, [user, loadRecords, loadApiData, loadLastSync]);
 
   const handleRefresh = async () => {
     if (!user) {
@@ -64,7 +75,8 @@ export default function AuditPage() {
     }
     setRefreshing(true);
     try {
-      await Promise.all([loadRecords(), loadApiData()]);
+      clearCampaignDataCache();
+      await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
       setHasLoaded(true);
       toast.success('Datos actualizados');
     } catch {
@@ -74,11 +86,39 @@ export default function AuditPage() {
     }
   };
 
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-sheet-data');
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || 'Sync failed');
+      toast.success(`Sincronizado: ${data?.rows ?? 0} filas`);
+      clearCampaignDataCache();
+      await Promise.all([loadApiData(), loadLastSync()]);
+    } catch (e) {
+      toast.error('Error sincronizando con Sheets');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     await supabase.from('audit_records').delete().eq('id', id);
     loadRecords();
     toast.success('Registro eliminado');
   };
+
+  // Format relative time for last sync
+  const lastSyncLabel = useMemo(() => {
+    if (!lastSync) return null;
+    const diffMs = Date.now() - new Date(lastSync.synced_at).getTime();
+    const min = Math.floor(diffMs / 60000);
+    if (min < 1) return 'hace segundos';
+    if (min < 60) return `hace ${min} min`;
+    const hrs = Math.floor(min / 60);
+    if (hrs < 24) return `hace ${hrs} h`;
+    return `hace ${Math.floor(hrs / 24)} d`;
+  }, [lastSync]);
 
   // Build audit rows with metrics + alerts
   const auditRows: AuditRowData[] = useMemo(() => {
@@ -140,9 +180,16 @@ export default function AuditPage() {
           <h1 className="text-xl font-bold text-foreground">Matriz de Auditoría</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Pacing de gasto vs presupuesto aprobado por campaña
+            {lastSyncLabel && (
+              <span className="ml-2">· Última sincronización: <span className="font-medium text-foreground/70">{lastSyncLabel}</span></span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleSyncNow} disabled={syncing}>
+            <CloudUpload className={`h-3.5 w-3.5 mr-1.5 ${syncing ? 'animate-pulse' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar ahora'}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
             Actualizar
