@@ -180,10 +180,11 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
                   variant="outline"
                   role="combobox"
                   aria-expanded={comboOpen}
+                  disabled={!accountName}
                   className="w-full justify-between font-normal text-sm h-9"
                 >
                   <span className="truncate">
-                    {campaignName || 'Buscar campaña...'}
+                    {campaignName || (accountName ? 'Buscar campaña...' : 'Selecciona una cuenta primero')}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
