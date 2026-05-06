@@ -1,1 +1,4 @@
 project_id = "nhxgjbsimvutglimzzcq"
+
+[functions.sync-meta-datos]
+verify_jwt = false
