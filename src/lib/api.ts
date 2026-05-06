@@ -56,7 +56,7 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
         campaign_name: String(r.campaign_name ?? ""),
         adset_name: String(r.adset_name ?? ""),
         platform: String(r.plataforma ?? "META"),
-        date: String(r.fecha ?? ""),
+        date: String(r.fecha ?? "").slice(0, 10),
         metrics: {
           cost: Number(r.total_cost ?? 0),
           clicks: Number(r.clicks ?? 0),
