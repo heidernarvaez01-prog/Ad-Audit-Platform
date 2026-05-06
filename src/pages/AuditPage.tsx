@@ -26,10 +26,9 @@ export default function AuditPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
 
   const loadRecords = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase.from('audit_records').select('*').eq('user_id', user.id);
+    const { data } = await supabase.from('audit_records').select('*').order('created_at', { ascending: false });
     setRecords(data || []);
-  }, [user]);
+  }, []);
 
   const loadApiData = useCallback(async () => {
     try {
