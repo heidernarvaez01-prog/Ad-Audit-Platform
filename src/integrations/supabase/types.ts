@@ -134,6 +134,96 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_datos: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          adset_daily_budget: number | null
+          adset_end_date: string | null
+          adset_lifetime_budget: number | null
+          adset_name: string | null
+          adset_start_date: string | null
+          budget_remaining: number | null
+          campaign_end_date: string | null
+          campaign_lifetime_budget: number | null
+          campaign_name: string | null
+          campaign_start_date: string | null
+          clicks: number | null
+          cpc: number | null
+          cpm: number | null
+          created_at: string
+          ctr_all: number | null
+          daily_budget: number | null
+          fecha: string | null
+          frequency: number | null
+          id: number
+          impressions: number | null
+          objective: string | null
+          plataforma: string | null
+          reach: number | null
+          thruplay_actions: number | null
+          total_cost: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          adset_daily_budget?: number | null
+          adset_end_date?: string | null
+          adset_lifetime_budget?: number | null
+          adset_name?: string | null
+          adset_start_date?: string | null
+          budget_remaining?: number | null
+          campaign_end_date?: string | null
+          campaign_lifetime_budget?: number | null
+          campaign_name?: string | null
+          campaign_start_date?: string | null
+          clicks?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr_all?: number | null
+          daily_budget?: number | null
+          fecha?: string | null
+          frequency?: number | null
+          id?: number
+          impressions?: number | null
+          objective?: string | null
+          plataforma?: string | null
+          reach?: number | null
+          thruplay_actions?: number | null
+          total_cost?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          adset_daily_budget?: number | null
+          adset_end_date?: string | null
+          adset_lifetime_budget?: number | null
+          adset_name?: string | null
+          adset_start_date?: string | null
+          budget_remaining?: number | null
+          campaign_end_date?: string | null
+          campaign_lifetime_budget?: number | null
+          campaign_name?: string | null
+          campaign_start_date?: string | null
+          clicks?: number | null
+          cpc?: number | null
+          cpm?: number | null
+          created_at?: string
+          ctr_all?: number | null
+          daily_budget?: number | null
+          fecha?: string | null
+          frequency?: number | null
+          id?: number
+          impressions?: number | null
+          objective?: string | null
+          plataforma?: string | null
+          reach?: number | null
+          thruplay_actions?: number | null
+          total_cost?: number | null
+        }
+        Relationships: []
+      }
       sheet_sync_data: {
         Row: {
           account_id: string | null
