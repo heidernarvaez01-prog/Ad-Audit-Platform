@@ -72,11 +72,21 @@ export default function AuditPage() {
 
   // Build audit rows with metrics + alerts
   const auditRows: AuditRowData[] = useMemo(() => {
+    // Cap end: exclude today and yesterday (partial/in-flight data not yet consolidated)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cutoffDate = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const yyyy = cutoffDate.getFullYear();
+    const mm = String(cutoffDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(cutoffDate.getDate()).padStart(2, '0');
+    const cutoff = `${yyyy}-${mm}-${dd}`;
+
     return records.map(rec => {
+      const effectiveEnd = rec.fecha_fin < cutoff ? rec.fecha_fin : cutoff;
       const campaignApiData = apiData.filter(r =>
         r.campaign_name === rec.campaign_name &&
         r.date >= rec.fecha_inicio &&
-        r.date <= rec.fecha_fin
+        r.date <= effectiveEnd
       );
       const cost = campaignApiData.reduce((s, r) => s + (isNaN(r.metrics.cost) ? 0 : r.metrics.cost), 0);
       const metrics = calculateAuditMetrics(
