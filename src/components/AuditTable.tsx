@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,6 +14,13 @@ import { toast } from 'sonner';
 import type { AuditMetrics } from '@/lib/audit-calculations';
 import type { AuditAlert } from '@/lib/audit-alerts';
 import type { ApiCampaignRow } from '@/lib/api';
+
+type RecordPatch = Partial<{
+  fecha_inicio: string;
+  fecha_fin: string;
+  tipo_calendario: string;
+  presupuesto_total: number;
+}>;
 
 export interface AuditRowData {
   id: string;
@@ -31,6 +40,7 @@ interface Props {
   rows: AuditRowData[];
   onEdit: (row: AuditRowData) => void;
   onDelete: (id: string) => void;
+  onUpdateRecord?: (id: string, patch: RecordPatch) => void;
 }
 
 interface InsightData {
