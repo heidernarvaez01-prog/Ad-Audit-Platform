@@ -1,9 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, CalendarRange } from 'lucide-react';
+import { ClipboardCheck } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Auditoría', icon: ClipboardCheck },
-  { to: '/planner', label: 'Planificador', icon: CalendarRange },
 ];
 
 export default function AppSidebar() {
