@@ -1,82 +1,47 @@
 ## Objetivo
 
-Cambiar la fuente de datos de la UI: en vez de leer en vivo del Google Apps Script, leer de la tabla `sheet_sync_data` de Lovable Cloud (que ya se sincroniza cada hora). Las tablas (Matriz, Ad Sets) y los formularios (selectores de plataforma/cuenta/campaña) seguirán funcionando igual, solo cambia el origen.
+Fusionar el **Planificador** dentro de **Auditoría** para tener una sola vista donde el usuario:
+1. Registra campañas vía el formulario actual de Auditoría (con selección desde la base `sheet_sync_data`).
+2. Puede editar **fechas, tipo de calendario y presupuesto** directamente en la fila de la tabla.
+3. Los cálculos (gasto, % gasto, % esperado, ideal/día, días restantes) se recalculan automáticamente al cambiar cualquier campo, leyendo de `sheet_sync_data`.
+4. **No se pierde nada** de lo que ya existe: badges de plataforma, pacing bar, alertas, fila expandible con métricas, gráficos de Recharts e Insight IA.
 
-## Cambios
+## Cambios propuestos
 
-### 1. `src/lib/api.ts` — leer de Supabase
+### 1. `src/components/AuditTable.tsx` — celdas editables inline
+Reemplazar las celdas estáticas por inputs/selects editables, con guardado debounced a Supabase:
 
-Reescribir `fetchCampaignData()` para que consulte `sheet_sync_data` en vez del GAS:
+- **Fecha inicio / Fecha fin**: `Input type="date"` compactos.
+- **Tipo de calendario**: `Select` con las 3 opciones (Lun–Vie / Lun–Sáb / Corrido).
+- **Presupuesto**: `Input type="number"`.
+- Al hacer `onChange`:
+  - Actualiza el estado local inmediatamente (recalculo instantáneo en UI).
+  - Lanza `supabase.from('audit_records').update(...)` con un debounce de ~600ms (toast discreto).
+- Las nuevas columnas se ubican antes de "Pacing" para que el flujo lectura-edición sea natural.
+- Se conservan: badge de plataforma, columna campaña, cuenta, **pacing bar, estado, gasto/aprobado, ideal/día, IA, acciones, fila expandible con charts y métricas**.
 
-- Usar el cliente de Supabase ya disponible (`@/integrations/supabase/client`).
-- **Paginación obligatoria**: Supabase limita a 1000 filas por query y la tabla tiene ~42,000 filas. Iterar con `.range(from, to)` en bloques de 1000 hasta agotar.
-- Mapear cada fila plana de la tabla al shape `ApiCampaignRow` (anidando `metrics: { cost, clicks, impressions, reach, cpc, cpm }`) para no tocar nada río abajo.
-- Mantener el caché en memoria de 1 minuto (igual que hoy).
-- `normalizeDate` ya no hace falta porque la fecha viene como `date` desde Postgres (formato YYYY-MM-DD garantizado), pero la dejamos por compatibilidad si el campo viene null.
-- Las funciones `getUniqueCampaignNames`, `getUniqueAccountIds`, `getUniquePlatforms`, `getUniqueAccountNames`, `getCampaignCost` no cambian.
+### 2. `src/pages/AuditPage.tsx` — recálculo dinámico + carga automática
+- Ya existe `auditRows` con `useMemo` sobre `records + apiData`. Solo hay que **propagar al hijo un `onUpdateRecord(id, patch)`** que actualice `records` localmente y persista en Supabase, manteniendo el recálculo memoizado.
+- **Carga automática** de `apiData` al entrar (hoy es bajo demanda). Mantener "Actualizar" manual como override.
+- Agregar pequeña ayuda visual: tooltip "Editable" en los headers de Fecha/Presupuesto/Calendario.
 
-Resultado: `AuditPage`, `AuditForm`, `AuditTable`, `AdSetTable` siguen recibiendo el mismo `ApiCampaignRow[]` sin modificaciones.
+### 3. Eliminar la página Planificador
+- Quitar la ruta `/planner` de `src/App.tsx`.
+- Quitar el ítem "Planificador" del `src/components/AppSidebar.tsx`.
+- Borrar `src/pages/PlannerPage.tsx` (ya no se necesita; su valor queda integrado en Auditoría).
 
-### 2. `AuditPage.tsx` — indicador de última sync + botón sync manual
+### 4. Cálculo de "$ Gasto" coherente
+En `audit-calculations.ts` el `gastoActual` se sigue pasando desde `AuditPage` sumando `apiData` por campaña entre `fecha_inicio` y `fecha_fin`. Al editar fechas en línea, el `useMemo` re-corre y el valor se ajusta automáticamente. No se modifica la lógica matemática existente.
 
-Agregar arriba de la matriz:
-
-- Texto pequeño "Última sincronización: hace X min" leyendo la fila más reciente de `sheet_sync_log` (`order by synced_at desc limit 1`).
-- Botón secundario "Sincronizar ahora" que llama a `supabase.functions.invoke('sync-sheet-data')`. Al terminar, recarga `apiData` y el log.
-- El botón "Actualizar" existente sigue funcionando (refresca tanto registros como `apiData`).
-
-### 3. Limpieza menor
-
-- Quitar el `API_URL` del GAS de `src/lib/api.ts` (ya no se usa en cliente; solo lo usa el edge function).
-- No tocar el edge function `sync-sheet-data` ni el cron (siguen igual).
-- No tocar `AuditForm.tsx`, `AuditTable.tsx`, `AdSetTable.tsx` ni `audit-calculations.ts` — todos consumen `ApiCampaignRow[]` y seguirán funcionando.
-
-## Detalles técnicos
-
-```ts
-// src/lib/api.ts (extracto)
-export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
-  const now = Date.now();
-  if (cachedData && now - cacheTime < CACHE_TTL) return cachedData;
-
-  const PAGE = 1000;
-  const all: any[] = [];
-  let from = 0;
-  while (true) {
-    const { data, error } = await supabase
-      .from('sheet_sync_data')
-      .select('account_id, account_name, campaign_name, adset_name, platform, date, cost, clicks, impressions, reach, cpc, cpm')
-      .range(from, from + PAGE - 1);
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < PAGE) break;
-    from += PAGE;
-  }
-
-  cachedData = all.map(r => ({
-    account_id: r.account_id ?? '',
-    account_name: r.account_name ?? '',
-    campaign_name: r.campaign_name ?? '',
-    adset_name: r.adset_name ?? '',
-    platform: r.platform ?? '',
-    date: r.date ?? '',
-    metrics: {
-      cost: Number(r.cost) || 0,
-      clicks: Number(r.clicks) || 0,
-      impressions: Number(r.impressions) || 0,
-      reach: Number(r.reach) || 0,
-      cpc: Number(r.cpc) || 0,
-      cpm: Number(r.cpm) || 0,
-    },
-  }));
-  cacheTime = now;
-  return cachedData!;
-}
-```
+## Lo que NO se toca
+- Esquema de la base de datos.
+- `AuditForm` (sigue siendo el punto de alta de campañas).
+- `AdSetTable`, `PerformanceCharts`, `audit-alerts.ts`, `audit-calculations.ts`, `business-days.ts`.
+- Edge function `sync-sheet-data` ni botón "Sincronizar ahora".
 
 ## Resultado
-
-- La UI deja de depender del GAS en cada carga (más rápido y sin riesgo de timeouts del Sheet).
-- Los datos se actualizan cada hora vía cron + manualmente con el botón "Sincronizar ahora".
-- Indicador visible de la última sync para que sepas cuán fresco está lo que ves.
+Una sola pestaña **Auditoría** que contiene:
+- Formulario para crear campañas eligiendo de la base sincronizada.
+- Tabla con todas las métricas actuales **+ celdas editables** (fechas, calendario, presupuesto) que recalculan en vivo.
+- Toda la riqueza visual que ya tienes (pacing, alertas, charts, IA) intacta.
+- El Planificador desaparece como pestaña separada.
