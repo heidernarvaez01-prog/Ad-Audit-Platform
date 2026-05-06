@@ -6,7 +6,7 @@ import { calculateAuditMetrics } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, RefreshCw, LayoutGrid, Layers, CloudUpload } from 'lucide-react';
+import { Plus, LayoutGrid, Layers, CloudUpload } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
@@ -79,23 +79,6 @@ export default function AuditPage() {
     [loadRecords],
   );
 
-  const handleRefresh = async () => {
-    if (!user) {
-      toast.error('Debes iniciar sesión para actualizar datos');
-      return;
-    }
-    setRefreshing(true);
-    try {
-      clearCampaignDataCache();
-      await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
-      setHasLoaded(true);
-      toast.success('Datos actualizados');
-    } catch {
-      toast.error('Error al actualizar datos');
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const handleSyncNow = async () => {
     setSyncing(true);
