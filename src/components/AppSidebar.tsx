@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { ClipboardCheck } from 'lucide-react';
 
 const navItems = [
-  { to: '/', label: 'Auditoría', icon: ClipboardCheck },
+  { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
 ];
 
 export default function AppSidebar() {

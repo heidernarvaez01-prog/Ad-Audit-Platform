@@ -60,21 +60,21 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     return [...new Set(apiData.map(r => r.platform).filter(Boolean))].sort();
   }, [apiData]);
 
-  // Campaigns filtered by selected platform AND account_name
-  const filteredCampaigns = useMemo(() => {
-    let filtered = apiData;
-    if (platform) filtered = filtered.filter(r => r.platform === platform);
-    if (accountName) filtered = filtered.filter(r => r.account_name === accountName);
-    return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
-  }, [apiData, platform, accountName]);
-
-  // Unique account names filtered by platform
+  // All account names from the dataset (platform-agnostic so the user can start by account)
   const accountNames = useMemo(() => {
     const filtered = platform
       ? apiData.filter(r => r.platform === platform)
       : apiData;
     return [...new Set(filtered.map(r => r.account_name).filter(Boolean))].sort();
   }, [apiData, platform]);
+
+  // Campaigns filtered by selected account (and platform if set). Disabled until an account is picked.
+  const filteredCampaigns = useMemo(() => {
+    if (!accountName) return [];
+    let filtered = apiData.filter(r => r.account_name === accountName);
+    if (platform) filtered = filtered.filter(r => r.platform === platform);
+    return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
+  }, [apiData, platform, accountName]);
 
   // When a campaign is selected, prefill dates from API data
   const handleCampaignSelect = (name: string) => {
