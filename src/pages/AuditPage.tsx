@@ -51,13 +51,33 @@ export default function AuditPage() {
     }
   }, []);
 
-  // Auto-refresh paused: only load lightweight metadata (records + last sync indicator).
-  // Heavy API data (sheet_sync_data) is loaded only when the user clicks "Actualizar".
+  // Auto-load on mount: records + sync log + sheet data so inline edits recompute live
   useEffect(() => {
     if (!user) return;
     loadRecords();
     loadLastSync();
-  }, [user, loadRecords, loadLastSync]);
+    (async () => {
+      try {
+        await loadApiData();
+        setHasLoaded(true);
+      } catch {
+        /* handled in loadApiData */
+      }
+    })();
+  }, [user, loadRecords, loadLastSync, loadApiData]);
+
+  // Optimistic inline update for editable cells (dates, calendar, budget)
+  const handleUpdateRecord = useCallback(
+    async (id: string, patch: Partial<{ fecha_inicio: string; fecha_fin: string; tipo_calendario: string; presupuesto_total: number }>) => {
+      setRecords(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
+      const { error } = await supabase.from('audit_records').update(patch).eq('id', id);
+      if (error) {
+        toast.error('Error guardando cambios');
+        loadRecords();
+      }
+    },
+    [loadRecords],
+  );
 
   const handleRefresh = async () => {
     if (!user) {
@@ -242,6 +262,7 @@ export default function AuditPage() {
                   rows={filteredRows}
                   onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
                   onDelete={handleDelete}
+                  onUpdateRecord={handleUpdateRecord}
                 />
               </TabsContent>
             </Tabs>
