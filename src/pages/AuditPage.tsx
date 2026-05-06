@@ -6,7 +6,7 @@ import { calculateAuditMetrics } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, RefreshCw, LayoutGrid, Layers, CloudUpload } from 'lucide-react';
+import { Plus, LayoutGrid, Layers, CloudUpload } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
@@ -79,23 +79,6 @@ export default function AuditPage() {
     [loadRecords],
   );
 
-  const handleRefresh = async () => {
-    if (!user) {
-      toast.error('Debes iniciar sesión para actualizar datos');
-      return;
-    }
-    setRefreshing(true);
-    try {
-      clearCampaignDataCache();
-      await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
-      setHasLoaded(true);
-      toast.success('Datos actualizados');
-    } catch {
-      toast.error('Error al actualizar datos');
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const handleSyncNow = async () => {
     setSyncing(true);
@@ -201,10 +184,6 @@ export default function AuditPage() {
             <CloudUpload className={`h-3.5 w-3.5 mr-1.5 ${syncing ? 'animate-pulse' : ''}`} />
             {syncing ? 'Sincronizando...' : 'Sincronizar ahora'}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
           <Button size="sm" onClick={() => { setEditRecord(null); setShowForm(true); }}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Nueva Auditoría
@@ -223,18 +202,8 @@ export default function AuditPage() {
         </div>
       )}
 
-      {/* Empty state when no API data loaded */}
-      {!hasLoaded && !refreshing ? (
-        <div className="border border-border rounded-lg p-12 text-center text-muted-foreground">
-          <RefreshCw className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
-          <p className="text-sm font-medium">Haz clic en "Actualizar" para cargar datos</p>
-          <p className="text-xs mt-1">Los datos de la API se cargarán bajo demanda.</p>
-        </div>
-      ) : refreshing ? (
-        <div className="flex items-center justify-center h-32">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
+      {/* Audit table is always visible — even when API data hasn't loaded yet */}
+      {(
         /* Top-level view mode tabs */
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'campaigns' | 'adsets')}>
           <TabsList>

@@ -60,19 +60,17 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     return [...new Set(apiData.map(r => r.platform).filter(Boolean))].sort();
   }, [apiData]);
 
-  // Use account_name when present, else fall back to account_id (some platforms only return the id)
-  const accountKey = (r: ApiCampaignRow) => r.account_name || r.account_id || '';
-
+  // Account list comes strictly from `account_name` (no id fallback per requirement)
   const accountNames = useMemo(() => {
     const filtered = platform
       ? apiData.filter(r => r.platform === platform)
       : apiData;
-    return [...new Set(filtered.map(accountKey).filter(Boolean))].sort();
+    return [...new Set(filtered.map(r => r.account_name).filter(Boolean))].sort();
   }, [apiData, platform]);
 
   const filteredCampaigns = useMemo(() => {
     if (!accountName) return [];
-    let filtered = apiData.filter(r => accountKey(r) === accountName);
+    let filtered = apiData.filter(r => r.account_name === accountName);
     if (platform) filtered = filtered.filter(r => r.platform === platform);
     return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
   }, [apiData, platform, accountName]);
@@ -90,7 +88,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
         setFechaFin(dates[dates.length - 1].slice(0, 10));
       }
       // Prefill account_name if consistent
-      const accts = [...new Set(campaignRows.map(accountKey).filter(Boolean))];
+      const accts = [...new Set(campaignRows.map(r => r.account_name).filter(Boolean))];
       if (accts.length === 1 && !editRecord) {
         setAccountName(accts[0]);
       }
