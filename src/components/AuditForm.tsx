@@ -60,21 +60,21 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     return [...new Set(apiData.map(r => r.platform).filter(Boolean))].sort();
   }, [apiData]);
 
-  // Campaigns filtered by selected platform AND account_name
-  const filteredCampaigns = useMemo(() => {
-    let filtered = apiData;
-    if (platform) filtered = filtered.filter(r => r.platform === platform);
-    if (accountName) filtered = filtered.filter(r => r.account_name === accountName);
-    return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
-  }, [apiData, platform, accountName]);
-
-  // Unique account names filtered by platform
+  // All account names from the dataset (platform-agnostic so the user can start by account)
   const accountNames = useMemo(() => {
     const filtered = platform
       ? apiData.filter(r => r.platform === platform)
       : apiData;
     return [...new Set(filtered.map(r => r.account_name).filter(Boolean))].sort();
   }, [apiData, platform]);
+
+  // Campaigns filtered by selected account (and platform if set). Disabled until an account is picked.
+  const filteredCampaigns = useMemo(() => {
+    if (!accountName) return [];
+    let filtered = apiData.filter(r => r.account_name === accountName);
+    if (platform) filtered = filtered.filter(r => r.platform === platform);
+    return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
+  }, [apiData, platform, accountName]);
 
   // When a campaign is selected, prefill dates from API data
   const handleCampaignSelect = (name: string) => {
@@ -180,10 +180,11 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
                   variant="outline"
                   role="combobox"
                   aria-expanded={comboOpen}
+                  disabled={!accountName}
                   className="w-full justify-between font-normal text-sm h-9"
                 >
                   <span className="truncate">
-                    {campaignName || 'Buscar campaña...'}
+                    {campaignName || (accountName ? 'Buscar campaña...' : 'Selecciona una cuenta primero')}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
