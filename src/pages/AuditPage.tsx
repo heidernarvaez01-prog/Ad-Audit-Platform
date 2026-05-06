@@ -51,22 +51,13 @@ export default function AuditPage() {
     }
   }, []);
 
-  // Load audit records and API data on mount
+  // Auto-refresh paused: only load lightweight metadata (records + last sync indicator).
+  // Heavy API data (sheet_sync_data) is loaded only when the user clicks "Actualizar".
   useEffect(() => {
     if (!user) return;
-    const init = async () => {
-      setRefreshing(true);
-      try {
-        await Promise.all([loadRecords(), loadApiData(), loadLastSync()]);
-        setHasLoaded(true);
-      } catch {
-        // silent
-      } finally {
-        setRefreshing(false);
-      }
-    };
-    init();
-  }, [user, loadRecords, loadApiData, loadLastSync]);
+    loadRecords();
+    loadLastSync();
+  }, [user, loadRecords, loadLastSync]);
 
   const handleRefresh = async () => {
     if (!user) {
