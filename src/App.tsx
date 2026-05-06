@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
 import AuditPage from "@/pages/AuditPage";
-import PlannerPage from "@/pages/PlannerPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
 
@@ -23,7 +22,6 @@ function AppLayout() {
     );
   }
 
-  // Login removed — app is publicly accessible (anonymous session handled in useAuth)
   void user;
 
   return (
@@ -33,7 +31,6 @@ function AppLayout() {
         <main className="flex-1 p-6 overflow-auto">
           <Routes>
             <Route path="/" element={<AuditPage />} />
-            <Route path="/planner" element={<PlannerPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

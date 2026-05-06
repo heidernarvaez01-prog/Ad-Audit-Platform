@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,6 +14,13 @@ import { toast } from 'sonner';
 import type { AuditMetrics } from '@/lib/audit-calculations';
 import type { AuditAlert } from '@/lib/audit-alerts';
 import type { ApiCampaignRow } from '@/lib/api';
+
+type RecordPatch = Partial<{
+  fecha_inicio: string;
+  fecha_fin: string;
+  tipo_calendario: string;
+  presupuesto_total: number;
+}>;
 
 export interface AuditRowData {
   id: string;
@@ -31,6 +40,7 @@ interface Props {
   rows: AuditRowData[];
   onEdit: (row: AuditRowData) => void;
   onDelete: (id: string) => void;
+  onUpdateRecord?: (id: string, patch: RecordPatch) => void;
 }
 
 interface InsightData {
@@ -208,7 +218,7 @@ function ExpandedDetails({
   );
 }
 
-export default function AuditTable({ rows, onEdit, onDelete }: Props) {
+export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [insights, setInsights] = useState<Record<string, InsightData>>({});
   const [loadingInsights, setLoadingInsights] = useState<Record<string, boolean>>({});
@@ -290,6 +300,10 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
             <TableHead className="text-xs">Plataforma</TableHead>
             <TableHead className="text-xs">Campaña</TableHead>
             <TableHead className="text-xs">Cuenta</TableHead>
+            <TableHead className="text-xs w-[140px]">Fecha inicio</TableHead>
+            <TableHead className="text-xs w-[140px]">Fecha fin</TableHead>
+            <TableHead className="text-xs w-[140px]">Calendario</TableHead>
+            <TableHead className="text-xs w-[120px] text-right">Presupuesto</TableHead>
             <TableHead className="text-xs w-40">Pacing</TableHead>
             <TableHead className="text-xs">Estado</TableHead>
             <TableHead className="text-xs text-right">Gasto / Aprobado</TableHead>
@@ -321,9 +335,6 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                         <span className="text-sm font-medium text-foreground truncate max-w-[200px] block">
                           {row.campaign_name}
                         </span>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {row.fecha_inicio} → {row.fecha_fin}
-                        </p>
                       </TableCell>
                       <TableCell>
                         {(() => {
@@ -331,6 +342,43 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                           const name = apiRow?.account_name || row.account_id;
                           return <span className="text-xs text-muted-foreground">{name}</span>;
                         })()}
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Input
+                          type="date"
+                          value={row.fecha_inicio}
+                          onChange={e => onUpdateRecord?.(row.id, { fecha_inicio: e.target.value })}
+                          className="h-8 text-xs"
+                        />
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Input
+                          type="date"
+                          value={row.fecha_fin}
+                          onChange={e => onUpdateRecord?.(row.id, { fecha_fin: e.target.value })}
+                          className="h-8 text-xs"
+                        />
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Select
+                          value={row.tipo_calendario}
+                          onValueChange={v => onUpdateRecord?.(row.id, { tipo_calendario: v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="corridos" className="text-xs">De corrido</SelectItem>
+                            <SelectItem value="lun_vie" className="text-xs">Lun a Vie</SelectItem>
+                            <SelectItem value="lun_sab" className="text-xs">Lun a Sáb</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Input
+                          type="number"
+                          value={row.presupuesto_total}
+                          onChange={e => onUpdateRecord?.(row.id, { presupuesto_total: parseFloat(e.target.value) || 0 })}
+                          className="h-8 text-xs text-right font-mono"
+                        />
                       </TableCell>
                       <TableCell>
                         <PacingBar
@@ -368,7 +416,7 @@ export default function AuditTable({ rows, onEdit, onDelete }: Props) {
                   </CollapsibleTrigger>
                   <CollapsibleContent asChild>
                     <tr>
-                      <td colSpan={10} className="p-0 bg-muted/20">
+                      <td colSpan={14} className="p-0 bg-muted/20">
                         <ExpandedDetails
                           row={row}
                           insight={insight}
