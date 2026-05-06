@@ -219,18 +219,8 @@ export default function AuditPage() {
         </div>
       )}
 
-      {/* Empty state when no API data loaded */}
-      {!hasLoaded && !refreshing ? (
-        <div className="border border-border rounded-lg p-12 text-center text-muted-foreground">
-          <RefreshCw className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
-          <p className="text-sm font-medium">Haz clic en "Actualizar" para cargar datos</p>
-          <p className="text-xs mt-1">Los datos de la API se cargarán bajo demanda.</p>
-        </div>
-      ) : refreshing ? (
-        <div className="flex items-center justify-center h-32">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
+      {/* Audit table is always visible — even when API data hasn't loaded yet */}
+      {(
         /* Top-level view mode tabs */
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'campaigns' | 'adsets')}>
           <TabsList>
