@@ -66,41 +66,11 @@ export default function AuditPage() {
     },
     [loadRecords],
   );
-
-
-  const handleSyncNow = async () => {
-    setSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-sheet-data');
-      if (error) throw error;
-      if (data?.ok === false) throw new Error(data.error || 'Sync failed');
-      toast.success(`Sincronizado: ${data?.rows ?? 0} filas`);
-      clearCampaignDataCache();
-      await Promise.all([loadApiData(), loadLastSync()]);
-    } catch (e) {
-      toast.error('Error sincronizando con Sheets');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     await supabase.from('audit_records').delete().eq('id', id);
     loadRecords();
     toast.success('Registro eliminado');
   };
-
-  // Format relative time for last sync
-  const lastSyncLabel = useMemo(() => {
-    if (!lastSync) return null;
-    const diffMs = Date.now() - new Date(lastSync.synced_at).getTime();
-    const min = Math.floor(diffMs / 60000);
-    if (min < 1) return 'hace segundos';
-    if (min < 60) return `hace ${min} min`;
-    const hrs = Math.floor(min / 60);
-    if (hrs < 24) return `hace ${hrs} h`;
-    return `hace ${Math.floor(hrs / 24)} d`;
-  }, [lastSync]);
 
   // Build audit rows with metrics + alerts
   const auditRows: AuditRowData[] = useMemo(() => {
@@ -162,16 +132,9 @@ export default function AuditPage() {
           <h1 className="text-xl font-bold text-foreground">Matriz de Auditoría</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Pacing de gasto vs presupuesto aprobado por campaña
-            {lastSyncLabel && (
-              <span className="ml-2">· Última sincronización: <span className="font-medium text-foreground/70">{lastSyncLabel}</span></span>
-            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleSyncNow} disabled={syncing}>
-            <CloudUpload className={`h-3.5 w-3.5 mr-1.5 ${syncing ? 'animate-pulse' : ''}`} />
-            {syncing ? 'Sincronizando...' : 'Sincronizar ahora'}
-          </Button>
           <Button size="sm" onClick={() => { setEditRecord(null); setShowForm(true); }}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Nueva Auditoría
