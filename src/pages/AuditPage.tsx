@@ -201,10 +201,6 @@ export default function AuditPage() {
             <CloudUpload className={`h-3.5 w-3.5 mr-1.5 ${syncing ? 'animate-pulse' : ''}`} />
             {syncing ? 'Sincronizando...' : 'Sincronizar ahora'}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
           <Button size="sm" onClick={() => { setEditRecord(null); setShowForm(true); }}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Nueva Auditoría
