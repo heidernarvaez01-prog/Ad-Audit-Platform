@@ -39,9 +39,8 @@ export default function AuditPage() {
     }
   }, []);
 
-  // Auto-load on mount: records + sync log + sheet data so inline edits recompute live
+  // Auto-load on mount
   useEffect(() => {
-    if (!user) return;
     loadRecords();
     (async () => {
       try {
@@ -51,7 +50,7 @@ export default function AuditPage() {
         /* handled in loadApiData */
       }
     })();
-  }, [user, loadRecords, loadApiData]);
+  }, [loadRecords, loadApiData]);
 
   // Optimistic inline update for editable cells (dates, calendar, budget)
   const handleUpdateRecord = useCallback(
