@@ -6,7 +6,7 @@ import { calculateAuditMetrics } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, LayoutGrid, Layers, CloudUpload } from 'lucide-react';
+import { Plus, LayoutGrid, Layers } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
@@ -24,18 +24,7 @@ export default function AuditPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [lastSync, setLastSync] = useState<{ synced_at: string; status: string; rows_inserted: number } | null>(null);
-  const [syncing, setSyncing] = useState(false);
 
-  const loadLastSync = useCallback(async () => {
-    const { data } = await supabase
-      .from('sheet_sync_log')
-      .select('synced_at, status, rows_inserted')
-      .order('synced_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data) setLastSync(data);
-  }, []);
   const loadRecords = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from('audit_records').select('*').eq('user_id', user.id);
@@ -55,7 +44,6 @@ export default function AuditPage() {
   useEffect(() => {
     if (!user) return;
     loadRecords();
-    loadLastSync();
     (async () => {
       try {
         await loadApiData();
@@ -64,7 +52,7 @@ export default function AuditPage() {
         /* handled in loadApiData */
       }
     })();
-  }, [user, loadRecords, loadLastSync, loadApiData]);
+  }, [user, loadRecords, loadApiData]);
 
   // Optimistic inline update for editable cells (dates, calendar, budget)
   const handleUpdateRecord = useCallback(
