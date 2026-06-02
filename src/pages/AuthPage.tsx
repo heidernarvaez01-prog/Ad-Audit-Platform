@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,21 +7,35 @@ import { Card } from '@/components/ui/card';
 import { LogIn } from 'lucide-react';
 
 export default function AuthPage() {
-  const { signIn, signUp } = useAuth();
+  const { user, loading: authLoading, signIn, signUp } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (!authLoading && user) navigate('/', { replace: true });
+  }, [user, authLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+    if (isSignUp) {
+      setError('Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.');
+    }
     setLoading(false);
   };
+
+  if (user) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
