@@ -6,6 +6,7 @@ import { calculateAuditMetrics } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, LayoutGrid, Layers } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
@@ -133,7 +134,7 @@ export default function AuditPage() {
   // No full-page loader — show empty state instead when not loaded
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -153,11 +154,11 @@ export default function AuditPage() {
       {/* Summary cards */}
       {auditRows.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <SummaryCard label="Presupuesto Total" value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} />
-          <SummaryCard label="Gasto Total" value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} />
-          <SummaryCard label="En Ruta" value={summary.ok.toString()} color="text-success" />
-          <SummaryCard label="Subgastando" value={summary.under.toString()} color="text-warning" />
-          <SummaryCard label="Sobregastando" value={summary.over.toString()} color="text-destructive" />
+          <SummaryCard label="Presupuesto Total" value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Suma del presupuesto aprobado de todas las campañas auditadas." />
+          <SummaryCard label="Gasto Total" value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Suma del gasto real consolidado (excluye hoy y ayer)." />
+          <SummaryCard label="En Ruta" value={summary.ok.toString()} color="text-success" hint="Campañas dentro del ±10% del pacing ideal." />
+          <SummaryCard label="Subgastando" value={summary.under.toString()} color="text-warning" hint="Campañas gastando menos del 90% del ideal — riesgo de no agotar presupuesto." />
+          <SummaryCard label="Sobregastando" value={summary.over.toString()} color="text-destructive" hint="Campañas gastando más del 110% del ideal — riesgo de agotar antes." />
         </div>
       )}
 
@@ -215,11 +216,18 @@ export default function AuditPage() {
   );
 }
 
-function SummaryCard({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="border border-border rounded-lg bg-card p-3">
+function SummaryCard({ label, value, color, hint }: { label: string; value: string; color?: string; hint?: string }) {
+  const card = (
+    <div className="border border-border rounded-lg bg-card p-3 cursor-help">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={`text-lg font-bold font-mono ${color || 'text-foreground'}`}>{value}</p>
     </div>
+  );
+  if (!hint) return card;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs text-xs">{hint}</TooltipContent>
+    </Tooltip>
   );
 }

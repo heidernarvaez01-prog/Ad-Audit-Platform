@@ -34,25 +34,41 @@ export default function AppSidebar() {
     <aside
       className={`${collapsed ? 'w-14' : 'w-56'} min-h-screen bg-sidebar text-sidebar-foreground flex flex-col transition-[width] duration-200 ease-out border-r border-sidebar-border`}
     >
-      <div className={`${collapsed ? 'p-2' : 'p-4'} border-b border-sidebar-border flex items-center justify-between gap-2`}>
+      <div className={`${collapsed ? 'p-2 flex-col gap-2' : 'p-4 justify-between gap-2'} border-b border-sidebar-border flex items-center`}>
         {collapsed ? (
-          <img src={logo.url} alt="Apache Studio" className="h-8 w-8 object-contain mx-auto" />
+          <>
+            <img src={logo.url} alt="Apache Studio" className="h-8 w-8 object-contain" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setCollapsed(false)}
+                  className="w-full flex items-center justify-center p-1.5 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
+                  aria-label="Expandir menú"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">Expandir menú</TooltipContent>
+            </Tooltip>
+          </>
         ) : (
-          <div className="flex items-center gap-2 min-w-0">
-            <img src={logo.url} alt="Apache Studio" className="h-10 w-10 object-contain shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-base font-bold tracking-tight truncate">Apache Studio</h1>
-              <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">Ad Audit</p>
+          <>
+            <div className="flex items-center gap-2 min-w-0">
+              <img src={logo.url} alt="Apache Studio" className="h-10 w-10 object-contain shrink-0" />
+              <div className="min-w-0">
+                <h1 className="text-base font-bold tracking-tight truncate">Apache Studio</h1>
+                <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">Ad Audit</p>
+              </div>
             </div>
-          </div>
+            <button
+              onClick={() => setCollapsed(true)}
+              className="p-1.5 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors shrink-0"
+              aria-label="Colapsar menú"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </>
         )}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="p-1.5 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors shrink-0"
-          aria-label={collapsed ? 'Expandir' : 'Colapsar'}
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
       </div>
       <nav className={`flex-1 ${collapsed ? 'p-1.5' : 'p-2'} space-y-0.5`}>
         {navItems.map(({ to, label, icon: Icon }) => {
