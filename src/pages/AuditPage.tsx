@@ -6,6 +6,7 @@ import { calculateAuditMetrics } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, LayoutGrid, Layers } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
