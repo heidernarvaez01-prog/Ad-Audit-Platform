@@ -76,12 +76,3 @@
   }
 }
 
-/* Shine animation keyframes (from v0-lelo-saas-landing) */
-@keyframes shine {
-  0% {
-    transform: translateX(-100%) skewX(-12deg);
-  }
-  100% {
-    transform: translateX(200%) skewX(-12deg);
-  }
-}
