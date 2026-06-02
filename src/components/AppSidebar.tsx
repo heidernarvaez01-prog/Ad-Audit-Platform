@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+import logo from '@/assets/apache-studio-logo.png.asset.json';
 
 const navItems = [
   { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
