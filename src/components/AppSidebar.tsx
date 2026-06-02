@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun, Shield } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
+import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/apache-studio-logo.png.asset.json';
 
-const navItems = [
+const baseNav = [
   { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
   { to: '/brief', label: 'Brief de Marca', icon: FileText },
   { to: '/metrics-ai', label: 'Análisis IA', icon: Sparkles },
@@ -18,6 +19,16 @@ export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(true);
   const { user, signOut } = useAuth();
   const { theme, toggle } = useTheme();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle()
+      .then(({ data }) => setIsAdmin(!!data));
+  }, [user]);
+
+  const navItems = isAdmin ? [...baseNav, { to: '/admin', label: 'Administración', icon: Shield }] : baseNav;
+
 
   return (
     <aside
