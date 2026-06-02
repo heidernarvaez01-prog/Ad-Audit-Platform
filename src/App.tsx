@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,9 +22,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AppLayout() {
+function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -32,15 +31,18 @@ function AppLayout() {
       </div>
     );
   }
+  if (!user) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
 
-  void user;
-
+function AppLayout() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/marketing" element={<MarketingPage />} />
-        <Route path="/" element={<AppShell><AuditPage /></AppShell>} />
-        <Route path="/brief" element={<AppShell><BriefPage /></AppShell>} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
+        <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
         <Route path="*" element={<AppShell><NotFound /></AppShell>} />
       </Routes>
     </BrowserRouter>
