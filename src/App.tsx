@@ -8,7 +8,6 @@ import AppSidebar from "@/components/AppSidebar";
 import AuditPage from "@/pages/AuditPage";
 import AuthPage from "@/pages/AuthPage";
 import BriefPage from "@/pages/BriefPage";
-import MarketingPage from "@/pages/MarketingPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,7 +38,6 @@ function AppLayout() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
         <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
