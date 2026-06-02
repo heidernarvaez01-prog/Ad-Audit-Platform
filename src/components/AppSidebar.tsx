@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const navItems = [
   { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
   { to: '/brief', label: 'Brief de Marca', icon: FileText },
+  { to: '/marketing', label: 'Landing', icon: Sparkles },
 ];
 
 export default function AppSidebar() {
