@@ -7,8 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
 import AuditPage from "@/pages/AuditPage";
 import AuthPage from "@/pages/AuthPage";
+import BriefPage from "@/pages/BriefPage";
 import NotFound from "@/pages/NotFound";
-import MarketingPage from "@/pages/MarketingPage";
 
 const queryClient = new QueryClient();
 
@@ -27,18 +27,16 @@ function AppLayout() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MarketingPage />} />
-        <Route path="/app" element={
-          <div className="flex min-h-screen">
-            <AppSidebar />
-            <main className="flex-1 p-6 overflow-auto">
-              <AuditPage />
-            </main>
-          </div>
-        } />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <div className="flex min-h-screen">
+        <AppSidebar />
+        <main className="flex-1 p-6 overflow-auto">
+          <Routes>
+            <Route path="/" element={<AuditPage />} />
+            <Route path="/brief" element={<BriefPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </div>
     </BrowserRouter>
   );
 }

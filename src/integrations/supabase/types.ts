@@ -56,6 +56,90 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_briefs: {
+        Row: {
+          account_id: string
+          account_name: string | null
+          benchmark: string | null
+          created_at: string
+          descripcion_proyecto: string | null
+          diferenciador: string | null
+          elementos_marca: string | null
+          estilo_tono: string | null
+          frases_marca: string | null
+          fundamentos_marca: string | null
+          id: string
+          insights: string | null
+          marca: string | null
+          mercado_objetivo: string | null
+          necesidad_principal: string | null
+          palabras_marca: string | null
+          personalidad_marca: string | null
+          presupuesto_campana: number | null
+          promesa_marca: string | null
+          publico_objetivo: string | null
+          reasons_why: string | null
+          sitio_web: string | null
+          updated_at: string
+          user_id: string | null
+          valores_marca: string | null
+        }
+        Insert: {
+          account_id: string
+          account_name?: string | null
+          benchmark?: string | null
+          created_at?: string
+          descripcion_proyecto?: string | null
+          diferenciador?: string | null
+          elementos_marca?: string | null
+          estilo_tono?: string | null
+          frases_marca?: string | null
+          fundamentos_marca?: string | null
+          id?: string
+          insights?: string | null
+          marca?: string | null
+          mercado_objetivo?: string | null
+          necesidad_principal?: string | null
+          palabras_marca?: string | null
+          personalidad_marca?: string | null
+          presupuesto_campana?: number | null
+          promesa_marca?: string | null
+          publico_objetivo?: string | null
+          reasons_why?: string | null
+          sitio_web?: string | null
+          updated_at?: string
+          user_id?: string | null
+          valores_marca?: string | null
+        }
+        Update: {
+          account_id?: string
+          account_name?: string | null
+          benchmark?: string | null
+          created_at?: string
+          descripcion_proyecto?: string | null
+          diferenciador?: string | null
+          elementos_marca?: string | null
+          estilo_tono?: string | null
+          frases_marca?: string | null
+          fundamentos_marca?: string | null
+          id?: string
+          insights?: string | null
+          marca?: string | null
+          mercado_objetivo?: string | null
+          necesidad_principal?: string | null
+          palabras_marca?: string | null
+          personalidad_marca?: string | null
+          presupuesto_campana?: number | null
+          promesa_marca?: string | null
+          publico_objetivo?: string | null
+          reasons_why?: string | null
+          sitio_web?: string | null
+          updated_at?: string
+          user_id?: string | null
+          valores_marca?: string | null
+        }
+        Relationships: []
+      }
       campaign_tracking: {
         Row: {
           account_name: string | null

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -64,61 +66,12 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Clash Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Hide default cursor on marketing page */
-  .marketing-page {
-    cursor: none !important;
-  }
-
-  .marketing-page * {
-    cursor: none !important;
-  }
-
-  /* Glassmorphism utilities */
-  @supports (backdrop-filter: blur(10px)) {
-    .glass-effect {
-      backdrop-filter: blur(16px) saturate(180%);
-      -webkit-backdrop-filter: blur(16px) saturate(180%);
-    }
-  }
-
-  /* Text glow effect */
-  .text-glow {
-    text-shadow: 0 0 20px rgba(168, 85, 247, 0.5),
-                 0 0 40px rgba(168, 85, 247, 0.3),
-                 0 0 60px rgba(168, 85, 247, 0.2);
-  }
-
-  .text-glow-blue {
-    text-shadow: 0 0 20px rgba(59, 130, 246, 0.5),
-                 0 0 40px rgba(59, 130, 246, 0.3),
-                 0 0 60px rgba(59, 130, 246, 0.2);
+    font-family: 'Inter', sans-serif;
   }
 }
 
 @layer utilities {
   .font-mono-data {
     font-family: var(--font-mono);
-  }
-}
-
-/* Shine animation keyframes */
-@keyframes shine {
-  0% {
-    transform: translateX(-100%) skewX(-12deg);
-  }
-  100% {
-    transform: translateX(200%) skewX(-12deg);
   }
 }

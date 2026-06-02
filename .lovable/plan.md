@@ -1,47 +1,66 @@
-## Objetivo
 
-Fusionar el **Planificador** dentro de **Auditoría** para tener una sola vista donde el usuario:
-1. Registra campañas vía el formulario actual de Auditoría (con selección desde la base `sheet_sync_data`).
-2. Puede editar **fechas, tipo de calendario y presupuesto** directamente en la fila de la tabla.
-3. Los cálculos (gasto, % gasto, % esperado, ideal/día, días restantes) se recalculan automáticamente al cambiar cualquier campo, leyendo de `sheet_sync_data`.
-4. **No se pierde nada** de lo que ya existe: badges de plataforma, pacing bar, alertas, fila expandible con métricas, gráficos de Recharts e Insight IA.
+# Brief de Marca por Cuenta
 
-## Cambios propuestos
+Nueva sección que permite registrar y editar un brief estratégico por cada cuenta publicitaria. Estos datos se asocian al `account_id` (el mismo que ya usan `audit_records` y `meta_datos`) y se envían como contexto al análisis de IA junto con las métricas de Windsor.ai.
 
-### 1. `src/components/AuditTable.tsx` — celdas editables inline
-Reemplazar las celdas estáticas por inputs/selects editables, con guardado debounced a Supabase:
+## 1. Base de datos
 
-- **Fecha inicio / Fecha fin**: `Input type="date"` compactos.
-- **Tipo de calendario**: `Select` con las 3 opciones (Lun–Vie / Lun–Sáb / Corrido).
-- **Presupuesto**: `Input type="number"`.
-- Al hacer `onChange`:
-  - Actualiza el estado local inmediatamente (recalculo instantáneo en UI).
-  - Lanza `supabase.from('audit_records').update(...)` con un debounce de ~600ms (toast discreto).
-- Las nuevas columnas se ubican antes de "Pacing" para que el flujo lectura-edición sea natural.
-- Se conservan: badge de plataforma, columna campaña, cuenta, **pacing bar, estado, gasto/aprobado, ideal/día, IA, acciones, fila expandible con charts y métricas**.
+Nueva tabla `public.brand_briefs` con un registro por `account_id` (único). Todos los campos largos como `text` nullable para permitir guardar parcial.
 
-### 2. `src/pages/AuditPage.tsx` — recálculo dinámico + carga automática
-- Ya existe `auditRows` con `useMemo` sobre `records + apiData`. Solo hay que **propagar al hijo un `onUpdateRecord(id, patch)`** que actualice `records` localmente y persista en Supabase, manteniendo el recálculo memoizado.
-- **Carga automática** de `apiData` al entrar (hoy es bajo demanda). Mantener "Actualizar" manual como override.
-- Agregar pequeña ayuda visual: tooltip "Editable" en los headers de Fecha/Presupuesto/Calendario.
+Campos:
+- `account_id` (text, UNIQUE) — enlace con cuentas existentes
+- `account_name` (text)
+- `marca` (text)
+- `sitio_web` (text)
+- `necesidad_principal` (text)
+- `descripcion_proyecto` (text)
+- `mercado_objetivo` (text)
+- `publico_objetivo` (text)
+- `fundamentos_marca` (text)
+- `palabras_marca` (text) — 30 palabras separadas por comas
+- `frases_marca` (text) — 10 frases, una por línea
+- `valores_marca` (text)
+- `promesa_marca` (text)
+- `reasons_why` (text)
+- `personalidad_marca` (text) — arquetipo
+- `estilo_tono` (text)
+- `diferenciador` (text)
+- `insights` (text)
+- `elementos_marca` (text) — colores, tipografías, guía
+- `benchmark` (text)
+- `presupuesto_campana` (numeric)
+- `user_id` (uuid), `created_at`, `updated_at`
 
-### 3. Eliminar la página Planificador
-- Quitar la ruta `/planner` de `src/App.tsx`.
-- Quitar el ítem "Planificador" del `src/components/AppSidebar.tsx`.
-- Borrar `src/pages/PlannerPage.tsx` (ya no se necesita; su valor queda integrado en Auditoría).
+RLS abierta (consistente con `audit_records` actual) + trigger `update_updated_at_column`.
 
-### 4. Cálculo de "$ Gasto" coherente
-En `audit-calculations.ts` el `gastoActual` se sigue pasando desde `AuditPage` sumando `apiData` por campaña entre `fecha_inicio` y `fecha_fin`. Al editar fechas en línea, el `useMemo` re-corre y el valor se ajusta automáticamente. No se modifica la lógica matemática existente.
+## 2. Frontend — nueva página `/brief`
 
-## Lo que NO se toca
-- Esquema de la base de datos.
-- `AuditForm` (sigue siendo el punto de alta de campañas).
-- `AdSetTable`, `PerformanceCharts`, `audit-alerts.ts`, `audit-calculations.ts`, `business-days.ts`.
-- Edge function `sync-sheet-data` ni botón "Sincronizar ahora".
+- Item en `AppSidebar` con icono (FileText) llamado "Brief de Marca".
+- Página `src/pages/BriefPage.tsx`:
+  - Selector de cuenta arriba: lista derivada de `audit_records` + `meta_datos` (account_id distintos con nombre).
+  - Al seleccionar, hace `upsert`-load del brief de esa cuenta.
+  - Formulario con todos los campos agrupados en secciones colapsables:
+    1. Identificación (marca, sitio web, mercado, presupuesto)
+    2. Estrategia (necesidad, descripción, público, fundamentos)
+    3. Identidad verbal (30 palabras, 10 frases, valores, promesa, reasons why)
+    4. Personalidad (arquetipo, estilo y tono, diferenciador)
+    5. Creatividad y referencias (insights, elementos de marca, benchmark)
+  - Inputs largos = `Textarea`; cortos = `Input`. Autosave con debounce (1.2s) usando `upsert` por `account_id` + toast discreto.
 
-## Resultado
-Una sola pestaña **Auditoría** que contiene:
-- Formulario para crear campañas eligiendo de la base sincronizada.
-- Tabla con todas las métricas actuales **+ celdas editables** (fechas, calendario, presupuesto) que recalculan en vivo.
-- Toda la riqueza visual que ya tienes (pacing, alertas, charts, IA) intacta.
-- El Planificador desaparece como pestaña separada.
+## 3. Integración con IA
+
+- En `supabase/functions/audit-insight/index.ts`: antes de llamar al modelo, consultar `brand_briefs` por el `account_id` de la campaña analizada y añadir el contenido al prompt como bloque `### Contexto de marca`.
+- Si no hay brief, se mantiene el comportamiento actual.
+- El frontend (`AuditPage`/`AuditTable` donde se dispare insight) sigue igual; solo pasa `account_id` (ya disponible).
+
+## 4. Detalles técnicos
+
+- Tipos: tras la migración se regenera `src/integrations/supabase/types.ts` automáticamente.
+- Reutilizar componentes ui existentes (`Input`, `Textarea`, `Label`, `Card`, `Collapsible`, `Button`, `Select`).
+- Validación ligera con `zod` solo para sitio web (url opcional) y presupuesto (≥0); el resto texto libre con `maxLength` razonable (4000).
+- Sin cambios a `audit_records` ni a `meta_datos`.
+
+## Entregables
+- Migración SQL (`brand_briefs` + RLS + trigger).
+- `src/pages/BriefPage.tsx`, ruta en `App.tsx`, entrada en `AppSidebar.tsx`.
+- Update de `audit-insight` edge function para incluir el brief en el prompt.

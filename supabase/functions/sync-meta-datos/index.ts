@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbziTsKYIb6Gg_Purc8e5QfcPb8oGkhjpgHJ1In3WQQTpF38AXCngc22W8E8soMJnU24/exec";
+const WINDSOR_URL =
+  "https://connectors.windsor.ai/facebook?api_key=3b97127322bd6bc821bf2cbe12046b84c3a1&date_preset=last_30d&fields=account_id,date,account_name,campaign,adset_name,campaign_objective,spend,clicks,impressions,ctr,link_clicks,frequency,cpm,actions_post_engagement,video_thruplay_watched_actions_video_view&select_accounts=204109401";
 
 function toDate(v: unknown): string | null {
   if (!v || typeof v !== "string") return null;
@@ -40,38 +40,43 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const res = await fetch(SCRIPT_URL);
-    if (!res.ok) throw new Error(`Script fetch failed: ${res.status}`);
+    const res = await fetch(WINDSOR_URL);
+    if (!res.ok) throw new Error(`Windsor fetch failed: ${res.status}`);
     const json = await res.json();
     const rows: any[] = json?.data ?? [];
 
-    const mapped = rows.map((r) => ({
-      account_id: toStr(r["Account id"]),
-      account_name: toStr(r["Account name"]),
-      campaign_name: toStr(r["Campaign name"]),
-      objective: toStr(r["Objective"]),
-      adset_name: toStr(r["AdSet name"]),
-      plataforma: toStr(r["Plataforma"]),
-      fecha: toDate(r["Date"]),
-      campaign_start_date: toDate(r["Campaign start date"]),
-      campaign_end_date: toDate(r["Campaign end date"]),
-      adset_start_date: toDate(r["AdSet start date"]),
-      adset_end_date: toDate(r["AdSet end date"]),
-      campaign_lifetime_budget: toNum(r["Campaign Lifetime budget"]),
-      daily_budget: toNum(r["Daily budget"]),
-      budget_remaining: toNum(r["Budget remaining"]),
-      adset_lifetime_budget: toNum(r["AdSet Lifetime budget"]),
-      adset_daily_budget: toNum(r["AdSet Daily budget"]),
-      total_cost: toNum(r["Total Cost"]),
-      cpc: toNum(r["CPC"]),
-      cpm: toNum(r["CPM"]),
-      frequency: toNum(r["Frequency"]),
-      ctr_all: toNum(r["CTR (all)"]),
-      clicks: toInt(r["Clicks"]),
-      reach: toInt(r["Reach"]),
-      impressions: toInt(r["Impressions"]),
-      thruplay_actions: toInt(r["ThruPlay actions"]),
-    }));
+    const mapped = rows.map((r) => {
+      const spend = toNum(r["spend"]);
+      const clicks = toInt(r["clicks"]);
+      const cpc = spend !== null && clicks && clicks > 0 ? spend / clicks : null;
+      return {
+        account_id: toStr(r["account_id"]),
+        account_name: toStr(r["account_name"]),
+        campaign_name: toStr(r["campaign"]),
+        objective: toStr(r["campaign_objective"]),
+        adset_name: toStr(r["adset_name"]),
+        plataforma: "META",
+        fecha: toDate(r["date"]),
+        campaign_start_date: null,
+        campaign_end_date: null,
+        adset_start_date: null,
+        adset_end_date: null,
+        campaign_lifetime_budget: null,
+        daily_budget: null,
+        budget_remaining: null,
+        adset_lifetime_budget: null,
+        adset_daily_budget: null,
+        total_cost: spend,
+        cpc,
+        cpm: toNum(r["cpm"]),
+        frequency: toNum(r["frequency"]),
+        ctr_all: toNum(r["ctr"]),
+        clicks,
+        reach: null,
+        impressions: toInt(r["impressions"]),
+        thruplay_actions: toInt(r["video_thruplay_watched_actions_video_view"]),
+      };
+    });
 
     // Reemplazo total
     const { error: delErr } = await supabase
@@ -91,7 +96,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, inserted, total: mapped.length }),
+      JSON.stringify({ success: true, inserted, total: mapped.length, source: "windsor" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {

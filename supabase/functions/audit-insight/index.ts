@@ -15,11 +15,55 @@ serve(async (req) => {
 
     const { campaignData } = await req.json();
 
+    // Fetch brand brief context for the account, if available
+    let briefBlock = "";
+    try {
+      const accountId = campaignData?.accountId;
+      if (accountId) {
+        const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+        const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        if (SUPABASE_URL && SERVICE_KEY) {
+          const r = await fetch(
+            `${SUPABASE_URL}/rest/v1/brand_briefs?account_id=eq.${encodeURIComponent(accountId)}&select=*`,
+            { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
+          );
+          if (r.ok) {
+            const rows = await r.json();
+            const b = Array.isArray(rows) ? rows[0] : null;
+            if (b) {
+              const lines: string[] = [];
+              const push = (label: string, v: any) => { if (v != null && String(v).trim() !== "") lines.push(`- ${label}: ${v}`); };
+              push("Marca", b.marca);
+              push("Sitio web", b.sitio_web);
+              push("Mercado objetivo", b.mercado_objetivo);
+              push("Necesidad principal", b.necesidad_principal);
+              push("Descripción del proyecto", b.descripcion_proyecto);
+              push("Público objetivo", b.publico_objetivo);
+              push("Fundamentos de marca", b.fundamentos_marca);
+              push("Promesa de marca", b.promesa_marca);
+              push("Reasons why", b.reasons_why);
+              push("Personalidad / arquetipo", b.personalidad_marca);
+              push("Estilo y tono", b.estilo_tono);
+              push("Diferenciador", b.diferenciador);
+              push("Valores", b.valores_marca);
+              push("Insights", b.insights);
+              push("Benchmark", b.benchmark);
+              push("Presupuesto de campaña (brief)", b.presupuesto_campana);
+              if (lines.length) briefBlock = `\n\n### Contexto de marca\n${lines.join("\n")}\n`;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("brief fetch failed", err);
+    }
+
     const systemPrompt = `Eres un analista experto en publicidad digital y pacing presupuestario. 
 Genera un diagnóstico de EXACTAMENTE 3 líneas enfocado en riesgo presupuestario.
 - Línea 1: Nivel de riesgo (Crítico/Moderado/Bajo) y razón principal.
 - Línea 2: Insight sobre la distribución del gasto o rendimiento (CTR, CPC).
 - Línea 3: Recomendación accionable concreta.
+Cuando exista contexto de marca, incorpóralo (tono, público, diferenciador) en el insight y la recomendación.
 Sé directo, usa datos numéricos del contexto. Responde solo en español.
 Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CRITICO] o [RIESGO_MODERADO] o [SIN_RIESGO]`;
 
@@ -39,7 +83,7 @@ Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CR
 - Impressiones: ${campaignData.impressions}
 - Clicks: ${campaignData.clicks}
 - Reach: ${campaignData.reach}
-
+${briefBlock}
 Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
