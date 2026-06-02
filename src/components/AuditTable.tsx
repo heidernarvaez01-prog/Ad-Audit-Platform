@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -404,6 +405,11 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                            <Link to={`/audit/${row.id}`} title="Ver detalle">
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(row)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>

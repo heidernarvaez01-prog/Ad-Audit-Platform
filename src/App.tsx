@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
 import AuditPage from "@/pages/AuditPage";
+import AuditDetailPage from "@/pages/AuditDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import BriefPage from "@/pages/BriefPage";
 import MetricsAIPage from "@/pages/MetricsAIPage";
@@ -43,6 +44,7 @@ function AppLayout() {
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
+        <Route path="/audit/:id" element={<RequireAuth><AppShell><AuditDetailPage /></AppShell></RequireAuth>} />
         <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
         <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />
         <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
