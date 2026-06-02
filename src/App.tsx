@@ -38,7 +38,6 @@ function AppLayout() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
         <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
