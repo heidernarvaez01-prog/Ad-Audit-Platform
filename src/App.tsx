@@ -9,6 +9,7 @@ import AuditPage from "@/pages/AuditPage";
 import AuthPage from "@/pages/AuthPage";
 import BriefPage from "@/pages/BriefPage";
 import MetricsAIPage from "@/pages/MetricsAIPage";
+import AlertsPage from "@/pages/AlertsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ function AppLayout() {
         <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
         <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
         <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />
+        <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
         <Route path="*" element={<AppShell><NotFound /></AppShell>} />
       </Routes>
     </BrowserRouter>
