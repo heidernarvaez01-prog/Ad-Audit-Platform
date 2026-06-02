@@ -215,11 +215,18 @@ export default function AuditPage() {
   );
 }
 
-function SummaryCard({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="border border-border rounded-lg bg-card p-3">
+function SummaryCard({ label, value, color, hint }: { label: string; value: string; color?: string; hint?: string }) {
+  const card = (
+    <div className="border border-border rounded-lg bg-card p-3 cursor-help">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={`text-lg font-bold font-mono ${color || 'text-foreground'}`}>{value}</p>
     </div>
+  );
+  if (!hint) return card;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs text-xs">{hint}</TooltipContent>
+    </Tooltip>
   );
 }
