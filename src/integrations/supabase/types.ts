@@ -81,7 +81,7 @@ export type Database = {
           reasons_why: string | null
           sitio_web: string | null
           updated_at: string
-          user_id: string | null
+          user_id: string
           valores_marca: string | null
         }
         Insert: {
@@ -108,7 +108,7 @@ export type Database = {
           reasons_why?: string | null
           sitio_web?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           valores_marca?: string | null
         }
         Update: {
@@ -135,7 +135,7 @@ export type Database = {
           reasons_why?: string | null
           sitio_web?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           valores_marca?: string | null
         }
         Relationships: []

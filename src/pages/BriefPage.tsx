@@ -102,8 +102,13 @@ export default function BriefPage() {
 
   const persist = useCallback(async (next: Brief) => {
     if (!next.account_id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('Debes iniciar sesión para guardar');
+      return;
+    }
     setSaving(true);
-    const payload = { ...next, account_id: next.account_id };
+    const payload = { ...next, account_id: next.account_id, user_id: user.id };
     const { error } = await supabase.from('brand_briefs').upsert(payload, { onConflict: 'account_id' });
     setSaving(false);
     if (error) {
