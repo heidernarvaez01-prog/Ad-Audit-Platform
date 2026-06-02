@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_assignments: {
+        Row: {
+          account_id: string
+          account_name: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          platform: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          account_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          platform?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          account_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          platform?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       alert_settings: {
         Row: {
           created_at: string
@@ -347,12 +377,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       ad_platform:
@@ -362,6 +419,7 @@ export type Database = {
         | "linkedin"
         | "extra1"
         | "extra2"
+      app_role: "admin" | "user"
       lab_days_type: "mon_fri" | "mon_sat" | "all"
     }
     CompositeTypes: {
@@ -491,6 +549,7 @@ export const Constants = {
   public: {
     Enums: {
       ad_platform: ["meta", "google", "tiktok", "linkedin", "extra1", "extra2"],
+      app_role: ["admin", "user"],
       lab_days_type: ["mon_fri", "mon_sat", "all"],
     },
   },
