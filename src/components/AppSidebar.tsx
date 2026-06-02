@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, LogOut } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [
   { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
   { to: '/brief', label: 'Brief de Marca', icon: FileText },
+  { to: '/metrics-ai', label: 'Análisis IA', icon: Sparkles },
 ];
 
 export default function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(true);
+  const { user, signOut } = useAuth();
 
   return (
     <aside
@@ -56,6 +59,38 @@ export default function AppSidebar() {
           ) : link;
         })}
       </nav>
+
+      {user && (
+        <div className={`border-t border-sidebar-border ${collapsed ? 'p-1.5' : 'p-2'} space-y-1`}>
+          {!collapsed && (
+            <p className="text-xs text-sidebar-foreground/60 truncate px-2" title={user.email ?? ''}>
+              {user.email}
+            </p>
+          )}
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => signOut()}
+                  className="w-full flex items-center justify-center p-2 rounded text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+                  aria-label="Cerrar sesión"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">Cerrar sesión</TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={() => signOut()}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span className="truncate">Cerrar sesión</span>
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }
