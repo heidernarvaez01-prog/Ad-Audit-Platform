@@ -9,34 +9,28 @@ export function useAuth() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setLoading(false);
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        setLoading(false);
-      } else {
-        // Auto sign-in anonymously so the app is accessible without a login screen
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (!error) setUser(data.user ?? null);
-        setLoading(false);
-      }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    return supabase.auth.signInWithPassword({ email, password });
-  };
+  const signIn = async (email: string, password: string) =>
+    supabase.auth.signInWithPassword({ email, password });
 
-  const signUp = async (email: string, password: string) => {
-    return supabase.auth.signUp({ email, password });
-  };
+  const signUp = async (email: string, password: string) =>
+    supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
 
-  const signOut = async () => {
-    return supabase.auth.signOut();
-  };
+  const signOut = async () => supabase.auth.signOut();
 
   return { user, loading, signIn, signUp, signOut };
 }
