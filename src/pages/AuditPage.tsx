@@ -133,7 +133,7 @@ export default function AuditPage() {
   // No full-page loader — show empty state instead when not loaded
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <div className="space-y-5 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
