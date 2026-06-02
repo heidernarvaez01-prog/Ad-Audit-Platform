@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, LogOut } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
   { to: '/brief', label: 'Brief de Marca', icon: FileText },
   { to: '/metrics-ai', label: 'Análisis IA', icon: Sparkles },
+  { to: '/alerts', label: 'Alertas', icon: Bell },
 ];
 
 export default function AppSidebar() {
