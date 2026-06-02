@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_settings: {
+        Row: {
+          created_at: string
+          email_recipients: string[]
+          enabled: boolean
+          id: string
+          last_sent_at: string | null
+          notify_frequency: string
+          only_critical: boolean
+          pacing_threshold_pct: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_recipients?: string[]
+          enabled?: boolean
+          id?: string
+          last_sent_at?: string | null
+          notify_frequency?: string
+          only_critical?: boolean
+          pacing_threshold_pct?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_recipients?: string[]
+          enabled?: boolean
+          id?: string
+          last_sent_at?: string | null
+          notify_frequency?: string
+          only_critical?: boolean
+          pacing_threshold_pct?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_records: {
         Row: {
           account_id: string
