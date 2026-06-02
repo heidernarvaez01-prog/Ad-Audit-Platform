@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+import logo from '@/assets/apache-studio-logo.png.asset.json';
 
 const navItems = [
   { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
@@ -15,16 +17,22 @@ export default function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(true);
   const { user, signOut } = useAuth();
+  const { theme, toggle } = useTheme();
 
   return (
     <aside
       className={`${collapsed ? 'w-14' : 'w-56'} min-h-screen bg-sidebar text-sidebar-foreground flex flex-col transition-[width] duration-200 ease-out border-r border-sidebar-border`}
     >
       <div className={`${collapsed ? 'p-2' : 'p-4'} border-b border-sidebar-border flex items-center justify-between gap-2`}>
-        {!collapsed && (
-          <div className="min-w-0">
-            <h1 className="text-base font-bold tracking-tight truncate">Ad Audit</h1>
-            <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">Auditoría Publicitaria</p>
+        {collapsed ? (
+          <img src={logo.url} alt="Apache Studio" className="h-8 w-8 object-contain mx-auto" />
+        ) : (
+          <div className="flex items-center gap-2 min-w-0">
+            <img src={logo.url} alt="Apache Studio" className="h-10 w-10 object-contain shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base font-bold tracking-tight truncate">Apache Studio</h1>
+              <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">Ad Audit</p>
+            </div>
           </div>
         )}
         <button
@@ -60,6 +68,33 @@ export default function AppSidebar() {
           ) : link;
         })}
       </nav>
+
+      <div className={`border-t border-sidebar-border ${collapsed ? 'p-1.5' : 'p-2'} space-y-1`}>
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggle}
+                className="w-full flex items-center justify-center p-2 rounded text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+                aria-label="Cambiar tema"
+              >
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">
+              {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={toggle}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
+          </button>
+        )}
+      </div>
 
       {user && (
         <div className={`border-t border-sidebar-border ${collapsed ? 'p-1.5' : 'p-2'} space-y-1`}>
