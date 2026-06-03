@@ -11,6 +11,7 @@ import { Plus, LayoutGrid, Layers } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
+import { Sparkline } from '@/components/Sparkline';
 import type { ApiCampaignRow } from '@/lib/api';
 import { toast } from 'sonner';
 
