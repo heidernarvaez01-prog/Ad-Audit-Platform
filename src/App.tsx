@@ -13,6 +13,8 @@ import MetricsAIPage from "@/pages/MetricsAIPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AdminPage from "@/pages/AdminPage";
 import HowItWorksPage from "@/pages/HowItWorksPage";
+import HeroDemo from "@/pages/HeroDemo";
+import FloatingIconsDemo from "@/pages/FloatingIconsDemo";
 import NotFound from "@/pages/NotFound";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 
@@ -45,6 +47,8 @@ function AppLayout() {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/hero-demo" element={<HeroDemo />} />
+        <Route path="/floating-icons-demo" element={<FloatingIconsDemo />} />
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
         <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
         <Route path="/audit/:id" element={<RequireAuth><AppShell><AuditDetailPage /></AppShell></RequireAuth>} />
