@@ -122,6 +122,40 @@ function MetricMini({ label, value }: { label: string; value: string }) {
   );
 }
 
+function CampaignSummary({ row }: { row: AuditRowData }) {
+  const m = row.metrics;
+  const api = row.campaignApiData;
+  const clicks = api.reduce((s, r) => s + r.metrics.clicks, 0);
+  const impressions = api.reduce((s, r) => s + r.metrics.impressions, 0);
+  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  const cpc = clicks > 0 ? m.gastoActual / clicks : 0;
+  return (
+    <div className="space-y-2.5">
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Campaña</p>
+        <p className="text-sm font-semibold text-foreground line-clamp-2">{row.campaign_name}</p>
+        {row.platform && <PlatformBadge platform={row.platform} />}
+      </div>
+      <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-border">
+        <MetricMini label="Gasto" value={fmt(m.gastoActual)} />
+        <MetricMini label="Presupuesto" value={fmt(row.presupuesto_total)} />
+        <MetricMini label="Pacing" value={`${m.pacingPct.toFixed(1)}%`} />
+        <MetricMini label="Diario ideal" value={fmt(m.presupuestoDiarioIdeal)} />
+        <MetricMini label="Días restantes" value={m.diasRestantes.toString()} />
+        <MetricMini label="Estado" value={m.pacingStatus === 'OK' ? 'En Ruta' : m.pacingStatus === 'SOBREGASTANDO' ? 'Sobre' : 'Sub'} />
+        <MetricMini label="CTR" value={`${ctr.toFixed(2)}%`} />
+        <MetricMini label="CPC" value={fmt(cpc)} />
+      </div>
+      {row.alerts.length > 0 && (
+        <div className="pt-1.5 border-t border-border">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Alertas</p>
+          <p className="text-[11px] text-foreground">{row.alerts[0].icon} {row.alerts[0].message}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InsightPanel({ insight }: { insight: InsightData }) {
   const borderColor = insight.riskLevel === 'critical'
     ? 'border-destructive/40 bg-destructive/5'
