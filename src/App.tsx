@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,9 +27,6 @@ const queryClient = new QueryClient();
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const location = useLocation();
-  // Close drawer on route change
-  useState(() => location.pathname);
   return (
     <div className="flex min-h-screen">
       <div className="hidden md:flex">
