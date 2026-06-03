@@ -92,7 +92,7 @@ const tooltipStyle = {
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+    <div className="rounded-lg border border-border bg-card p-3 space-y-2 transition-all duration-200 hover:shadow-md hover:border-border/80 animate-fade-in">
       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</p>
       <div className="h-[200px] w-full">{children}</div>
     </div>

@@ -259,7 +259,7 @@ function SummaryCard({
   pulseColor?: string;
 }) {
   const card = (
-    <div className="border border-border rounded-lg bg-card p-3 cursor-help relative overflow-hidden">
+    <div className="border border-border rounded-lg bg-card p-3 cursor-help relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-fade-in">
       <div className="flex items-center gap-1.5">
         {pulse && (
           <span className="relative flex h-2 w-2">
