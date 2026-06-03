@@ -373,9 +373,16 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                         <PlatformBadge platform={row.platform} />
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm font-medium text-foreground truncate max-w-[200px] block">
-                          {row.campaign_name}
-                        </span>
+                        <HoverCard openDelay={200} closeDelay={80}>
+                          <HoverCardTrigger asChild>
+                            <span className="text-sm font-medium text-foreground truncate max-w-[200px] block cursor-help">
+                              {row.campaign_name}
+                            </span>
+                          </HoverCardTrigger>
+                          <HoverCardContent side="right" align="start" className="w-72 p-3">
+                            <CampaignSummary row={row} />
+                          </HoverCardContent>
+                        </HoverCard>
                       </TableCell>
                       <TableCell>
                         {(() => {
