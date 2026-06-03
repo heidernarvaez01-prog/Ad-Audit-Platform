@@ -239,11 +239,42 @@ export default function AuditPage() {
   );
 }
 
-function SummaryCard({ label, value, color, hint }: { label: string; value: string; color?: string; hint?: string }) {
+function SummaryCard({
+  label,
+  value,
+  color,
+  hint,
+  sparkline,
+  sparklineColor,
+  pulse,
+  pulseColor,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  hint?: string;
+  sparkline?: number[];
+  sparklineColor?: string;
+  pulse?: boolean;
+  pulseColor?: string;
+}) {
   const card = (
-    <div className="border border-border rounded-lg bg-card p-3 cursor-help">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={`text-lg font-bold font-mono ${color || 'text-foreground'}`}>{value}</p>
+    <div className="border border-border rounded-lg bg-card p-3 cursor-help relative overflow-hidden">
+      <div className="flex items-center gap-1.5">
+        {pulse && (
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${pulseColor || 'bg-success'}`} />
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${pulseColor || 'bg-success'}`} />
+          </span>
+        )}
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      </div>
+      <div className="flex items-end justify-between gap-2 mt-1">
+        <p className={`text-lg font-bold font-mono leading-tight ${color || 'text-foreground'}`}>{value}</p>
+        {sparkline && sparkline.length > 1 && (
+          <Sparkline data={sparkline} width={70} height={24} className={sparklineColor || 'text-primary'} />
+        )}
+      </div>
     </div>
   );
   if (!hint) return card;
