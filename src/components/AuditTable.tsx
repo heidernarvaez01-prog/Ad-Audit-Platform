@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PacingBar from '@/components/PacingBar';
+import { MetricInfo } from '@/components/MetricInfo';
 import { supabase } from '@/integrations/supabase/client';
 import PerformanceCharts from '@/components/PerformanceCharts';
 import { toast } from 'sonner';
@@ -304,12 +305,42 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
             <TableHead className="text-xs w-[140px]">Fecha inicio</TableHead>
             <TableHead className="text-xs w-[140px]">Fecha fin</TableHead>
             <TableHead className="text-xs w-[140px]">Calendario</TableHead>
-            <TableHead className="text-xs w-[120px] text-right">Presupuesto</TableHead>
-            <TableHead className="text-xs w-40">Pacing</TableHead>
-            <TableHead className="text-xs">Estado</TableHead>
-            <TableHead className="text-xs text-right">Gasto / Aprobado</TableHead>
-            <TableHead className="text-xs text-right">Diario Ideal</TableHead>
-            <TableHead className="text-xs w-10 text-center">IA</TableHead>
+            <TableHead className="text-xs w-[120px] text-right">
+              Presupuesto
+              <MetricInfo label="Presupuesto aprobado">
+                Monto total aprobado para la campaña durante el período auditado. Es la base contra la que se compara el gasto real para calcular el pacing.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs w-40">
+              Pacing
+              <MetricInfo label="Pacing dual">
+                Barra superior: % de tiempo transcurrido (días hábiles o naturales según calendario). Barra inferior: % del presupuesto gastado. Idealmente ambas avanzan juntas.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs">
+              Estado
+              <MetricInfo label="Estado de pacing">
+                Sub-pacing: gasto &gt;10% por debajo del tiempo. Sobre-pacing: gasto &gt;10% por encima. On-pace: dentro de ±10%.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              Gasto / Aprobado
+              <MetricInfo label="Gasto real vs aprobado">
+                Suma de gasto reportado por la plataforma vs presupuesto aprobado. El % indica qué porción del presupuesto ya se consumió.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              Diario Ideal
+              <MetricInfo label="Gasto diario ideal">
+                Presupuesto restante dividido entre los días hábiles que quedan en el período. Es lo que deberías gastar por día para terminar exactamente en el presupuesto.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs w-10 text-center">
+              IA
+              <MetricInfo label="Diagnóstico IA">
+                Análisis bajo demanda (gpt-4o-mini) que clasifica el riesgo presupuestal: Crítico, Moderado o Sin Riesgo.
+              </MetricInfo>
+            </TableHead>
             <TableHead className="text-xs w-20"></TableHead>
           </TableRow>
         </TableHeader>

@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import PerformanceCharts from '@/components/PerformanceCharts';
+import { MetricInfo } from '@/components/MetricInfo';
 import type { ApiCampaignRow } from '@/lib/api';
 import type { AuditRowData } from '@/components/AuditTable';
 
@@ -289,10 +290,30 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
             <TableHead className="w-8"></TableHead>
             <TableHead className="text-xs">Plataforma</TableHead>
             <TableHead className="text-xs">Nombre</TableHead>
-            <TableHead className="text-xs w-36">% del Gasto</TableHead>
-            <TableHead className="text-xs text-right">Gasto</TableHead>
-            <TableHead className="text-xs text-right">CPC</TableHead>
-            <TableHead className="text-xs text-right">CTR</TableHead>
+            <TableHead className="text-xs w-36">
+              % del Gasto
+              <MetricInfo label="Share of spend">
+                Porcentaje del gasto total de la campaña que consume este ad set. Útil para detectar concentración de presupuesto.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              Gasto
+              <MetricInfo label="Gasto del ad set">
+                Suma del gasto reportado por la plataforma para este ad set durante el período auditado.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              CPC
+              <MetricInfo label="Costo por clic">
+                Gasto total / clics. Mide eficiencia: a menor CPC, más clics por el mismo presupuesto.
+              </MetricInfo>
+            </TableHead>
+            <TableHead className="text-xs text-right">
+              CTR
+              <MetricInfo label="Click-through rate">
+                Clics / impresiones × 100. Mide qué tan atractivo es el creativo. Benchmarks varían por plataforma e industria.
+              </MetricInfo>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
