@@ -16,9 +16,14 @@ const baseNav = [
   { to: '/how-it-works', label: 'Cómo funciona', icon: HelpCircle },
 ];
 
-export default function AppSidebar() {
+interface AppSidebarProps {
+  forceExpanded?: boolean;
+  hideToggle?: boolean;
+}
+
+export default function AppSidebar({ forceExpanded = false, hideToggle = false }: AppSidebarProps = {}) {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(!forceExpanded);
   const [scrolled, setScrolled] = useState(false);
   const { user, signOut } = useAuth();
   const { theme, toggle } = useTheme();
@@ -108,22 +113,24 @@ export default function AppSidebar() {
               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
             </motion.div>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <motion.button
-                  onClick={() => setCollapsed(false)}
-                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full flex items-center justify-center p-1.5 rounded-lg
-                    text-sidebar-foreground/70 hover:text-sidebar-foreground
-                    transition-colors duration-200"
-                  aria-label="Expandir menú"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </motion.button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">Expandir menú</TooltipContent>
-            </Tooltip>
+            {!hideToggle && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.button
+                    onClick={() => setCollapsed(false)}
+                    whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full flex items-center justify-center p-1.5 rounded-lg
+                      text-sidebar-foreground/70 hover:text-sidebar-foreground
+                      transition-colors duration-200"
+                    aria-label="Expandir menú"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">Expandir menú</TooltipContent>
+              </Tooltip>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -157,16 +164,18 @@ export default function AppSidebar() {
                 <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">Ad Audit</p>
               </motion.div>
             </div>
-            <motion.button
-              onClick={() => setCollapsed(true)}
-              whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-              whileTap={{ scale: 0.95 }}
-              className="p-1.5 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground
-                transition-colors duration-200 shrink-0"
-              aria-label="Colapsar menú"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </motion.button>
+            {!hideToggle && (
+              <motion.button
+                onClick={() => setCollapsed(true)}
+                whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                whileTap={{ scale: 0.95 }}
+                className="p-1.5 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground
+                  transition-colors duration-200 shrink-0"
+                aria-label="Colapsar menú"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </motion.button>
+            )}
           </motion.div>
         )}
       </motion.div>

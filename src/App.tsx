@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Menu } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
 import AuditPage from "@/pages/AuditPage";
@@ -17,14 +21,39 @@ import HeroDemo from "@/pages/HeroDemo";
 import FloatingIconsDemo from "@/pages/FloatingIconsDemo";
 import NotFound from "@/pages/NotFound";
 import UnsubscribePage from "@/pages/UnsubscribePage";
+import logo from "@/assets/apache-studio-logo.png.asset.json";
 
 const queryClient = new QueryClient();
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <div className="flex min-h-screen">
-      <AppSidebar />
-      <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto min-w-0">{children}</main>
+      <div className="hidden md:flex">
+        <AppSidebar />
+      </div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="md:hidden h-12 flex items-center justify-between px-3 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Abrir menú">
+                <Menu className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-[240px] border-r-0">
+              <div onClick={() => setMobileOpen(false)} className="h-full">
+                <AppSidebar forceExpanded hideToggle />
+              </div>
+            </SheetContent>
+          </Sheet>
+          <div className="flex items-center gap-2 min-w-0">
+            <img src={logo.url} alt="Apache Studio" className="h-6 w-6 object-contain" />
+            <span className="text-sm font-semibold truncate">Apache Studio</span>
+          </div>
+          <div className="w-8" />
+        </header>
+        <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto min-w-0">{children}</main>
+      </div>
     </div>
   );
 }
