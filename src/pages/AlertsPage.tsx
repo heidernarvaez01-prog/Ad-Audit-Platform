@@ -58,6 +58,7 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<ComputedAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -171,6 +172,40 @@ export default function AlertsPage() {
     setSaving(false);
     if (error) toast({ title: 'Error al guardar', description: error.message, variant: 'destructive' });
     else toast({ title: 'Configuración guardada' });
+  };
+
+  const sendNow = async () => {
+    if (!user) return;
+    if (settings.email_recipients.length === 0) {
+      toast({ title: 'Agrega al menos un destinatario', variant: 'destructive' });
+      return;
+    }
+    const toSend = settings.only_critical ? alerts.filter((a) => a.level === 'critical') : alerts.filter((a) => a.level !== 'ok');
+    const criticalCount = alerts.filter((a) => a.level === 'critical').length;
+    const warningCount = alerts.filter((a) => a.level === 'warning').length;
+    setSending(true);
+    try {
+      const stamp = Date.now();
+      const results = await Promise.all(
+        settings.email_recipients.map((email) =>
+          supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'active-alerts',
+              recipientEmail: email,
+              idempotencyKey: `alerts-${user.id}-${email}-${stamp}`,
+              templateData: { criticalCount, warningCount, alerts: toSend },
+            },
+          }),
+        ),
+      );
+      const failed = results.filter((r) => r.error).length;
+      if (failed > 0) toast({ title: `Enviado con ${failed} errores`, variant: 'destructive' });
+      else toast({ title: `Alertas enviadas a ${settings.email_recipients.length} destinatario(s)` });
+    } catch (e: any) {
+      toast({ title: 'Error al enviar', description: e.message, variant: 'destructive' });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
