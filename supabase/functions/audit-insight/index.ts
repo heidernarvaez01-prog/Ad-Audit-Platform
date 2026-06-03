@@ -10,8 +10,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTROPHIC_API_KEY is not configured");
 
     const { campaignData } = await req.json();
 
@@ -86,18 +86,18 @@ Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CR
 ${briefBlock}
 Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 500,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
@@ -108,12 +108,12 @@ Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
         });
       }
       const t = await response.text();
-      console.error("OpenAI API error:", response.status, t);
-      throw new Error("OpenAI API error");
+      console.error("Anthropic API error:", response.status, t);
+      throw new Error("Anthropic API error");
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    const content = data.content?.[0]?.text || "";
 
     let riskLevel: "critical" | "moderate" | "none" = "none";
     if (content.includes("[RIESGO_CRITICO]")) riskLevel = "critical";

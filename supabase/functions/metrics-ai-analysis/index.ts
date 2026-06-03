@@ -11,10 +11,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTROPHIC_API_KEY missing");
 
     // Validate user
     const authHeader = req.headers.get("Authorization");
@@ -93,32 +93,32 @@ Reglas:
 
     const userPrompt = `Contexto (JSON):\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\`\n\nPregunta del usuario:\n${question}`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
     if (aiRes.status === 429) {
       return new Response(JSON.stringify({ error: "Límite de uso alcanzado. Intenta de nuevo en unos segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ error: "Se requieren créditos en tu workspace de Lovable AI." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
     if (!aiRes.ok) {
       const t = await aiRes.text();
-      console.error("AI error", aiRes.status, t);
+      console.error("Anthropic error", aiRes.status, t);
       return new Response(JSON.stringify({ error: "Error del servicio de IA" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const data = await aiRes.json();
-    const answer = data?.choices?.[0]?.message?.content ?? "Sin respuesta.";
+    const answer = data?.content?.[0]?.text ?? "Sin respuesta.";
 
     return new Response(
       JSON.stringify({ answer, stats: { campaignsAnalyzed: campaignSummary.length, rows: metrics.length } }),
