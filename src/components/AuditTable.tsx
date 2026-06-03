@@ -349,8 +349,117 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   }
 
   return (
-    <div ref={wrapperRef} className="border border-border rounded-lg overflow-x-auto relative">
-      <Table className="min-w-[1200px]">
+    <>
+      {/* Mobile: cards/accordions */}
+      <div className="md:hidden space-y-3">
+        {rows.map(row => {
+          const m = row.metrics;
+          const isExpanded = expandedIds.has(row.id);
+          const insight = insights[row.id] || null;
+          return (
+            <Collapsible
+              key={row.id}
+              open={isExpanded}
+              onOpenChange={() => toggleExpand(row.id)}
+            >
+              <div className={`border border-border rounded-lg bg-card overflow-hidden transition-all duration-200 ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full text-left p-3 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <PlatformBadge platform={row.platform} />
+                        <span className="text-sm font-semibold text-foreground truncate">{row.campaign_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {insight && <RiskIndicator insight={insight} />}
+                        {isExpanded
+                          ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <StatusBadge status={m.pacingStatus} />
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {row.campaignApiData[0]?.account_name || row.account_id}
+                      </span>
+                    </div>
+                    <PacingBar
+                      porcentajeTiempo={m.porcentajeTiempo}
+                      porcentajeGasto={m.porcentajeGastado}
+                      status={m.pacingStatus}
+                    />
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <MetricMini label="Gasto" value={fmt(m.gastoActual)} />
+                      <MetricMini label="Presupuesto" value={fmt(row.presupuesto_total)} />
+                      <MetricMini label="Diario ideal" value={fmt(m.presupuestoDiarioIdeal)} />
+                      <MetricMini label="Días restantes" value={m.diasRestantes.toString()} />
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="border-t border-border p-3 space-y-3 bg-muted/20 animate-fade-in">
+                    <div className="grid grid-cols-2 gap-2" onClick={e => e.stopPropagation()}>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Fecha inicio</p>
+                        <Input type="date" value={row.fecha_inicio}
+                          onChange={e => onUpdateRecord?.(row.id, { fecha_inicio: e.target.value })}
+                          className="h-8 text-xs" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Fecha fin</p>
+                        <Input type="date" value={row.fecha_fin}
+                          onChange={e => onUpdateRecord?.(row.id, { fecha_fin: e.target.value })}
+                          className="h-8 text-xs" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Calendario</p>
+                        <Select value={row.tipo_calendario}
+                          onValueChange={v => onUpdateRecord?.(row.id, { tipo_calendario: v })}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="corridos" className="text-xs">De corrido</SelectItem>
+                            <SelectItem value="lun_vie" className="text-xs">Lun a Vie</SelectItem>
+                            <SelectItem value="lun_sab" className="text-xs">Lun a Sáb</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Presupuesto</p>
+                        <Input type="number" value={row.presupuesto_total}
+                          onChange={e => onUpdateRecord?.(row.id, { presupuesto_total: parseFloat(e.target.value) || 0 })}
+                          className="h-8 text-xs text-right font-mono" />
+                      </div>
+                    </div>
+                    <ExpandedDetails
+                      row={row}
+                      insight={insight}
+                      loadingInsight={loadingInsights[row.id] || false}
+                      onGenerateInsight={() => generateInsight(row)}
+                    />
+                    <div className="flex items-center gap-1 justify-end pt-1 border-t border-border" onClick={e => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                        <Link to={`/audit/${row.id}`} title="Ver detalle">
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(row)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(row.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+          );
+        })}
+      </div>
+
+      {/* Desktop: full table */}
+      <div ref={wrapperRef} className="hidden md:block border border-border rounded-lg overflow-x-auto relative">
+        <Table className="min-w-[1200px]">
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
