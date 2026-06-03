@@ -283,8 +283,101 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-x-auto">
-      <Table className="min-w-[800px]">
+    <>
+      {/* Mobile: nested accordion */}
+      <div className="md:hidden space-y-3">
+        {campaignGroups.map(group => {
+          const isCampaignOpen = expandedCampaigns.has(group.campaign.id);
+          const m = group.campaign.metrics;
+          const statusClass = m.pacingStatus === 'SOBREGASTANDO'
+            ? 'text-destructive'
+            : m.pacingStatus === 'SUBGASTANDO'
+              ? 'text-warning'
+              : 'text-success';
+          return (
+            <Collapsible
+              key={group.campaign.id}
+              open={isCampaignOpen}
+              onOpenChange={() => toggleCampaign(group.campaign.id)}
+            >
+              <div className={`border border-border rounded-lg bg-card overflow-hidden transition-all duration-200 ${isCampaignOpen ? 'shadow-md' : 'hover:shadow-sm'}`}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full text-left p-3 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <PlatformBadge platform={group.campaign.platform} />
+                        <span className="text-sm font-bold text-foreground truncate">{group.campaign.campaign_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <span className={`font-semibold ${statusClass}`}>
+                          {m.pacingStatus === 'OK' ? '● En Ruta' : m.pacingStatus === 'SOBREGASTANDO' ? '● Sobregastando' : '● Subgastando'}
+                        </span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="text-muted-foreground">{group.adsets.length} ad sets</span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="font-mono text-foreground">{fmt(group.totalCost)}</span>
+                      </div>
+                    </div>
+                    {isCampaignOpen
+                      ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="border-t border-border divide-y divide-border bg-muted/10 animate-fade-in">
+                    {group.adsets.map(row => {
+                      const isExpanded = expandedIds.has(row.key);
+                      const insight = insights[row.key] || null;
+                      return (
+                        <Collapsible
+                          key={row.key}
+                          open={isExpanded}
+                          onOpenChange={() => toggleExpand(row.key)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <button className="w-full text-left p-3 hover:bg-accent/30 transition-colors space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-foreground truncate">
+                                  <span className="text-muted-foreground mr-1">↳</span>
+                                  {row.adsetName}
+                                </span>
+                                {isExpanded
+                                  ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                  : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                              </div>
+                              <ShareBar pct={row.shareOfSpend} />
+                              <div className="grid grid-cols-3 gap-2">
+                                <MetricMini label="Gasto" value={fmt(row.cost)} />
+                                <MetricMini label="CPC" value={fmt(row.cpc)} />
+                                <MetricMini label="CTR" value={`${row.ctr.toFixed(2)}%`} />
+                              </div>
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="bg-accent/10 animate-fade-in">
+                              <ExpandedAdSetDetails
+                                row={row}
+                                campaignBudget={row.campaignBudget}
+                                insight={insight}
+                                loadingInsight={loadingInsights[row.key] || false}
+                                onGenerateInsight={() => generateInsight(row)}
+                              />
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+          );
+        })}
+      </div>
+
+      {/* Desktop: full table */}
+      <div className="hidden md:block border border-border rounded-lg overflow-x-auto">
+        <Table className="min-w-[800px]">
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
@@ -423,7 +516,8 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
             );
           })}
         </TableBody>
-      </Table>
-    </div>
+        </Table>
+      </div>
+    </>
   );
 }
