@@ -82,7 +82,15 @@ function StatusBadge({ status }: { status: string }) {
   if (status === 'SUBGASTANDO') {
     return <Badge className="text-[10px] px-1.5 bg-warning text-warning-foreground hover:bg-warning/90">Subgastando</Badge>;
   }
-  return <Badge className="text-[10px] px-1.5 bg-success text-success-foreground hover:bg-success/90">En Ruta</Badge>;
+  return (
+    <Badge className="text-[10px] px-1.5 bg-success text-success-foreground hover:bg-success/90 gap-1">
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success-foreground/80 opacity-75" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success-foreground" />
+      </span>
+      En Ruta
+    </Badge>
+  );
 }
 
 function RiskIndicator({ insight }: { insight: InsightData }) {
