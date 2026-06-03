@@ -134,11 +134,11 @@ export default function AuditPage() {
   // No full-page loader — show empty state instead when not loaded
 
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-5 w-full min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Matriz de Auditoría</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">Matriz de Auditoría</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Pacing de gasto vs presupuesto aprobado por campaña
           </p>
@@ -166,12 +166,12 @@ export default function AuditPage() {
       {(
         /* Top-level view mode tabs */
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'campaigns' | 'adsets')}>
-          <TabsList>
-            <TabsTrigger value="campaigns" className="text-xs gap-1.5">
+          <TabsList className="w-full sm:w-auto flex">
+            <TabsTrigger value="campaigns" className="text-xs gap-1.5 flex-1 sm:flex-none">
               <LayoutGrid className="h-3.5 w-3.5" />
               Campañas
             </TabsTrigger>
-            <TabsTrigger value="adsets" className="text-xs gap-1.5">
+            <TabsTrigger value="adsets" className="text-xs gap-1.5 flex-1 sm:flex-none">
               <Layers className="h-3.5 w-3.5" />
               Conjuntos de Anuncios
             </TabsTrigger>
@@ -180,12 +180,14 @@ export default function AuditPage() {
           <TabsContent value="campaigns" className="mt-3">
             {/* Platform filter tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList>
-                <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
-                {platformTabs.map(p => (
-                  <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
-                ))}
-              </TabsList>
+              <div className="overflow-x-auto">
+                <TabsList>
+                  <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
+                  {platformTabs.map(p => (
+                    <TabsTrigger key={p} value={p} className="text-xs capitalize">{p}</TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
               <TabsContent value={activeTab} className="mt-3">
                 <AuditTable
                   rows={filteredRows}

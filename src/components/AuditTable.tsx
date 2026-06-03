@@ -293,8 +293,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      <Table>
+    <div className="border border-border rounded-lg overflow-x-auto">
+      <Table className="min-w-[1200px]">
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
