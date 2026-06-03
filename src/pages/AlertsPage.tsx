@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, CheckCircle2, Loader2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,6 +58,7 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<ComputedAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -173,6 +174,40 @@ export default function AlertsPage() {
     else toast({ title: 'Configuración guardada' });
   };
 
+  const sendNow = async () => {
+    if (!user) return;
+    if (settings.email_recipients.length === 0) {
+      toast({ title: 'Agrega al menos un destinatario', variant: 'destructive' });
+      return;
+    }
+    const toSend = settings.only_critical ? alerts.filter((a) => a.level === 'critical') : alerts.filter((a) => a.level !== 'ok');
+    const criticalCount = alerts.filter((a) => a.level === 'critical').length;
+    const warningCount = alerts.filter((a) => a.level === 'warning').length;
+    setSending(true);
+    try {
+      const stamp = Date.now();
+      const results = await Promise.all(
+        settings.email_recipients.map((email) =>
+          supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'active-alerts',
+              recipientEmail: email,
+              idempotencyKey: `alerts-${user.id}-${email}-${stamp}`,
+              templateData: { criticalCount, warningCount, alerts: toSend },
+            },
+          }),
+        ),
+      );
+      const failed = results.filter((r) => r.error).length;
+      if (failed > 0) toast({ title: `Enviado con ${failed} errores`, variant: 'destructive' });
+      else toast({ title: `Alertas enviadas a ${settings.email_recipients.length} destinatario(s)` });
+    } catch (e: any) {
+      toast({ title: 'Error al enviar', description: e.message, variant: 'destructive' });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <header className="flex items-center gap-2">
@@ -286,7 +321,11 @@ export default function AlertsPage() {
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={sendNow} disabled={sending || loading || !settings.enabled}>
+            {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+            Enviar alertas ahora
+          </Button>
           <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
             Guardar configuración

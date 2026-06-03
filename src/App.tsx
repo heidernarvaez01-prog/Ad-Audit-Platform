@@ -14,6 +14,7 @@ import AlertsPage from "@/pages/AlertsPage";
 import AdminPage from "@/pages/AdminPage";
 import HowItWorksPage from "@/pages/HowItWorksPage";
 import NotFound from "@/pages/NotFound";
+import UnsubscribePage from "@/pages/UnsubscribePage";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ function AppLayout() {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/unsubscribe" element={<UnsubscribePage />} />
         <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
         <Route path="/audit/:id" element={<RequireAuth><AppShell><AuditDetailPage /></AppShell></RequireAuth>} />
         <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
