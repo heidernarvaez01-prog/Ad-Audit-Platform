@@ -170,8 +170,14 @@ export default function AuditPage() {
       {auditRows.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <SummaryCard label="Presupuesto Total" value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Suma del presupuesto aprobado de todas las campañas auditadas." />
-          <SummaryCard label="Gasto Total" value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Suma del gasto real consolidado (excluye hoy y ayer)." />
-          <SummaryCard label="En Ruta" value={summary.ok.toString()} color="text-success" hint="Campañas dentro del ±10% del pacing ideal." />
+          <SummaryCard
+            label="Gasto Total"
+            value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            hint="Suma del gasto real consolidado (excluye hoy y ayer). El sparkline muestra el gasto acumulado día a día."
+            sparkline={summary.cumulativeSpend}
+            sparklineColor="text-primary"
+          />
+          <SummaryCard label="En Ruta" value={summary.ok.toString()} color="text-success" hint="Campañas dentro del ±10% del pacing ideal." pulse={summary.ok > 0} pulseColor="bg-success" />
           <SummaryCard label="Subgastando" value={summary.under.toString()} color="text-warning" hint="Campañas gastando menos del 90% del ideal — riesgo de no agotar presupuesto." />
           <SummaryCard label="Sobregastando" value={summary.over.toString()} color="text-destructive" hint="Campañas gastando más del 110% del ideal — riesgo de agotar antes." />
         </div>
