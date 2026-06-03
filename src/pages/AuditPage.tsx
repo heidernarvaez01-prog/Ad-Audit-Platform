@@ -122,14 +122,28 @@ export default function AuditPage() {
     return auditRows.filter(r => r.platform === activeTab);
   }, [auditRows, activeTab]);
 
-  // Summary
+  // Summary + sparkline series
   const summary = useMemo(() => {
     const total = auditRows.reduce((s, r) => s + r.presupuesto_total, 0);
     const spent = auditRows.reduce((s, r) => s + r.metrics.gastoActual, 0);
     const over = auditRows.filter(r => r.metrics.pacingStatus === 'SOBREGASTANDO').length;
     const under = auditRows.filter(r => r.metrics.pacingStatus === 'SUBGASTANDO').length;
     const ok = auditRows.filter(r => r.metrics.pacingStatus === 'OK').length;
-    return { total, spent, over, under, ok };
+
+    // Daily aggregated spend across all audited campaigns (sorted ASC, cumulative)
+    const dailyMap = new Map<string, number>();
+    for (const row of auditRows) {
+      for (const api of row.campaignApiData) {
+        const cost = isNaN(api.metrics.cost) ? 0 : api.metrics.cost;
+        dailyMap.set(api.date, (dailyMap.get(api.date) || 0) + cost);
+      }
+    }
+    const dailyKeys = [...dailyMap.keys()].sort();
+    const dailySpend = dailyKeys.map(k => dailyMap.get(k) || 0);
+    let cum = 0;
+    const cumulativeSpend = dailySpend.map(v => (cum += v));
+
+    return { total, spent, over, under, ok, dailySpend, cumulativeSpend };
   }, [auditRows]);
 
   // No full-page loader — show empty state instead when not loaded
