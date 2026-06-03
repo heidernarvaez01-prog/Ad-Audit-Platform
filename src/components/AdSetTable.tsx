@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import PerformanceCharts from '@/components/PerformanceCharts';
+import { MetricInfo } from '@/components/MetricInfo';
 import type { ApiCampaignRow } from '@/lib/api';
 import type { AuditRowData } from '@/components/AuditTable';
 
