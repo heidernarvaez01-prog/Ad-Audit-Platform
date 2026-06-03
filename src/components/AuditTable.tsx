@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -267,6 +267,18 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [insights, setInsights] = useState<Record<string, InsightData>>({});
   const [loadingInsights, setLoadingInsights] = useState<Record<string, boolean>>({});
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+    const el = wrapperRef.current;
+    const update = () => setViewportWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -337,7 +349,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-x-auto">
+    <div ref={wrapperRef} className="border border-border rounded-lg overflow-x-auto relative">
       <Table className="min-w-[1200px]">
         <TableHeader>
           <TableRow className="bg-muted/50">
@@ -396,7 +408,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
               <Collapsible key={row.id} open={isExpanded} onOpenChange={() => toggleExpand(row.id)} asChild>
                 <>
                   <CollapsibleTrigger asChild>
-                    <TableRow className="cursor-pointer hover:bg-muted/30 transition-colors">
+                    <TableRow className={`cursor-pointer transition-colors duration-200 ${isExpanded ? 'bg-muted/40' : 'hover:bg-muted/30'}`}>
                       <TableCell className="px-2">
                         {isExpanded
                           ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -501,15 +513,20 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                       </TableCell>
                     </TableRow>
                   </CollapsibleTrigger>
-                  <CollapsibleContent asChild>
-                    <tr>
-                      <td colSpan={14} className="p-0 bg-muted/20">
-                        <ExpandedDetails
-                          row={row}
-                          insight={insight}
-                          loadingInsight={loadingInsights[row.id] || false}
-                          onGenerateInsight={() => generateInsight(row)}
-                        />
+                  <CollapsibleContent asChild forceMount>
+                    <tr className={isExpanded ? '' : 'hidden'}>
+                      <td colSpan={14} className="p-0 bg-muted/20 border-t border-border">
+                        <div
+                          className="sticky left-0 animate-fade-in"
+                          style={{ width: viewportWidth ? `${viewportWidth}px` : '100%' }}
+                        >
+                          <ExpandedDetails
+                            row={row}
+                            insight={insight}
+                            loadingInsight={loadingInsights[row.id] || false}
+                            onGenerateInsight={() => generateInsight(row)}
+                          />
+                        </div>
                       </td>
                     </tr>
                   </CollapsibleContent>
