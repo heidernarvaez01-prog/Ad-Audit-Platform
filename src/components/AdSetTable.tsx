@@ -282,8 +282,8 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      <Table>
+    <div className="border border-border rounded-lg overflow-x-auto">
+      <Table className="min-w-[800px]">
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
