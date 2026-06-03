@@ -644,7 +644,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
             );
           })}
         </TableBody>
-      </Table>
-    </div>
+        </Table>
+      </div>
+    </>
   );
 }
