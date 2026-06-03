@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PacingBar from '@/components/PacingBar';
+import { MetricInfo } from '@/components/MetricInfo';
 import { supabase } from '@/integrations/supabase/client';
 import PerformanceCharts from '@/components/PerformanceCharts';
 import { toast } from 'sonner';
