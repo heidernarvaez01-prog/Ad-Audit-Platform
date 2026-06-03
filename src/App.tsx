@@ -12,6 +12,7 @@ import BriefPage from "@/pages/BriefPage";
 import MetricsAIPage from "@/pages/MetricsAIPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AdminPage from "@/pages/AdminPage";
+import HowItWorksPage from "@/pages/HowItWorksPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,7 +21,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <AppSidebar />
-      <main className="flex-1 p-6 overflow-auto">{children}</main>
+      <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto min-w-0">{children}</main>
     </div>
   );
 }
@@ -49,6 +50,7 @@ function AppLayout() {
         <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />
         <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AppShell><AdminPage /></AppShell></RequireAuth>} />
+        <Route path="/how-it-works" element={<RequireAuth><AppShell><HowItWorksPage /></AppShell></RequireAuth>} />
         <Route path="*" element={<AppShell><NotFound /></AppShell>} />
 
       </Routes>

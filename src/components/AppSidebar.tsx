@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun, Shield } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun, Shield, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
@@ -12,6 +12,7 @@ const baseNav = [
   { to: '/brief', label: 'Brief de Marca', icon: FileText },
   { to: '/metrics-ai', label: 'Análisis IA', icon: Sparkles },
   { to: '/alerts', label: 'Alertas', icon: Bell },
+  { to: '/how-it-works', label: 'Cómo funciona', icon: HelpCircle },
 ];
 
 export default function AppSidebar() {
