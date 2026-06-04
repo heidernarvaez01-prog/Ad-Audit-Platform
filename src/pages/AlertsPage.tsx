@@ -185,28 +185,27 @@ export default function AlertsPage() {
     const warningCount = alerts.filter((a) => a.level === 'warning').length;
     setSending(true);
     try {
-      const stamp = Date.now();
-      const results = await Promise.all(
-        settings.email_recipients.map((email) =>
-          supabase.functions.invoke('send-transactional-email', {
-            body: {
-              templateName: 'active-alerts',
-              recipientEmail: email,
-              idempotencyKey: `alerts-${user.id}-${email}-${stamp}`,
-              templateData: { criticalCount, warningCount, alerts: toSend },
-            },
-          }),
-        ),
-      );
-      const failed = results.filter((r) => r.error).length;
-      if (failed > 0) toast({ title: `Enviado con ${failed} errores`, variant: 'destructive' });
-      else toast({ title: `Alertas enviadas a ${settings.email_recipients.length} destinatario(s)` });
+      const { data, error } = await supabase.functions.invoke('send-alert-email', {
+        body: {
+          to: settings.email_recipients,
+          alerts: toSend,
+          criticalCount,
+          warningCount,
+        },
+      });
+      if (error || (data && (data as any).error)) {
+        const msg = error?.message || (data as any)?.error || 'Error desconocido';
+        toast({ title: 'Error al enviar', description: String(msg), variant: 'destructive' });
+      } else {
+        toast({ title: `Alertas enviadas a ${settings.email_recipients.length} destinatario(s)` });
+      }
     } catch (e: any) {
       toast({ title: 'Error al enviar', description: e.message, variant: 'destructive' });
     } finally {
       setSending(false);
     }
   };
+
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
