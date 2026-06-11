@@ -23,7 +23,7 @@ export function generateAlerts(
     alerts.push({
       type: 'SOBREGASTO_CRITICO',
       severity: 'danger',
-      message: `Sobregasto crítico: ${metrics.pacingPct.toFixed(1)}% por encima del ritmo esperado. Reduce el gasto diario a $${metrics.presupuestoDiarioIdeal.toFixed(2)} para cumplir el objetivo.`,
+      message: `Critical overspend: ${metrics.pacingPct.toFixed(1)}% above the expected pace. Reduce daily spend to $${metrics.presupuestoDiarioIdeal.toFixed(2)} to stay on target.`,
       icon: '🔴',
     });
   }
@@ -35,7 +35,7 @@ export function generateAlerts(
       alerts.push({
         type: 'RIESGO_SUBEJECUCION',
         severity: 'warning',
-        message: `⚠️ Riesgo de subejecución crítico. Necesitas gastar $${neededDaily.toFixed(2)}/día pero tu promedio actual es $${metrics.gastoDiarioActual.toFixed(2)}/día.`,
+        message: `⚠️ Critical under-delivery risk. You need to spend $${neededDaily.toFixed(2)}/day but your current average is $${metrics.gastoDiarioActual.toFixed(2)}/day.`,
         icon: '⚠️',
       });
     }
@@ -56,7 +56,7 @@ export function generateAlerts(
       alerts.push({
         type: 'CPC_ELEVADO',
         severity: 'warning',
-        message: `El CPC de esta campaña ($${campaignCpc.toFixed(2)}) está ${pctAbove}% por encima del promedio de la cuenta ($${avgCpc.toFixed(2)}). Revisa la segmentación.`,
+        message: `This campaign's CPC ($${campaignCpc.toFixed(2)}) is ${pctAbove}% above the account average ($${avgCpc.toFixed(2)}). Review your targeting.`,
         icon: '📈',
       });
     }
@@ -67,7 +67,7 @@ export function generateAlerts(
     alerts.push({
       type: 'PACING_OK',
       severity: 'info',
-      message: 'El ritmo de gasto está dentro del rango esperado. Todo en orden.',
+      message: 'Spend pacing is within the expected range. All good.',
       icon: '✅',
     });
   }

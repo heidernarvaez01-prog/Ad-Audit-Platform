@@ -77,7 +77,7 @@ export default function AdminPage() {
 
   const assign = async () => {
     if (!selUser || !selAccount) {
-      toast({ title: 'Selecciona usuario y cuenta', variant: 'destructive' });
+      toast({ title: 'Select a user and an account', variant: 'destructive' });
       return;
     }
     const acc = accounts.find((a) => `${a.account_id}|${a.platform ?? ''}` === selAccount);
@@ -90,7 +90,7 @@ export default function AdminPage() {
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     setAssignments([data as Assignment, ...assignments]);
     setSelAccount('');
-    toast({ title: 'Cuenta asignada' });
+    toast({ title: 'Account assigned' });
   };
 
   const remove = async (id: string) => {
@@ -113,15 +113,15 @@ export default function AdminPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando...</div>;
+    return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>;
   }
   if (!isAdmin) {
     return (
       <div className="max-w-md mx-auto mt-20">
         <Card className="p-6 text-center space-y-2">
           <Shield className="h-8 w-8 text-muted-foreground mx-auto" />
-          <h2 className="font-semibold">Acceso restringido</h2>
-          <p className="text-sm text-muted-foreground">Solo los administradores pueden acceder a este módulo.</p>
+          <h2 className="font-semibold">Restricted access</h2>
+          <p className="text-sm text-muted-foreground">Only administrators can access this module.</p>
         </Card>
       </div>
     );
@@ -132,21 +132,21 @@ export default function AdminPage() {
       <header className="flex items-center gap-2">
         <Shield className="h-5 w-5 text-primary" />
         <div>
-          <h1 className="text-xl font-semibold">Administración</h1>
-          <p className="text-sm text-muted-foreground">Enlaza cuentas a usuarios y gestiona permisos.</p>
+          <h1 className="text-xl font-semibold">Admin</h1>
+          <p className="text-sm text-muted-foreground">Link accounts to users and manage permissions.</p>
         </div>
       </header>
 
       <Card className="p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Link2 className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">Nueva asignación</h2>
+          <h2 className="font-semibold">New assignment</h2>
         </div>
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="space-y-1.5">
-            <Label>Usuario (correo)</Label>
+            <Label>User (email)</Label>
             <Select value={selUser} onValueChange={setSelUser}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar correo" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select email" /></SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
                   <SelectItem key={u.id} value={u.id}>{u.email ?? u.id}</SelectItem>
@@ -155,9 +155,9 @@ export default function AdminPage() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Cuenta</Label>
+            <Label>Account</Label>
             <Select value={selAccount} onValueChange={setSelAccount}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
               <SelectContent>
                 {accounts.map((a) => {
                   const key = `${a.account_id}|${a.platform ?? ''}`;
@@ -173,7 +173,7 @@ export default function AdminPage() {
           <div className="flex items-end">
             <Button onClick={assign} disabled={saving} className="w-full">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-              Asignar
+              Assign
             </Button>
           </div>
         </div>
@@ -183,17 +183,17 @@ export default function AdminPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">Asignaciones ({assignments.length})</h2>
+            <h2 className="font-semibold">Assignments ({assignments.length})</h2>
           </div>
           <Input
-            placeholder="Buscar por correo, cuenta o ID..."
+            placeholder="Search by email, account or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
           />
         </div>
         {filteredAssignments.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Sin asignaciones.</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">No assignments.</p>
         ) : (
           <div className="divide-y divide-border">
             {filteredAssignments.map((a) => (
@@ -216,7 +216,7 @@ export default function AdminPage() {
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">Administradores</h2>
+          <h2 className="font-semibold">Administrators</h2>
         </div>
         <div className="divide-y divide-border">
           {users.map((u) => {
@@ -232,9 +232,9 @@ export default function AdminPage() {
                   size="sm"
                   onClick={() => toggleAdmin(u.id)}
                   disabled={u.id === user!.id}
-                  title={u.id === user!.id ? 'No puedes quitarte tu propio rol' : ''}
+                  title={u.id === user!.id ? "You can't remove your own role" : ''}
                 >
-                  {isA ? <><ShieldOff className="h-3.5 w-3.5 mr-1.5" />Quitar admin</> : <><ShieldCheck className="h-3.5 w-3.5 mr-1.5" />Hacer admin</>}
+                  {isA ? <><ShieldOff className="h-3.5 w-3.5 mr-1.5" />Remove admin</> : <><ShieldCheck className="h-3.5 w-3.5 mr-1.5" />Make admin</>}
                 </Button>
               </div>
             );

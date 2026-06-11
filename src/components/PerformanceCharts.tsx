@@ -24,7 +24,7 @@ function formatDateLabel(raw: string): string {
     d = new Date(raw.includes('T') ? raw : raw + 'T00:00:00');
   }
   if (isNaN(d.getTime())) return raw; // fallback to raw string
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 }
 
 interface ChartDataPoint {
@@ -113,7 +113,7 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
   if (data.length < 2) {
     return (
       <div className="rounded-lg border border-border p-6 text-center text-muted-foreground text-xs">
-        Se necesitan al menos 2 días de datos para mostrar gráficos.
+        At least 2 days of data are needed to display charts.
       </div>
     );
   }
@@ -129,7 +129,7 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <ChartCard title="Gasto Acumulado">
+      <ChartCard title="Cumulative Spend">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={cumulativeData}>
             <CartesianGrid {...commonGrid} />
@@ -137,15 +137,15 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
             <YAxis {...commonYAxis} />
             <Tooltip {...tooltipStyle} />
             <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
-            <Line type="monotone" dataKey="cumulativeSpend" name="Gasto" stroke={primary} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+            <Line type="monotone" dataKey="cumulativeSpend" name="Spend" stroke={primary} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
             {budget && (
-              <Line type="monotone" dataKey={() => budget} name="Presupuesto" stroke="hsl(var(--destructive))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
+              <Line type="monotone" dataKey={() => budget} name="Budget" stroke="hsl(var(--destructive))" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
             )}
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Rendimiento (Clicks · Impressions · Reach)">
+      <ChartCard title="Performance (Clicks · Impressions · Reach)">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={data}>
             <CartesianGrid {...commonGrid} />
@@ -160,7 +160,7 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Eficiencia (CTR · CPC · CPM)">
+      <ChartCard title="Efficiency (CTR · CPC · CPM)">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={data}>
             <CartesianGrid {...commonGrid} />
@@ -175,14 +175,14 @@ export default function PerformanceCharts({ apiRows, budget, level = 'campaign' 
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Gasto Diario">
+      <ChartCard title="Daily Spend">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <LineChart data={data}>
             <CartesianGrid {...commonGrid} />
             <XAxis {...commonXAxis} />
             <YAxis {...commonYAxis} />
             <Tooltip {...tooltipStyle} />
-            <Line type="monotone" dataKey="spend" name="Gasto/día" stroke={secondary} strokeWidth={2} dot={{ r: 2, fill: secondary }} activeDot={{ r: 4 }} />
+            <Line type="monotone" dataKey="spend" name="Spend/day" stroke={secondary} strokeWidth={2} dot={{ r: 2, fill: secondary }} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </ChartCard>

@@ -42,7 +42,7 @@ export default function AuditDetailPage() {
         ]);
         if (error) throw error;
         if (!rec) {
-          toast.error('Auditoría no encontrada');
+          toast.error('Audit not found');
           navigate('/');
           return;
         }
@@ -50,7 +50,7 @@ export default function AuditDetailPage() {
         setApiData(api);
       } catch (e) {
         console.error(e);
-        toast.error('Error cargando la auditoría');
+        toast.error('Error loading the audit');
       } finally {
         setLoading(false);
       }
@@ -127,7 +127,7 @@ export default function AuditDetailPage() {
       setInsight(data as InsightData);
     } catch (e) {
       console.error(e);
-      toast.error('Error generando insight IA');
+      toast.error('Error generating AI insight');
     } finally {
       setLoadingInsight(false);
     }
@@ -150,10 +150,10 @@ export default function AuditDetailPage() {
         : 'default';
   const statusLabel =
     metrics.pacingStatus === 'SOBREGASTANDO'
-      ? 'Sobregastando'
+      ? 'Overspending'
       : metrics.pacingStatus === 'SUBGASTANDO'
-        ? 'Subgastando'
-        : 'En Ruta';
+        ? 'Underspending'
+        : 'On Track';
 
   const accountName = campaignApiData[0]?.account_name || record.account_id;
 
@@ -161,8 +161,8 @@ export default function AuditDetailPage() {
     <div className="space-y-5 max-w-7xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-4 w-4 mr-1.5" /> Volver
+          <Button variant="ghost" size="sm" onClick={() => navigate(record.client_id ? `/client/${record.client_id}` : '/')}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back
           </Button>
           <div>
             <h1 className="text-xl font-bold text-foreground">{record.campaign_name}</h1>
@@ -177,7 +177,7 @@ export default function AuditDetailPage() {
       {/* Pacing card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Pacing de Gasto</CardTitle>
+          <CardTitle className="text-sm">Spend Pacing</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <PacingBar
@@ -186,26 +186,26 @@ export default function AuditDetailPage() {
             status={metrics.pacingStatus}
           />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat label="Presupuesto" value={fmt(record.presupuesto_total)} />
+            <Stat label="Budget" value={fmt(record.presupuesto_total)} />
             <Stat
-              label="Gasto Actual"
+              label="Current Spend"
               value={fmt(metrics.gastoActual)}
               color={metrics.pacingStatus === 'SOBREGASTANDO' ? 'text-destructive' : undefined}
             />
-            <Stat label="Restante" value={fmt(metrics.presupuestoRestante)} />
+            <Stat label="Remaining" value={fmt(metrics.presupuestoRestante)} />
             <Stat label="Pacing" value={`${metrics.pacingPct >= 0 ? '+' : ''}${metrics.pacingPct.toFixed(1)}%`} />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat label="Días Totales" value={String(metrics.diasTotales)} />
-            <Stat label="Días Transcurridos" value={String(metrics.diasTranscurridos)} />
-            <Stat label="Días Restantes" value={String(metrics.diasRestantes)} />
-            <Stat label="Diario Ideal" value={fmt(metrics.presupuestoDiarioIdeal)} />
+            <Stat label="Total Days" value={String(metrics.diasTotales)} />
+            <Stat label="Days Elapsed" value={String(metrics.diasTranscurridos)} />
+            <Stat label="Days Left" value={String(metrics.diasRestantes)} />
+            <Stat label="Ideal Daily" value={fmt(metrics.presupuestoDiarioIdeal)} />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat label="Gasto Diario Actual" value={fmt(metrics.gastoDiarioActual)} />
-            <Stat label="Gasto Esperado" value={fmt(metrics.gastoEsperado)} />
-            <Stat label="Fecha Inicio" value={record.fecha_inicio} />
-            <Stat label="Fecha Fin" value={record.fecha_fin} />
+            <Stat label="Current Daily Spend" value={fmt(metrics.gastoDiarioActual)} />
+            <Stat label="Expected Spend" value={fmt(metrics.gastoEsperado)} />
+            <Stat label="Start Date" value={record.fecha_inicio} />
+            <Stat label="End Date" value={record.fecha_fin} />
           </div>
         </CardContent>
       </Card>
@@ -213,7 +213,7 @@ export default function AuditDetailPage() {
       {/* API metrics */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Métricas de Rendimiento</CardTitle>
+          <CardTitle className="text-sm">Performance Metrics</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
@@ -230,7 +230,7 @@ export default function AuditDetailPage() {
       {/* Charts */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Evolución</CardTitle>
+          <CardTitle className="text-sm">Trends</CardTitle>
         </CardHeader>
         <CardContent>
           <PerformanceCharts
@@ -244,11 +244,11 @@ export default function AuditDetailPage() {
       {/* Alerts */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Alertas</CardTitle>
+          <CardTitle className="text-sm">Alerts</CardTitle>
         </CardHeader>
         <CardContent>
           {alerts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Sin alertas activas.</p>
+            <p className="text-xs text-muted-foreground">No active alerts.</p>
           ) : (
             <div className="space-y-2">
               {alerts.map((alert, i) => (
@@ -273,14 +273,14 @@ export default function AuditDetailPage() {
       {/* AI Insight */}
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm">Diagnóstico IA</CardTitle>
+          <CardTitle className="text-sm">AI Diagnosis</CardTitle>
           <Button variant="outline" size="sm" onClick={generateInsight} disabled={loadingInsight}>
             {loadingInsight ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
             ) : (
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
             )}
-            {loadingInsight ? 'Analizando...' : 'Generar Insight'}
+            {loadingInsight ? 'Analyzing...' : 'Generate Insight'}
           </Button>
         </CardHeader>
         <CardContent>
@@ -298,7 +298,7 @@ export default function AuditDetailPage() {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Genera un diagnóstico IA basado en el estado actual de esta auditoría.
+              Generate an AI diagnosis based on the current state of this audit.
             </p>
           )}
         </CardContent>

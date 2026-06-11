@@ -70,7 +70,7 @@ export default function AuthPage() {
       return;
     }
     if (isSignUp) {
-      setError('Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.');
+      setError('Check your email to confirm your account before signing in.');
     }
     setLoading(false);
   };
@@ -154,7 +154,7 @@ export default function AuthPage() {
                   <LogIn className="h-5 w-5 text-primary" />
                 </motion.div>
                 <h2 className="text-lg font-semibold text-foreground">
-                  {isSignUp ? 'Crear Cuenta' : 'Iniciar Sesión'}
+                  {isSignUp ? 'Create Account' : 'Sign In'}
                 </h2>
               </div>
 
@@ -182,7 +182,7 @@ export default function AuthPage() {
                 >
                   <Input
                     type="password"
-                    placeholder="Contraseña"
+                    placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -223,7 +223,7 @@ export default function AuthPage() {
                       }}
                     />
                     <span className="relative z-10">
-                      {loading ? 'Cargando...' : isSignUp ? 'Registrarse' : 'Entrar'}
+                      {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
                     </span>
                   </Button>
                 </motion.div>
@@ -237,7 +237,7 @@ export default function AuthPage() {
                 whileTap={{ scale: 0.98 }}
                 className="text-sm text-muted-foreground hover:text-foreground w-full text-center transition-colors duration-200"
               >
-                {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
               </motion.button>
             </div>
           </Card>
@@ -250,7 +250,7 @@ export default function AuthPage() {
           transition={{ delay: 0.8 }}
           className="text-center text-xs text-muted-foreground mt-6"
         >
-          Plataforma de auditoría publicitaria inteligente
+          Intelligent ad audit platform
         </motion.p>
       </div>
     </FloatingIconsHero>

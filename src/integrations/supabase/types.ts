@@ -83,10 +83,38 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_clients: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_records: {
         Row: {
           account_id: string
           campaign_name: string
+          client_id: string | null
           created_at: string
           fecha_fin: string
           fecha_inicio: string
@@ -100,6 +128,7 @@ export type Database = {
         Insert: {
           account_id: string
           campaign_name: string
+          client_id?: string | null
           created_at?: string
           fecha_fin: string
           fecha_inicio: string
@@ -113,6 +142,7 @@ export type Database = {
         Update: {
           account_id?: string
           campaign_name?: string
+          client_id?: string | null
           created_at?: string
           fecha_fin?: string
           fecha_inicio?: string

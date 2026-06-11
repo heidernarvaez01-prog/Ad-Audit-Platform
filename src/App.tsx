@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
+import ClientsPage from "@/pages/ClientsPage";
 import AuditPage from "@/pages/AuditPage";
 import AuditDetailPage from "@/pages/AuditDetailPage";
 import AuthPage from "@/pages/AuthPage";
@@ -36,7 +37,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <header className="md:hidden h-12 flex items-center justify-between px-3 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Abrir menú">
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open menu">
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
@@ -79,7 +80,8 @@ function AppLayout() {
         <Route path="/hero-demo" element={<HeroDemo />} />
         <Route path="/floating-icons-demo" element={<FloatingIconsDemo />} />
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
-        <Route path="/" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
+        <Route path="/" element={<RequireAuth><AppShell><ClientsPage /></AppShell></RequireAuth>} />
+        <Route path="/client/:clientId" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
         <Route path="/audit/:id" element={<RequireAuth><AppShell><AuditDetailPage /></AppShell></RequireAuth>} />
         <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
         <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />

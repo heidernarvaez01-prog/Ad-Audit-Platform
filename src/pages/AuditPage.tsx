@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchCampaignData, getCampaignCost, clearCampaignDataCache } from '@/lib/api';
-import { calculateAuditMetrics } from '@/lib/audit-calculations';
-import { generateAlerts } from '@/lib/audit-alerts';
+import { buildAuditRows } from '@/lib/audit-helpers';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, LayoutGrid, Layers } from 'lucide-react';
+import { Plus, LayoutGrid, Layers, ArrowLeft } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
@@ -17,6 +17,9 @@ import { toast } from 'sonner';
 
 export default function AuditPage() {
   const { user } = useAuth();
+  const { clientId } = useParams<{ clientId: string }>();
+  const navigate = useNavigate();
+  const [client, setClient] = useState<{ id: string; name: string; description: string | null } | null>(null);
   const [records, setRecords] = useState<any[]>([]);
   const [apiData, setApiData] = useState<ApiCampaignRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,17 +30,36 @@ export default function AuditPage() {
   const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // Load the client this audit belongs to — audits are isolated per client
+  useEffect(() => {
+    if (!clientId) return;
+    (async () => {
+      const { data, error } = await supabase.from('audit_clients').select('id, name, description').eq('id', clientId).maybeSingle();
+      if (error || !data) {
+        toast.error('Client not found');
+        navigate('/', { replace: true });
+        return;
+      }
+      setClient(data);
+    })();
+  }, [clientId, navigate]);
+
   const loadRecords = useCallback(async () => {
-    const { data } = await supabase.from('audit_records').select('*').order('created_at', { ascending: false });
+    if (!clientId) return;
+    const { data } = await supabase
+      .from('audit_records')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
     setRecords(data || []);
-  }, []);
+  }, [clientId]);
 
   const loadApiData = useCallback(async () => {
     try {
       const data = await fetchCampaignData();
       setApiData(data);
     } catch {
-      toast.error('Error conectando con la API de campañas');
+      toast.error('Error connecting to the campaigns API');
     }
   }, []);
 
@@ -60,7 +82,7 @@ export default function AuditPage() {
       setRecords(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
       const { error } = await supabase.from('audit_records').update(patch).eq('id', id);
       if (error) {
-        toast.error('Error guardando cambios');
+        toast.error('Error saving changes');
         loadRecords();
       }
     },
@@ -69,46 +91,14 @@ export default function AuditPage() {
   const handleDelete = async (id: string) => {
     await supabase.from('audit_records').delete().eq('id', id);
     loadRecords();
-    toast.success('Registro eliminado');
+    toast.success('Record deleted');
   };
 
   // Build audit rows with metrics + alerts
-  const auditRows: AuditRowData[] = useMemo(() => {
-    // Cap end: exclude today and yesterday (partial/in-flight data not yet consolidated)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const cutoffDate = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
-    const yyyy = cutoffDate.getFullYear();
-    const mm = String(cutoffDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(cutoffDate.getDate()).padStart(2, '0');
-    const cutoff = `${yyyy}-${mm}-${dd}`;
-
-    return records.map(rec => {
-      const effectiveEnd = rec.fecha_fin < cutoff ? rec.fecha_fin : cutoff;
-      const campaignApiData = apiData.filter(r =>
-        r.campaign_name === rec.campaign_name &&
-        r.date >= rec.fecha_inicio &&
-        r.date <= effectiveEnd
-      );
-      const cost = campaignApiData.reduce((s, r) => s + (isNaN(r.metrics.cost) ? 0 : r.metrics.cost), 0);
-      const metrics = calculateAuditMetrics(
-        Number(rec.presupuesto_total),
-        rec.fecha_inicio,
-        rec.fecha_fin,
-        rec.tipo_calendario,
-        cost,
-      );
-      const alerts = generateAlerts(metrics, campaignApiData, apiData);
-      return {
-        ...rec,
-        presupuesto_total: Number(rec.presupuesto_total),
-        platform: rec.platform || undefined,
-        metrics,
-        alerts,
-        campaignApiData,
-      };
-    });
-  }, [records, apiData]);
+  const auditRows: AuditRowData[] = useMemo(
+    () => buildAuditRows(records, apiData),
+    [records, apiData],
+  );
 
   // Dynamic platform tabs from user's audit records
   const platformTabs = useMemo(() => {
@@ -152,16 +142,23 @@ export default function AuditPage() {
     <div className="space-y-5 w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-foreground">Matriz de Auditoría</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Pacing de gasto vs presupuesto aprobado por campaña
-          </p>
+        <div className="min-w-0 flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/')}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Clients
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">
+              {client ? client.name : 'Audit Matrix'}
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {client?.description || 'Spend pacing vs approved budget per campaign'}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => { setEditRecord(null); setShowForm(true); }}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Nueva Auditoría
+            New Audit
           </Button>
         </div>
       </div>
@@ -169,17 +166,17 @@ export default function AuditPage() {
       {/* Summary cards */}
       {auditRows.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <SummaryCard label="Presupuesto Total" value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Suma del presupuesto aprobado de todas las campañas auditadas." />
+          <SummaryCard label="Total Budget" value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Sum of the approved budget across all audited campaigns." />
           <SummaryCard
-            label="Gasto Total"
+            label="Total Spend"
             value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            hint="Suma del gasto real consolidado (excluye hoy y ayer). El sparkline muestra el gasto acumulado día a día."
+            hint="Sum of consolidated actual spend (excludes today and yesterday). The sparkline shows cumulative spend day by day."
             sparkline={summary.cumulativeSpend}
             sparklineColor="text-primary"
           />
-          <SummaryCard label="En Ruta" value={summary.ok.toString()} color="text-success" hint="Campañas dentro del ±10% del pacing ideal." pulse={summary.ok > 0} pulseColor="bg-success" />
-          <SummaryCard label="Subgastando" value={summary.under.toString()} color="text-warning" hint="Campañas gastando menos del 90% del ideal — riesgo de no agotar presupuesto." />
-          <SummaryCard label="Sobregastando" value={summary.over.toString()} color="text-destructive" hint="Campañas gastando más del 110% del ideal — riesgo de agotar antes." />
+          <SummaryCard label="On Track" value={summary.ok.toString()} color="text-success" hint="Campaigns within ±10% of ideal pacing." pulse={summary.ok > 0} pulseColor="bg-success" />
+          <SummaryCard label="Underspending" value={summary.under.toString()} color="text-warning" hint="Campaigns spending under 90% of ideal — risk of not using the full budget." />
+          <SummaryCard label="Overspending" value={summary.over.toString()} color="text-destructive" hint="Campaigns spending over 110% of ideal — risk of running out early." />
         </div>
       )}
 
@@ -190,11 +187,11 @@ export default function AuditPage() {
           <TabsList className="w-full sm:w-auto flex">
             <TabsTrigger value="campaigns" className="text-xs gap-1.5 flex-1 sm:flex-none">
               <LayoutGrid className="h-3.5 w-3.5" />
-              Campañas
+              Campaigns
             </TabsTrigger>
             <TabsTrigger value="adsets" className="text-xs gap-1.5 flex-1 sm:flex-none">
               <Layers className="h-3.5 w-3.5" />
-              Conjuntos de Anuncios
+              Ad Sets
             </TabsTrigger>
           </TabsList>
 
@@ -209,13 +206,21 @@ export default function AuditPage() {
                   ))}
                 </TabsList>
               </div>
-              <TabsContent value={activeTab} className="mt-3">
+              <TabsContent value={activeTab} className="mt-3 space-y-3">
                 <AuditTable
                   rows={filteredRows}
                   onEdit={(row) => { setEditRecord(row); setShowForm(true); }}
                   onDelete={handleDelete}
                   onUpdateRecord={handleUpdateRecord}
                 />
+                <Button
+                  variant="outline"
+                  className="w-full border-dashed text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => { setEditRecord(null); setShowForm(true); }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add campaign
+                </Button>
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -226,13 +231,14 @@ export default function AuditPage() {
         </Tabs>
       )}
 
-      {showForm && (
+      {showForm && clientId && (
         <AuditForm
           open={showForm}
           onClose={() => { setShowForm(false); setEditRecord(null); }}
           onSaved={() => { setShowForm(false); setEditRecord(null); loadRecords(); }}
           editRecord={editRecord}
           apiData={apiData}
+          clientId={clientId}
         />
       )}
     </div>

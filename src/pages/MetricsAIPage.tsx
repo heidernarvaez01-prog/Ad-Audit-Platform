@@ -8,10 +8,10 @@ import { toast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 
 const SUGGESTIONS = [
-  '¿Qué campañas tienen el peor CTR y por qué?',
-  'Detecta campañas con gasto alto y bajo rendimiento',
-  'Resume el desempeño general de mis cuentas esta semana',
-  'Dame 3 recomendaciones accionables para optimizar mi presupuesto',
+  'Which campaigns have the worst CTR and why?',
+  'Detect campaigns with high spend and low performance',
+  "Summarize my accounts' overall performance this week",
+  'Give me 3 actionable recommendations to optimize my budget',
 ];
 
 interface Msg { role: 'user' | 'assistant'; content: string }
@@ -34,7 +34,7 @@ export default function MetricsAIPage() {
       if (data?.error) throw new Error(data.error);
       setMessages((m) => [...m, { role: 'assistant', content: data.answer }]);
     } catch (e: any) {
-      toast({ title: 'Error', description: e.message ?? 'No se pudo analizar', variant: 'destructive' });
+      toast({ title: 'Error', description: e.message ?? 'Analysis failed', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -45,9 +45,9 @@ export default function MetricsAIPage() {
       <header className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-primary" />
         <div>
-          <h1 className="text-xl font-semibold">Análisis de Métricas con IA</h1>
+          <h1 className="text-xl font-semibold">AI Metrics Analysis</h1>
           <p className="text-sm text-muted-foreground">
-            Pregunta sobre el rendimiento de tus campañas. Analizo los datos sincronizados de tus cuentas.
+            Ask about your campaigns' performance. I analyze your accounts' synced data.
           </p>
         </div>
       </header>
@@ -70,7 +70,7 @@ export default function MetricsAIPage() {
         {messages.map((m, i) => (
           <Card key={i} className={`p-4 ${m.role === 'user' ? 'bg-muted' : ''}`}>
             <div className="text-xs font-medium text-muted-foreground mb-2">
-              {m.role === 'user' ? 'Tú' : 'Análisis IA'}
+              {m.role === 'user' ? 'You' : 'AI Analysis'}
             </div>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown>{m.content}</ReactMarkdown>
@@ -79,7 +79,7 @@ export default function MetricsAIPage() {
         ))}
         {loading && (
           <Card className="p-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Analizando tus datos...
+            <Loader2 className="h-4 w-4 animate-spin" /> Analyzing your data...
           </Card>
         )}
       </div>
@@ -91,7 +91,7 @@ export default function MetricsAIPage() {
         <Textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Pregunta sobre tus campañas..."
+          placeholder="Ask about your campaigns..."
           rows={2}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(question); }

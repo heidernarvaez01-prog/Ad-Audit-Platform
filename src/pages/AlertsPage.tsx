@@ -112,11 +112,11 @@ export default function AlertsPage() {
         else if (abs > 10) level = 'warning';
 
         const accountName = metrics.find((m) => m.account_id === a.account_id)?.account_name ?? a.account_id;
-        let message = `Pacing en línea (${deviation > 0 ? '+' : ''}${deviation}%)`;
+        let message = `Pacing on track (${deviation > 0 ? '+' : ''}${deviation}%)`;
         if (level !== 'ok') {
           message = deviation > 0
-            ? `Sobre-ejecución del ${deviation}% (gasto ${spendPct.toFixed(1)}% vs tiempo ${timePct.toFixed(1)}%)`
-            : `Sub-ejecución del ${deviation}% (gasto ${spendPct.toFixed(1)}% vs tiempo ${timePct.toFixed(1)}%)`;
+            ? `Over-delivery of ${deviation}% (spend ${spendPct.toFixed(1)}% vs time ${timePct.toFixed(1)}%)`
+            : `Under-delivery of ${deviation}% (spend ${spendPct.toFixed(1)}% vs time ${timePct.toFixed(1)}%)`;
         }
 
         computed.push({
@@ -151,7 +151,7 @@ export default function AlertsPage() {
     const e = emailInput.trim();
     if (!e) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
-      toast({ title: 'Email inválido', variant: 'destructive' });
+      toast({ title: 'Invalid email', variant: 'destructive' });
       return;
     }
     if (settings.email_recipients.includes(e)) return;
@@ -170,14 +170,14 @@ export default function AlertsPage() {
       { onConflict: 'user_id' },
     );
     setSaving(false);
-    if (error) toast({ title: 'Error al guardar', description: error.message, variant: 'destructive' });
-    else toast({ title: 'Configuración guardada' });
+    if (error) toast({ title: 'Error saving', description: error.message, variant: 'destructive' });
+    else toast({ title: 'Settings saved' });
   };
 
   const sendNow = async () => {
     if (!user) return;
     if (settings.email_recipients.length === 0) {
-      toast({ title: 'Agrega al menos un destinatario', variant: 'destructive' });
+      toast({ title: 'Add at least one recipient', variant: 'destructive' });
       return;
     }
     const toSend = settings.only_critical ? alerts.filter((a) => a.level === 'critical') : alerts.filter((a) => a.level !== 'ok');
@@ -194,13 +194,13 @@ export default function AlertsPage() {
         },
       });
       if (error || (data && (data as any).error)) {
-        const msg = error?.message || (data as any)?.error || 'Error desconocido';
-        toast({ title: 'Error al enviar', description: String(msg), variant: 'destructive' });
+        const msg = error?.message || (data as any)?.error || 'Unknown error';
+        toast({ title: 'Error sending', description: String(msg), variant: 'destructive' });
       } else {
-        toast({ title: `Alertas enviadas a ${settings.email_recipients.length} destinatario(s)` });
+        toast({ title: `Alerts sent to ${settings.email_recipients.length} recipient(s)` });
       }
     } catch (e: any) {
-      toast({ title: 'Error al enviar', description: e.message, variant: 'destructive' });
+      toast({ title: 'Error sending', description: e.message, variant: 'destructive' });
     } finally {
       setSending(false);
     }
@@ -212,9 +212,9 @@ export default function AlertsPage() {
       <header className="flex items-center gap-2">
         <Bell className="h-5 w-5 text-primary" />
         <div>
-          <h1 className="text-xl font-semibold">Alertas</h1>
+          <h1 className="text-xl font-semibold">Alerts</h1>
           <p className="text-sm text-muted-foreground">
-            Monitorea desviaciones de pacing y configura notificaciones por correo.
+            Monitor pacing deviations and configure email notifications.
           </p>
         </div>
       </header>
@@ -224,21 +224,21 @@ export default function AlertsPage() {
           <AlertCircle className="h-5 w-5 text-destructive" />
           <div>
             <div className="text-2xl font-bold">{stats.critical}</div>
-            <div className="text-xs text-muted-foreground">Críticas (&gt;20%)</div>
+            <div className="text-xs text-muted-foreground">Critical (&gt;20%)</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
           <AlertTriangle className="h-5 w-5 text-yellow-500" />
           <div>
             <div className="text-2xl font-bold">{stats.warning}</div>
-            <div className="text-xs text-muted-foreground">Advertencias (&gt;10%)</div>
+            <div className="text-xs text-muted-foreground">Warnings (&gt;10%)</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-emerald-500" />
           <div>
             <div className="text-2xl font-bold">{stats.ok}</div>
-            <div className="text-xs text-muted-foreground">En línea</div>
+            <div className="text-xs text-muted-foreground">On track</div>
           </div>
         </Card>
       </div>
@@ -246,23 +246,23 @@ export default function AlertsPage() {
       <Card className="p-5 space-y-5">
         <div className="flex items-center gap-2">
           <Mail className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">Configuración de correos</h2>
+          <h2 className="font-semibold">Email settings</h2>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <Label>Alertas activas</Label>
-            <p className="text-xs text-muted-foreground">Habilitar/deshabilitar el envío de notificaciones.</p>
+            <Label>Alerts enabled</Label>
+            <p className="text-xs text-muted-foreground">Enable/disable notification sending.</p>
           </div>
           <Switch checked={settings.enabled} onCheckedChange={(v) => setSettings({ ...settings, enabled: v })} />
         </div>
 
         <div className="space-y-2">
-          <Label>Destinatarios</Label>
+          <Label>Recipients</Label>
           <div className="flex gap-2">
             <Input
               type="email"
-              placeholder="alguien@empresa.com"
+              placeholder="someone@company.com"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEmail(); } }}
@@ -281,14 +281,14 @@ export default function AlertsPage() {
               </Badge>
             ))}
             {settings.email_recipients.length === 0 && (
-              <p className="text-xs text-muted-foreground">Agrega al menos un correo para recibir alertas.</p>
+              <p className="text-xs text-muted-foreground">Add at least one email to receive alerts.</p>
             )}
           </div>
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Umbral de desviación (%)</Label>
+            <Label>Deviation threshold (%)</Label>
             <Input
               type="number"
               min={1}
@@ -298,23 +298,23 @@ export default function AlertsPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Frecuencia</Label>
+            <Label>Frequency</Label>
             <Select
               value={settings.notify_frequency}
               onValueChange={(v: AlertSettings['notify_frequency']) => setSettings({ ...settings, notify_frequency: v })}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="daily">Diaria</SelectItem>
-                <SelectItem value="weekly">Semanal</SelectItem>
-                <SelectItem value="manual">Solo manual</SelectItem>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="manual">Manual only</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <Label>Solo críticas</Label>
-              <p className="text-xs text-muted-foreground">Ignorar advertencias.</p>
+              <Label>Critical only</Label>
+              <p className="text-xs text-muted-foreground">Ignore warnings.</p>
             </div>
             <Switch checked={settings.only_critical} onCheckedChange={(v) => setSettings({ ...settings, only_critical: v })} />
           </div>
@@ -323,23 +323,23 @@ export default function AlertsPage() {
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={sendNow} disabled={sending || loading || !settings.enabled}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-            Enviar alertas ahora
+            Send alerts now
           </Button>
           <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar configuración
+            Save settings
           </Button>
         </div>
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-semibold mb-3">Alertas activas</h2>
+        <h2 className="font-semibold mb-3">Active alerts</h2>
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Calculando...
+            <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
           </div>
         ) : alerts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay campañas auditadas todavía.</p>
+          <p className="text-sm text-muted-foreground">No audited campaigns yet.</p>
         ) : (
           <div className="divide-y divide-border">
             {alerts.map((a, i) => (
@@ -356,7 +356,7 @@ export default function AlertsPage() {
                 </div>
                 <div className="text-right text-xs text-muted-foreground shrink-0">
                   <div>${a.spend.toLocaleString()} / ${a.budget.toLocaleString()}</div>
-                  <div>{a.spendPct}% gasto · {a.timePct}% tiempo</div>
+                  <div>{a.spendPct}% spend · {a.timePct}% time</div>
                 </div>
               </div>
             ))}

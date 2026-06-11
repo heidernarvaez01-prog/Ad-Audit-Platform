@@ -78,10 +78,10 @@ function PlatformBadge({ platform }: { platform?: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'SOBREGASTANDO') {
-    return <Badge variant="destructive" className="text-[10px] px-1.5">Sobregastando</Badge>;
+    return <Badge variant="destructive" className="text-[10px] px-1.5">Overspending</Badge>;
   }
   if (status === 'SUBGASTANDO') {
-    return <Badge className="text-[10px] px-1.5 bg-warning text-warning-foreground hover:bg-warning/90">Subgastando</Badge>;
+    return <Badge className="text-[10px] px-1.5 bg-warning text-warning-foreground hover:bg-warning/90">Underspending</Badge>;
   }
   return (
     <Badge className="text-[10px] px-1.5 bg-success text-success-foreground hover:bg-success/90 gap-1">
@@ -89,7 +89,7 @@ function StatusBadge({ status }: { status: string }) {
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success-foreground/80 opacity-75" />
         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success-foreground" />
       </span>
-      En Ruta
+      On Track
     </Badge>
   );
 }
@@ -132,23 +132,23 @@ function CampaignSummary({ row }: { row: AuditRowData }) {
   return (
     <div className="space-y-2.5">
       <div>
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Campaña</p>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Campaign</p>
         <p className="text-sm font-semibold text-foreground line-clamp-2">{row.campaign_name}</p>
         {row.platform && <PlatformBadge platform={row.platform} />}
       </div>
       <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-border">
-        <MetricMini label="Gasto" value={fmt(m.gastoActual)} />
-        <MetricMini label="Presupuesto" value={fmt(row.presupuesto_total)} />
+        <MetricMini label="Spend" value={fmt(m.gastoActual)} />
+        <MetricMini label="Budget" value={fmt(row.presupuesto_total)} />
         <MetricMini label="Pacing" value={`${m.pacingPct.toFixed(1)}%`} />
-        <MetricMini label="Diario ideal" value={fmt(m.presupuestoDiarioIdeal)} />
-        <MetricMini label="Días restantes" value={m.diasRestantes.toString()} />
-        <MetricMini label="Estado" value={m.pacingStatus === 'OK' ? 'En Ruta' : m.pacingStatus === 'SOBREGASTANDO' ? 'Sobre' : 'Sub'} />
+        <MetricMini label="Ideal daily" value={fmt(m.presupuestoDiarioIdeal)} />
+        <MetricMini label="Days left" value={m.diasRestantes.toString()} />
+        <MetricMini label="Status" value={m.pacingStatus === 'OK' ? 'On Track' : m.pacingStatus === 'SOBREGASTANDO' ? 'Over' : 'Under'} />
         <MetricMini label="CTR" value={`${ctr.toFixed(2)}%`} />
         <MetricMini label="CPC" value={fmt(cpc)} />
       </div>
       {row.alerts.length > 0 && (
         <div className="pt-1.5 border-t border-border">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Alertas</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Alerts</p>
           <p className="text-[11px] text-foreground">{row.alerts[0].icon} {row.alerts[0].message}</p>
         </div>
       )}
@@ -167,7 +167,7 @@ function InsightPanel({ insight }: { insight: InsightData }) {
     <div className={`p-3 rounded-md border ${borderColor}`}>
       <div className="flex items-center gap-2 mb-1.5">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Insight IA</p>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">AI Insight</p>
       </div>
       <p className="text-xs text-foreground leading-relaxed whitespace-pre-line">{insight.insight}</p>
     </div>
@@ -214,10 +214,10 @@ function ExpandedDetails({
 
       {/* Pacing detail */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded-md bg-muted/50 border border-border">
-        <MetricMini label="Días Totales" value={row.metrics.diasTotales.toString()} />
-        <MetricMini label="Días Transcurridos" value={row.metrics.diasTranscurridos.toString()} />
-        <MetricMini label="Días Restantes" value={row.metrics.diasRestantes.toString()} />
-        <MetricMini label="Gasto Diario Actual" value={fmt(row.metrics.gastoDiarioActual)} />
+        <MetricMini label="Total Days" value={row.metrics.diasTotales.toString()} />
+        <MetricMini label="Days Elapsed" value={row.metrics.diasTranscurridos.toString()} />
+        <MetricMini label="Days Left" value={row.metrics.diasRestantes.toString()} />
+        <MetricMini label="Current Daily Spend" value={fmt(row.metrics.gastoDiarioActual)} />
       </div>
 
       {/* AI Insight */}
@@ -234,7 +234,7 @@ function ExpandedDetails({
           ) : (
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
           )}
-          {loadingInsight ? 'Analizando...' : 'Generar Insight IA'}
+          {loadingInsight ? 'Analyzing...' : 'Generate AI Insight'}
         </Button>
       </div>
 
@@ -332,7 +332,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
 
       setInsights(prev => ({ ...prev, [row.id]: data as InsightData }));
     } catch (e) {
-      toast.error('Error generando insight IA');
+      toast.error('Error generating AI insight');
       console.error(e);
     } finally {
       setLoadingInsights(prev => ({ ...prev, [row.id]: false }));
@@ -342,8 +342,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   if (rows.length === 0) {
     return (
       <div className="border border-border rounded-lg p-12 text-center text-muted-foreground">
-        <p className="text-sm">No hay campañas auditadas.</p>
-        <p className="text-xs mt-1">Crea un nuevo registro para comenzar a auditar.</p>
+        <p className="text-sm">No audited campaigns yet.</p>
+        <p className="text-xs mt-1">Create a new record to start auditing.</p>
       </div>
     );
   }
@@ -389,10 +389,10 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                       status={m.pacingStatus}
                     />
                     <div className="grid grid-cols-2 gap-2 pt-1">
-                      <MetricMini label="Gasto" value={fmt(m.gastoActual)} />
-                      <MetricMini label="Presupuesto" value={fmt(row.presupuesto_total)} />
-                      <MetricMini label="Diario ideal" value={fmt(m.presupuestoDiarioIdeal)} />
-                      <MetricMini label="Días restantes" value={m.diasRestantes.toString()} />
+                      <MetricMini label="Spend" value={fmt(m.gastoActual)} />
+                      <MetricMini label="Budget" value={fmt(row.presupuesto_total)} />
+                      <MetricMini label="Ideal daily" value={fmt(m.presupuestoDiarioIdeal)} />
+                      <MetricMini label="Days left" value={m.diasRestantes.toString()} />
                     </div>
                   </button>
                 </CollapsibleTrigger>
@@ -400,31 +400,31 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                   <div className="border-t border-border p-3 space-y-3 bg-muted/20 animate-fade-in">
                     <div className="grid grid-cols-2 gap-2" onClick={e => e.stopPropagation()}>
                       <div>
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Fecha inicio</p>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Start date</p>
                         <Input type="date" value={row.fecha_inicio}
                           onChange={e => onUpdateRecord?.(row.id, { fecha_inicio: e.target.value })}
                           className="h-8 text-xs" />
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Fecha fin</p>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">End date</p>
                         <Input type="date" value={row.fecha_fin}
                           onChange={e => onUpdateRecord?.(row.id, { fecha_fin: e.target.value })}
                           className="h-8 text-xs" />
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Calendario</p>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Schedule</p>
                         <Select value={row.tipo_calendario}
                           onValueChange={v => onUpdateRecord?.(row.id, { tipo_calendario: v })}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="corridos" className="text-xs">De corrido</SelectItem>
-                            <SelectItem value="lun_vie" className="text-xs">Lun a Vie</SelectItem>
-                            <SelectItem value="lun_sab" className="text-xs">Lun a Sáb</SelectItem>
+                            <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
+                            <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
+                            <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Presupuesto</p>
+                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Budget</p>
                         <Input type="number" value={row.presupuesto_total}
                           onChange={e => onUpdateRecord?.(row.id, { presupuesto_total: parseFloat(e.target.value) || 0 })}
                           className="h-8 text-xs text-right font-mono" />
@@ -438,7 +438,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                     />
                     <div className="flex items-center gap-1 justify-end pt-1 border-t border-border" onClick={e => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                        <Link to={`/audit/${row.id}`} title="Ver detalle">
+                        <Link to={`/audit/${row.id}`} title="View details">
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
@@ -458,51 +458,51 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
       </div>
 
       {/* Desktop: full table */}
-      <div ref={wrapperRef} className="hidden md:block border border-border rounded-lg overflow-x-auto relative">
+      <div ref={wrapperRef} className="hidden md:block border border-border rounded-lg overflow-hidden relative">
         <Table className="min-w-[1200px]">
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
-            <TableHead className="text-xs">Plataforma</TableHead>
-            <TableHead className="text-xs">Campaña</TableHead>
-            <TableHead className="text-xs">Cuenta</TableHead>
-            <TableHead className="text-xs w-[140px]">Fecha inicio</TableHead>
-            <TableHead className="text-xs w-[140px]">Fecha fin</TableHead>
-            <TableHead className="text-xs w-[140px]">Calendario</TableHead>
+            <TableHead className="text-xs">Platform</TableHead>
+            <TableHead className="text-xs">Campaign</TableHead>
+            <TableHead className="text-xs">Account</TableHead>
+            <TableHead className="text-xs w-[140px]">Start date</TableHead>
+            <TableHead className="text-xs w-[140px]">End date</TableHead>
+            <TableHead className="text-xs w-[140px]">Schedule</TableHead>
             <TableHead className="text-xs w-[120px] text-right">
-              Presupuesto
-              <MetricInfo label="Presupuesto aprobado">
-                Monto total aprobado para la campaña durante el período auditado. Es la base contra la que se compara el gasto real para calcular el pacing.
+              Budget
+              <MetricInfo label="Approved budget">
+                Total amount approved for the campaign during the audited period. It is the baseline against which actual spend is compared to calculate pacing.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs w-40">
               Pacing
-              <MetricInfo label="Pacing dual">
-                Barra superior: % de tiempo transcurrido (días hábiles o naturales según calendario). Barra inferior: % del presupuesto gastado. Idealmente ambas avanzan juntas.
+              <MetricInfo label="Dual pacing">
+                Top bar: % of time elapsed (business or calendar days depending on schedule). Bottom bar: % of budget spent. Ideally both move together.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs">
-              Estado
-              <MetricInfo label="Estado de pacing">
-                Sub-pacing: gasto &gt;10% por debajo del tiempo. Sobre-pacing: gasto &gt;10% por encima. On-pace: dentro de ±10%.
+              Status
+              <MetricInfo label="Pacing status">
+                Under-pacing: spend &gt;10% below time. Over-pacing: spend &gt;10% above. On-pace: within ±10%.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs text-right">
-              Gasto / Aprobado
-              <MetricInfo label="Gasto real vs aprobado">
-                Suma de gasto reportado por la plataforma vs presupuesto aprobado. El % indica qué porción del presupuesto ya se consumió.
+              Spent / Approved
+              <MetricInfo label="Actual spend vs approved">
+                Sum of platform-reported spend vs approved budget. The % shows how much of the budget has been consumed.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs text-right">
-              Diario Ideal
-              <MetricInfo label="Gasto diario ideal">
-                Presupuesto restante dividido entre los días hábiles que quedan en el período. Es lo que deberías gastar por día para terminar exactamente en el presupuesto.
+              Ideal Daily
+              <MetricInfo label="Ideal daily spend">
+                Remaining budget divided by the business days left in the period. It is what you should spend per day to land exactly on budget.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs w-10 text-center">
-              IA
-              <MetricInfo label="Diagnóstico IA">
-                Análisis bajo demanda (gpt-4o-mini) que clasifica el riesgo presupuestal: Crítico, Moderado o Sin Riesgo.
+              AI
+              <MetricInfo label="AI diagnosis">
+                On-demand AI analysis that classifies budget risk: Critical, Moderate, or No Risk.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs w-20"></TableHead>
@@ -569,9 +569,9 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="corridos" className="text-xs">De corrido</SelectItem>
-                            <SelectItem value="lun_vie" className="text-xs">Lun a Vie</SelectItem>
-                            <SelectItem value="lun_sab" className="text-xs">Lun a Sáb</SelectItem>
+                            <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
+                            <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
+                            <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -608,7 +608,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                       <TableCell className="text-right">
                         <div className="flex items-center gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                            <Link to={`/audit/${row.id}`} title="Ver detalle">
+                            <Link to={`/audit/${row.id}`} title="View details">
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Link>
                           </Button>

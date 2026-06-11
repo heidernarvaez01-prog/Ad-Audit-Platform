@@ -9,11 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/apache-studio-logo.png.asset.json';
 
 const baseNav = [
-  { to: '/', label: 'Auditoría Meta', icon: ClipboardCheck },
-  { to: '/brief', label: 'Brief de Marca', icon: FileText },
-  { to: '/metrics-ai', label: 'Análisis IA', icon: Sparkles },
-  { to: '/alerts', label: 'Alertas', icon: Bell },
-  { to: '/how-it-works', label: 'Cómo funciona', icon: HelpCircle },
+  { to: '/', label: 'Monitoring Audit', icon: ClipboardCheck },
+  { to: '/brief', label: 'Brand Brief', icon: FileText },
+  { to: '/metrics-ai', label: 'AI Analysis', icon: Sparkles },
+  { to: '/alerts', label: 'Alerts', icon: Bell },
+  { to: '/how-it-works', label: 'How it works', icon: HelpCircle },
 ];
 
 interface AppSidebarProps {
@@ -44,7 +44,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navItems = isAdmin ? [...baseNav, { to: '/admin', label: 'Administración', icon: Shield }] : baseNav;
+  const navItems = isAdmin ? [...baseNav, { to: '/admin', label: 'Admin', icon: Shield }] : baseNav;
 
   const sidebarVariants = {
     collapsed: { width: 56 },
@@ -123,12 +123,12 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
                     className="w-full flex items-center justify-center p-1.5 rounded-lg
                       text-sidebar-foreground/70 hover:text-sidebar-foreground
                       transition-colors duration-200"
-                    aria-label="Expandir menú"
+                    aria-label="Expand menu"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </motion.button>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">Expandir menú</TooltipContent>
+                <TooltipContent side="right" className="text-xs">Expand menu</TooltipContent>
               </Tooltip>
             )}
           </motion.div>
@@ -171,7 +171,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
                 whileTap={{ scale: 0.95 }}
                 className="p-1.5 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground
                   transition-colors duration-200 shrink-0"
-                aria-label="Colapsar menú"
+                aria-label="Collapse menu"
               >
                 <ChevronLeft className="h-4 w-4" />
               </motion.button>
@@ -187,7 +187,9 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
       >
         <AnimatePresence mode="wait">
           {navItems.map(({ to, label, icon: Icon }, index) => {
-            const active = location.pathname === to;
+            const active = to === '/'
+              ? location.pathname === '/' || location.pathname.startsWith('/client/') || location.pathname.startsWith('/audit/')
+              : location.pathname === to;
 
             const linkContent = (
               <motion.div
@@ -288,7 +290,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
                 className="w-full flex items-center justify-center p-2 rounded-lg
                   text-sidebar-foreground/70 hover:text-sidebar-foreground
                   transition-colors duration-200"
-                aria-label="Cambiar tema"
+                aria-label="Toggle theme"
               >
                 <motion.div
                   initial={false}
@@ -300,7 +302,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
               </motion.button>
             </TooltipTrigger>
             <TooltipContent side="right" className="text-xs">
-              {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -322,7 +324,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
               variants={itemVariants}
               className="truncate"
             >
-              {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
             </motion.span>
           </motion.button>
         )}
@@ -355,12 +357,12 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
                   className="w-full flex items-center justify-center p-2 rounded-lg
                     text-sidebar-foreground/70 hover:text-destructive
                     transition-colors duration-200"
-                  aria-label="Cerrar sesión"
+                  aria-label="Sign out"
                 >
                   <LogOut className="h-4 w-4" />
                 </motion.button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">Cerrar sesión</TooltipContent>
+              <TooltipContent side="right" className="text-xs">Sign out</TooltipContent>
             </Tooltip>
           ) : (
             <motion.button
@@ -376,7 +378,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
                 variants={itemVariants}
                 className="truncate"
               >
-                Cerrar sesión
+                Sign out
               </motion.span>
             </motion.button>
           )}

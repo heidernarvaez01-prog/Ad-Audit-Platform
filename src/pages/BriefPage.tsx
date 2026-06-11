@@ -14,47 +14,47 @@ type AccountOpt = { account_id: string; account_name: string };
 
 const SECTIONS: { title: string; fields: { key: string; label: string; hint?: string; type?: 'input' | 'textarea' | 'number' | 'url'; rows?: number }[] }[] = [
   {
-    title: 'Identificación',
+    title: 'Identification',
     fields: [
-      { key: 'marca', label: 'Marca' },
-      { key: 'sitio_web', label: 'Sitio Web', type: 'url' },
-      { key: 'mercado_objetivo', label: 'País o mercado objetivo', hint: 'Solo zonas geográficas' },
-      { key: 'presupuesto_campana', label: 'Presupuesto de campaña', type: 'number' },
+      { key: 'marca', label: 'Brand' },
+      { key: 'sitio_web', label: 'Website', type: 'url' },
+      { key: 'mercado_objetivo', label: 'Target country or market', hint: 'Geographic areas only' },
+      { key: 'presupuesto_campana', label: 'Campaign budget', type: 'number' },
     ],
   },
   {
-    title: 'Estrategia',
+    title: 'Strategy',
     fields: [
-      { key: 'necesidad_principal', label: 'Necesidad principal', hint: 'El problema a enfrentar y resolver con marketing', type: 'textarea', rows: 3 },
-      { key: 'descripcion_proyecto', label: 'Descripción general del proyecto', hint: 'Lo que ofrece la empresa, beneficios, público y diferenciadores', type: 'textarea', rows: 5 },
-      { key: 'publico_objetivo', label: 'Público objetivo y buyer persona', hint: 'Tipos de personas y descripciones situacionales', type: 'textarea', rows: 5 },
-      { key: 'fundamentos_marca', label: 'Fundamentos de la marca', hint: 'Productos, servicios y mandatorios de marca', type: 'textarea', rows: 4 },
+      { key: 'necesidad_principal', label: 'Main need', hint: 'The problem to face and solve with marketing', type: 'textarea', rows: 3 },
+      { key: 'descripcion_proyecto', label: 'Project overview', hint: 'What the company offers, benefits, audience and differentiators', type: 'textarea', rows: 5 },
+      { key: 'publico_objetivo', label: 'Target audience and buyer persona', hint: 'Types of people and situational descriptions', type: 'textarea', rows: 5 },
+      { key: 'fundamentos_marca', label: 'Brand fundamentals', hint: 'Products, services and brand mandatories', type: 'textarea', rows: 4 },
     ],
   },
   {
-    title: 'Identidad verbal',
+    title: 'Verbal identity',
     fields: [
-      { key: 'palabras_marca', label: '30 palabras que representan a la marca', hint: 'Separadas por comas', type: 'textarea', rows: 3 },
-      { key: 'frases_marca', label: '10 frases que describen a la marca', hint: 'Una por línea', type: 'textarea', rows: 5 },
-      { key: 'valores_marca', label: 'Valores de la marca', hint: 'Con una explicación de cada uno', type: 'textarea', rows: 4 },
-      { key: 'promesa_marca', label: 'Promesa de marca', hint: 'Promesas racionales y emocionales cumplibles', type: 'textarea', rows: 3 },
-      { key: 'reasons_why', label: 'Reasons Why / Razones para creer', hint: 'Razones concretas para creer en la promesa', type: 'textarea', rows: 3 },
+      { key: 'palabras_marca', label: '30 words that represent the brand', hint: 'Comma-separated', type: 'textarea', rows: 3 },
+      { key: 'frases_marca', label: '10 phrases that describe the brand', hint: 'One per line', type: 'textarea', rows: 5 },
+      { key: 'valores_marca', label: 'Brand values', hint: 'With an explanation for each', type: 'textarea', rows: 4 },
+      { key: 'promesa_marca', label: 'Brand promise', hint: 'Achievable rational and emotional promises', type: 'textarea', rows: 3 },
+      { key: 'reasons_why', label: 'Reasons Why / Reasons to believe', hint: 'Concrete reasons to believe the promise', type: 'textarea', rows: 3 },
     ],
   },
   {
-    title: 'Personalidad',
+    title: 'Personality',
     fields: [
-      { key: 'personalidad_marca', label: 'Personalidad de marca', hint: 'Arquetipo si aplica', type: 'textarea', rows: 3 },
-      { key: 'estilo_tono', label: 'Estilo y tono', hint: 'Cómo habla la marca según cliente y canal', type: 'textarea', rows: 3 },
-      { key: 'diferenciador', label: 'Diferenciador principal', hint: 'Lo que ningún otro tiene en el mercado local', type: 'textarea', rows: 3 },
+      { key: 'personalidad_marca', label: 'Brand personality', hint: 'Archetype if applicable', type: 'textarea', rows: 3 },
+      { key: 'estilo_tono', label: 'Style and tone', hint: 'How the brand speaks by customer and channel', type: 'textarea', rows: 3 },
+      { key: 'diferenciador', label: 'Main differentiator', hint: 'What no one else has in the local market', type: 'textarea', rows: 3 },
     ],
   },
   {
-    title: 'Creatividad y referencias',
+    title: 'Creative and references',
     fields: [
-      { key: 'insights', label: 'Hallazgos útiles o insights', hint: 'Conceptos, campañas, eslóganes y aprendizajes previos', type: 'textarea', rows: 4 },
-      { key: 'elementos_marca', label: 'Elementos de la marca', hint: 'Colores, tipografías, guía gráfica y manuales', type: 'textarea', rows: 4 },
-      { key: 'benchmark', label: 'Benchmark / Referentes', hint: 'Competidores relevantes a analizar', type: 'textarea', rows: 4 },
+      { key: 'insights', label: 'Useful findings or insights', hint: 'Concepts, campaigns, slogans and previous learnings', type: 'textarea', rows: 4 },
+      { key: 'elementos_marca', label: 'Brand elements', hint: 'Colors, typography, graphic guidelines and manuals', type: 'textarea', rows: 4 },
+      { key: 'benchmark', label: 'Benchmark / References', hint: 'Relevant competitors to analyze', type: 'textarea', rows: 4 },
     ],
   },
 ];
@@ -104,7 +104,7 @@ export default function BriefPage() {
     if (!next.account_id) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('Debes iniciar sesión para guardar');
+      toast.error('You must sign in to save');
       return;
     }
     setSaving(true);
@@ -112,7 +112,7 @@ export default function BriefPage() {
     const { error } = await supabase.from('brand_briefs').upsert(payload, { onConflict: 'account_id' });
     setSaving(false);
     if (error) {
-      toast.error('Error guardando brief');
+      toast.error('Error saving brief');
     } else {
       setSavedAt(Date.now());
     }
@@ -134,29 +134,29 @@ export default function BriefPage() {
     <div className="space-y-5 max-w-4xl">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Brief de Marca</h1>
+          <h1 className="text-xl font-bold text-foreground">Brand Brief</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Contexto estratégico por cuenta — alimenta el análisis de IA junto con métricas de Windsor.ai
+            Strategic context per account — feeds the AI analysis along with Windsor.ai metrics
           </p>
         </div>
         <div className="flex items-center gap-2">
           {saving ? (
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Save className="h-3 w-3 animate-pulse" /> Guardando...
+              <Save className="h-3 w-3 animate-pulse" /> Saving...
             </span>
           ) : savedAt ? (
             <span className="text-xs text-success flex items-center gap-1.5">
-              <Check className="h-3 w-3" /> Guardado
+              <Check className="h-3 w-3" /> Saved
             </span>
           ) : null}
         </div>
       </div>
 
       <div className="border border-border rounded-lg bg-card p-4 space-y-2">
-        <Label className="text-xs">Cuenta publicitaria</Label>
+        <Label className="text-xs">Ad account</Label>
         <Select value={accountId} onValueChange={setAccountId}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecciona una cuenta" />
+            <SelectValue placeholder="Select an account" />
           </SelectTrigger>
           <SelectContent>
             {accounts.map(a => (
@@ -168,7 +168,7 @@ export default function BriefPage() {
         </Select>
         {accountId && (
           <p className="text-[11px] text-muted-foreground">
-            Editando brief para <span className="font-mono">{selectedName}</span>
+            Editing brief for <span className="font-mono">{selectedName}</span>
           </p>
         )}
       </div>
@@ -222,7 +222,7 @@ export default function BriefPage() {
 
       {!accountId && accounts.length === 0 && (
         <div className="border border-dashed border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
-          No hay cuentas registradas. Crea una auditoría primero para poder añadir su brief.
+          No accounts registered. Create an audit first to add its brief.
         </div>
       )}
     </div>

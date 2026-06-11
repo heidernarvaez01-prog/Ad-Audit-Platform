@@ -37,33 +37,33 @@ export default function UnsubscribePage() {
     const { data, error } = await supabase.functions.invoke('handle-email-unsubscribe', { body: { token } });
     if (error) { setErrorMsg(error.message); setState('error'); return; }
     if (data?.success || data?.reason === 'already_unsubscribed') setState('done');
-    else { setErrorMsg('No fue posible procesar la solicitud.'); setState('error'); }
+    else { setErrorMsg('The request could not be processed.'); setState('error'); }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <Card className="max-w-md w-full p-8 text-center space-y-4">
-        {state === 'loading' && (<><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /><p>Validando enlace…</p></>)}
+        {state === 'loading' && (<><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /><p>Validating link…</p></>)}
         {state === 'valid' && (<>
-          <h1 className="text-xl font-semibold">Cancelar suscripción</h1>
-          <p className="text-sm text-muted-foreground">¿Confirmas que deseas dejar de recibir alertas por correo?</p>
-          <Button onClick={confirm} className="w-full">Confirmar cancelación</Button>
+          <h1 className="text-xl font-semibold">Unsubscribe</h1>
+          <p className="text-sm text-muted-foreground">Do you confirm you want to stop receiving email alerts?</p>
+          <Button onClick={confirm} className="w-full">Confirm unsubscribe</Button>
         </>)}
-        {state === 'submitting' && (<><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /><p>Procesando…</p></>)}
+        {state === 'submitting' && (<><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /><p>Processing…</p></>)}
         {state === 'done' && (<>
           <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
-          <h1 className="text-xl font-semibold">Suscripción cancelada</h1>
-          <p className="text-sm text-muted-foreground">Ya no recibirás más correos en esta dirección.</p>
+          <h1 className="text-xl font-semibold">Unsubscribed</h1>
+          <p className="text-sm text-muted-foreground">You will no longer receive emails at this address.</p>
         </>)}
         {state === 'already' && (<>
           <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
-          <h1 className="text-xl font-semibold">Ya estabas dado de baja</h1>
-          <p className="text-sm text-muted-foreground">Esta dirección ya no recibe correos.</p>
+          <h1 className="text-xl font-semibold">You were already unsubscribed</h1>
+          <p className="text-sm text-muted-foreground">This address no longer receives emails.</p>
         </>)}
         {state === 'invalid' && (<>
           <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
-          <h1 className="text-xl font-semibold">Enlace inválido</h1>
-          <p className="text-sm text-muted-foreground">El enlace expiró o no es válido.</p>
+          <h1 className="text-xl font-semibold">Invalid link</h1>
+          <p className="text-sm text-muted-foreground">The link has expired or is not valid.</p>
         </>)}
         {state === 'error' && (<>
           <AlertCircle className="h-10 w-10 text-destructive mx-auto" />

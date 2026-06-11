@@ -6,15 +6,15 @@ export default function HeroDemo() {
 
   return (
     <FloatingIconsHero
-      title="Auditoría Publicitaria"
-      subtitle="Inteligente y Automatizada"
-      description="Monitorea, analiza y optimiza tus campañas publicitarias en tiempo real con insights impulsados por IA. Toma decisiones más rápidas y efectivas."
+      title="Ad Audit"
+      subtitle="Intelligent and Automated"
+      description="Monitor, analyze, and optimize your ad campaigns in real time with AI-powered insights. Make faster, more effective decisions."
       primaryCta={{
-        text: 'Comenzar Ahora',
+        text: 'Get Started',
         onClick: () => navigate('/auth'),
       }}
       secondaryCta={{
-        text: 'Ver Demo',
+        text: 'View Demo',
         onClick: () => navigate('/how-it-works'),
       }}
     />

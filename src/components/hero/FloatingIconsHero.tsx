@@ -46,9 +46,9 @@ interface FloatingIconsHeroProps {
 }
 
 export default function FloatingIconsHero({
-  title = 'Auditoría Publicitaria',
-  subtitle = 'Inteligente y Automatizada',
-  description = 'Monitorea, analiza y optimiza tus campañas publicitarias en tiempo real con insights impulsados por IA.',
+  title = 'Ad Audit',
+  subtitle = 'Intelligent and Automated',
+  description = 'Monitor, analyze, and optimize your ad campaigns in real time with AI-powered insights.',
   primaryCta,
   secondaryCta,
 }: FloatingIconsHeroProps) {
@@ -194,10 +194,10 @@ export default function FloatingIconsHero({
           className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto"
         >
           {[
-            { label: 'Campañas Monitoreadas', value: '500+' },
-            { label: 'Ahorro Promedio', value: '30%' },
-            { label: 'Tiempo Ahorrado', value: '10h/sem' },
-            { label: 'Alertas en Tiempo Real', value: '24/7' },
+            { label: 'Campaigns Monitored', value: '500+' },
+            { label: 'Average Savings', value: '30%' },
+            { label: 'Time Saved', value: '10h/wk' },
+            { label: 'Real-Time Alerts', value: '24/7' },
           ].map((stat, index) => (
             <motion.div
               key={index}

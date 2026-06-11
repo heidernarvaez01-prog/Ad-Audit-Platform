@@ -136,9 +136,9 @@ const demoIcons: FloatingIconsHeroProps['icons'] = [
 export default function FloatingIconsDemo() {
   return (
     <FloatingIconsHero
-      title="Auditoría Publicitaria Inteligente"
-      subtitle="Monitorea y optimiza tus campañas en tiempo real con tecnología respaldada por las mejores plataformas del mundo."
-      ctaText="Comenzar Ahora"
+      title="Intelligent Ad Audit"
+      subtitle="Monitor and optimize your campaigns in real time with technology backed by the world's best platforms."
+      ctaText="Get Started"
       ctaHref="/auth"
       icons={demoIcons}
     />

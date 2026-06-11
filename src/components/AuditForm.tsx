@@ -18,6 +18,7 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   apiData: ApiCampaignRow[];
+  clientId: string;
   editRecord?: {
     id: string;
     account_id: string;
@@ -30,7 +31,7 @@ interface Props {
   } | null;
 }
 
-export default function AuditForm({ open, onClose, onSaved, apiData, editRecord }: Props) {
+export default function AuditForm({ open, onClose, onSaved, apiData, clientId, editRecord }: Props) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -102,12 +103,13 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
 
   const handleSave = async () => {
     if (!user || !campaignName || !presupuesto || !fechaInicio || !fechaFin) {
-      toast.error('Completa todos los campos');
+      toast.error('Please fill in all fields');
       return;
     }
     setLoading(true);
     const record = {
       user_id: user.id,
+      client_id: clientId,
       account_id: accountName,
       campaign_name: campaignName,
       presupuesto_total: parseFloat(presupuesto),
@@ -125,9 +127,9 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
     }
 
     if (error) {
-      toast.error('Error guardando registro');
+      toast.error('Error saving record');
     } else {
-      toast.success(editRecord ? 'Registro actualizado' : 'Registro creado');
+      toast.success(editRecord ? 'Record updated' : 'Record created');
       onSaved();
     }
     setLoading(false);
@@ -138,15 +140,15 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-foreground">
-            {editRecord ? 'Editar Registro de Auditoría' : 'Nueva Campaña Auditada'}
+            {editRecord ? 'Edit Audit Record' : 'New Audited Campaign'}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
           {/* Platform selector */}
           <div>
-            <Label className="text-xs text-muted-foreground">Plataforma</Label>
+            <Label className="text-xs text-muted-foreground">Platform</Label>
             <Select value={platform} onValueChange={(v) => { setPlatform(v); setAccountName(''); setCampaignName(''); }}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar plataforma" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
               <SelectContent>
                 {platforms.map(p => (
                   <SelectItem key={p} value={p}>
@@ -159,9 +161,9 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
 
           {/* Cuenta (Account Name) — depends on platform */}
           <div>
-            <Label className="text-xs text-muted-foreground">Cuenta</Label>
+            <Label className="text-xs text-muted-foreground">Account</Label>
             <Select value={accountName} onValueChange={(v) => { setAccountName(v); setCampaignName(''); }}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar cuenta" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
               <SelectContent>
                 {accountNames.map(name => (
                   <SelectItem key={name} value={name}>{name}</SelectItem>
@@ -172,7 +174,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
 
           {/* Campaign combobox — depends on platform + account */}
           <div>
-            <Label className="text-xs text-muted-foreground">Campaña</Label>
+            <Label className="text-xs text-muted-foreground">Campaign</Label>
             <Popover open={comboOpen} onOpenChange={setComboOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -183,16 +185,16 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
                   className="w-full justify-between font-normal text-sm h-9"
                 >
                   <span className="truncate">
-                    {campaignName || (accountName ? 'Buscar campaña...' : 'Selecciona una cuenta primero')}
+                    {campaignName || (accountName ? 'Search campaign...' : 'Select an account first')}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                 <Command>
-                  <CommandInput placeholder="Buscar campaña..." />
+                  <CommandInput placeholder="Search campaign..." />
                   <CommandList>
-                    <CommandEmpty>No se encontraron campañas.</CommandEmpty>
+                    <CommandEmpty>No campaigns found.</CommandEmpty>
                     <CommandGroup className="max-h-60 overflow-auto">
                       {filteredCampaigns.map(c => (
                         <CommandItem
@@ -212,7 +214,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Presupuesto Total Aprobado</Label>
+            <Label className="text-xs text-muted-foreground">Total Approved Budget</Label>
             <Input
               type="number"
               value={presupuesto}
@@ -223,30 +225,30 @@ export default function AuditForm({ open, onClose, onSaved, apiData, editRecord 
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Fecha Inicio</Label>
+              <Label className="text-xs text-muted-foreground">Start Date</Label>
               <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Fecha Fin</Label>
+              <Label className="text-xs text-muted-foreground">End Date</Label>
               <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
             </div>
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Tipo de Calendario</Label>
+            <Label className="text-xs text-muted-foreground">Schedule Type</Label>
             <Select value={tipoCalendario} onValueChange={setTipoCalendario}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="corridos">Días corridos</SelectItem>
-                <SelectItem value="lun_vie">Lunes a Viernes</SelectItem>
-                <SelectItem value="lun_sab">Lunes a Sábado</SelectItem>
+                <SelectItem value="corridos">Every day</SelectItem>
+                <SelectItem value="lun_vie">Monday to Friday</SelectItem>
+                <SelectItem value="lun_sab">Monday to Saturday</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <Button onClick={handleSave} disabled={loading} className="w-full">
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            {editRecord ? 'Guardar Cambios' : 'Crear Registro'}
+            {editRecord ? 'Save Changes' : 'Create Record'}
           </Button>
         </div>
       </DialogContent>
