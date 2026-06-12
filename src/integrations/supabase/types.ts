@@ -153,7 +153,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audit_records_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "audit_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       brand_briefs: {
         Row: {
@@ -240,43 +248,15 @@ export type Database = {
           user_id?: string
           valores_marca?: string | null
         }
-        Relationships: []
-      }
-      cluster_runs: {
-        Row: {
-          client_id: string
-          cluster_key: string
-          created_at: string
-          id: string
-          model: string | null
-          output_html: string | null
-          status: string
-          title: string
-          user_id: string
-        }
-        Insert: {
-          client_id: string
-          cluster_key?: string
-          created_at?: string
-          id?: string
-          model?: string | null
-          output_html?: string | null
-          status?: string
-          title: string
-          user_id: string
-        }
-        Update: {
-          client_id?: string
-          cluster_key?: string
-          created_at?: string
-          id?: string
-          model?: string | null
-          output_html?: string | null
-          status?: string
-          title?: string
-          user_id?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "brand_briefs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "audit_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaign_tracking: {
         Row: {
@@ -322,6 +302,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      cluster_runs: {
+        Row: {
+          client_id: string
+          cluster_key: string
+          created_at: string
+          id: string
+          model: string | null
+          output_html: string | null
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          cluster_key?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          output_html?: string | null
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          cluster_key?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          output_html?: string | null
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cluster_runs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "audit_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       data_sources: {
         Row: {
