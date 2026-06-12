@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Menu, FileText, Network } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,11 +9,13 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
+import ClientPicker from "@/components/ClientPicker";
 import ClientsPage from "@/pages/ClientsPage";
 import AuditPage from "@/pages/AuditPage";
 import AuditDetailPage from "@/pages/AuditDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import BriefPage from "@/pages/BriefPage";
+import ClusterPage from "@/pages/ClusterPage";
 import MetricsAIPage from "@/pages/MetricsAIPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AdminPage from "@/pages/AdminPage";
@@ -83,7 +85,26 @@ function AppLayout() {
         <Route path="/" element={<RequireAuth><AppShell><ClientsPage /></AppShell></RequireAuth>} />
         <Route path="/client/:clientId" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
         <Route path="/audit/:id" element={<RequireAuth><AppShell><AuditDetailPage /></AppShell></RequireAuth>} />
-        <Route path="/brief" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
+        <Route path="/brief" element={<RequireAuth><AppShell>
+          <ClientPicker
+            title="Brand Brief"
+            subtitle="Strategic context per client — primary input of the AI projection clusters"
+            basePath="/brief"
+            icon={FileText}
+            mode="brief"
+          />
+        </AppShell></RequireAuth>} />
+        <Route path="/brief/:clientId" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
+        <Route path="/clusters" element={<RequireAuth><AppShell>
+          <ClientPicker
+            title="Projection Clusters"
+            subtitle="AI strategy engines per client — built from the brief, boosted with live campaign data"
+            basePath="/clusters"
+            icon={Network}
+            mode="clusters"
+          />
+        </AppShell></RequireAuth>} />
+        <Route path="/clusters/:clientId" element={<RequireAuth><AppShell><ClusterPage /></AppShell></RequireAuth>} />
         <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />
         <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AppShell><AdminPage /></AppShell></RequireAuth>} />

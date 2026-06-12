@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Save, Check } from 'lucide-react';
+import { ChevronDown, Save, Check, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Brief = Record<string, any>;
-
-type AccountOpt = { account_id: string; account_name: string };
 
 const SECTIONS: { title: string; fields: { key: string; label: string; hint?: string; type?: 'input' | 'textarea' | 'number' | 'url'; rows?: number }[] }[] = [
   {
@@ -60,86 +59,74 @@ const SECTIONS: { title: string; fields: { key: string; label: string; hint?: st
 ];
 
 export default function BriefPage() {
-  const [accounts, setAccounts] = useState<AccountOpt[]>([]);
-  const [accountId, setAccountId] = useState<string>('');
+  const { clientId } = useParams<{ clientId: string }>();
+  const navigate = useNavigate();
+  const [client, setClient] = useState<{ id: string; name: string } | null>(null);
   const [brief, setBrief] = useState<Brief>({});
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const debounceRef = useRef<number | null>(null);
 
-  // Load accounts from audit_records + meta_datos
+  // Load the client and its brief — one brief per client, linked to the same
+  // client as the real-time audit and the projection clusters
   useEffect(() => {
+    if (!clientId) return;
     (async () => {
-      const [{ data: ar }, { data: md }] = await Promise.all([
-        supabase.from('audit_records').select('account_id, campaign_name'),
-        supabase.from('meta_datos').select('account_id, account_name'),
-      ]);
-      const map = new Map<string, string>();
-      (ar || []).forEach((r: any) => {
-        if (r.account_id && !map.has(r.account_id)) map.set(r.account_id, r.account_id);
-      });
-      (md || []).forEach((r: any) => {
-        if (r.account_id) map.set(r.account_id, r.account_name || map.get(r.account_id) || r.account_id);
-      });
-      const list = Array.from(map.entries()).map(([account_id, account_name]) => ({ account_id, account_name }));
-      list.sort((a, b) => a.account_name.localeCompare(b.account_name));
-      setAccounts(list);
-      if (list.length && !accountId) setAccountId(list[0].account_id);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Load brief for selected account
-  useEffect(() => {
-    if (!accountId) return;
-    (async () => {
-      const { data } = await supabase.from('brand_briefs').select('*').eq('account_id', accountId).maybeSingle();
-      const accountName = accounts.find(a => a.account_id === accountId)?.account_name || '';
-      setBrief(data || { account_id: accountId, account_name: accountName });
+      const { data: c, error } = await supabase.from('audit_clients').select('id, name').eq('id', clientId).maybeSingle();
+      if (error || !c) {
+        toast.error('Client not found');
+        navigate('/brief', { replace: true });
+        return;
+      }
+      setClient(c);
+      const { data } = await supabase.from('brand_briefs').select('*').eq('client_id', clientId).maybeSingle();
+      setBrief(data || { client_id: clientId });
       setSavedAt(null);
     })();
-  }, [accountId, accounts]);
+  }, [clientId, navigate]);
 
   const persist = useCallback(async (next: Brief) => {
-    if (!next.account_id) return;
+    if (!clientId) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error('You must sign in to save');
       return;
     }
     setSaving(true);
-    const payload = { ...next, account_id: next.account_id, user_id: user.id };
-    const { error } = await supabase.from('brand_briefs').upsert(payload, { onConflict: 'account_id' });
+    const payload = { ...next, client_id: clientId, user_id: user.id };
+    const { error } = await supabase.from('brand_briefs').upsert(payload, { onConflict: 'client_id' });
     setSaving(false);
     if (error) {
       toast.error('Error saving brief');
     } else {
       setSavedAt(Date.now());
     }
-  }, []);
+  }, [clientId]);
 
   const update = (key: string, value: any) => {
-    const next = { ...brief, [key]: value, account_id: accountId };
+    const next = { ...brief, [key]: value, client_id: clientId };
     setBrief(next);
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => persist(next), 1200);
   };
 
-  const selectedName = useMemo(
-    () => accounts.find(a => a.account_id === accountId)?.account_name || accountId,
-    [accounts, accountId],
-  );
-
   return (
     <div className="space-y-5 max-w-4xl">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Brand Brief</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Strategic context per account — feeds the AI analysis along with Windsor.ai metrics
-          </p>
+        <div className="min-w-0 flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/brief')}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Clients
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-foreground truncate">
+              {client ? `${client.name} — Brand Brief` : 'Brand Brief'}
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Strategic context for this client — primary input of the AI projection clusters
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {saving ? (
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
               <Save className="h-3 w-3 animate-pulse" /> Saving...
@@ -152,28 +139,7 @@ export default function BriefPage() {
         </div>
       </div>
 
-      <div className="border border-border rounded-lg bg-card p-4 space-y-2">
-        <Label className="text-xs">Ad account</Label>
-        <Select value={accountId} onValueChange={setAccountId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select an account" />
-          </SelectTrigger>
-          <SelectContent>
-            {accounts.map(a => (
-              <SelectItem key={a.account_id} value={a.account_id}>
-                {a.account_name} <span className="text-muted-foreground ml-2">({a.account_id})</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {accountId && (
-          <p className="text-[11px] text-muted-foreground">
-            Editing brief for <span className="font-mono">{selectedName}</span>
-          </p>
-        )}
-      </div>
-
-      {accountId && SECTIONS.map((section, idx) => (
+      {SECTIONS.map((section, idx) => (
         <Collapsible key={section.title} defaultOpen={idx === 0}>
           <div className="border border-border rounded-lg bg-card overflow-hidden">
             <CollapsibleTrigger className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors group">
@@ -219,12 +185,6 @@ export default function BriefPage() {
           </div>
         </Collapsible>
       ))}
-
-      {!accountId && accounts.length === 0 && (
-        <div className="border border-dashed border-border rounded-lg p-8 text-center text-sm text-muted-foreground">
-          No accounts registered. Create an audit first to add its brief.
-        </div>
-      )}
     </div>
   );
 }

@@ -157,9 +157,10 @@ export type Database = {
       }
       brand_briefs: {
         Row: {
-          account_id: string
+          account_id: string | null
           account_name: string | null
           benchmark: string | null
+          client_id: string | null
           created_at: string
           descripcion_proyecto: string | null
           diferenciador: string | null
@@ -184,9 +185,10 @@ export type Database = {
           valores_marca: string | null
         }
         Insert: {
-          account_id: string
+          account_id?: string | null
           account_name?: string | null
           benchmark?: string | null
+          client_id?: string | null
           created_at?: string
           descripcion_proyecto?: string | null
           diferenciador?: string | null
@@ -211,9 +213,10 @@ export type Database = {
           valores_marca?: string | null
         }
         Update: {
-          account_id?: string
+          account_id?: string | null
           account_name?: string | null
           benchmark?: string | null
+          client_id?: string | null
           created_at?: string
           descripcion_proyecto?: string | null
           diferenciador?: string | null
@@ -236,6 +239,42 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valores_marca?: string | null
+        }
+        Relationships: []
+      }
+      cluster_runs: {
+        Row: {
+          client_id: string
+          cluster_key: string
+          created_at: string
+          id: string
+          model: string | null
+          output_html: string | null
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          cluster_key?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          output_html?: string | null
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          cluster_key?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          output_html?: string | null
+          status?: string
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }

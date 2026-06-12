@@ -1,0 +1,360 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, Sparkles, Loader2, Download, Trash2, Eye, X, FileText, Network } from 'lucide-react';
+import { buildFormulaHtml, parseFormulaStream, FORMULA_NAV_LABELS } from '@/lib/formula-template';
+import { toast } from 'sonner';
+
+interface RunRow {
+  id: string;
+  title: string;
+  cluster_key: string;
+  status: string;
+  created_at: string;
+  model: string | null;
+}
+
+const CLUSTER_KEY = 'la_formula_v2';
+
+export default function ClusterPage() {
+  const { clientId } = useParams<{ clientId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [client, setClient] = useState<{ id: string; name: string; description: string | null } | null>(null);
+  const [hasBrief, setHasBrief] = useState<boolean | null>(null);
+  const [runs, setRuns] = useState<RunRow[]>([]);
+
+  // Generation state
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState({ section: 0, chars: 0 });
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<number | null>(null);
+
+  // Viewer state
+  const [viewerHtml, setViewerHtml] = useState<string | null>(null);
+  const [viewerTitle, setViewerTitle] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<RunRow | null>(null);
+
+  const loadAll = useCallback(async () => {
+    if (!clientId) return;
+    const { data: c, error } = await supabase.from('audit_clients').select('id, name, description').eq('id', clientId).maybeSingle();
+    if (error || !c) {
+      toast.error('Client not found');
+      navigate('/clusters', { replace: true });
+      return;
+    }
+    setClient(c);
+
+    const { data: brief } = await supabase.from('brand_briefs').select('*').eq('client_id', clientId).maybeSingle();
+    const filled = brief
+      ? Object.entries(brief).filter(([k, v]) =>
+          !['id', 'user_id', 'client_id', 'account_id', 'account_name', 'created_at', 'updated_at'].includes(k) &&
+          v !== null && v !== '').length
+      : 0;
+    setHasBrief(filled >= 3);
+
+    const { data: runRows } = await supabase
+      .from('cluster_runs')
+      .select('id, title, cluster_key, status, created_at, model')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    setRuns((runRows || []) as RunRow[]);
+  }, [clientId, navigate]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  useEffect(() => () => { if (timerRef.current) window.clearInterval(timerRef.current); }, []);
+
+  const runCluster = async () => {
+    if (!clientId || !user || running) return;
+    setRunning(true);
+    setProgress({ section: 0, chars: 0 });
+    setElapsed(0);
+    timerRef.current = window.setInterval(() => setElapsed(e => e + 1), 1000);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Session expired — sign in again');
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/projection-cluster`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ clientId }),
+      });
+
+      if (!res.ok) {
+        let msg = `Cluster failed (${res.status})`;
+        try { msg = (await res.json()).error || msg; } catch { /* not json */ }
+        throw new Error(msg);
+      }
+      if (!res.body) throw new Error('No response stream');
+
+      // Parse the Anthropic SSE stream and accumulate the generated text
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let raw = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (!payload || payload === '[DONE]') continue;
+          try {
+            const evt = JSON.parse(payload);
+            if (evt.type === 'content_block_delta' && evt.delta?.text) {
+              raw += evt.delta.text;
+            } else if (evt.type === 'error') {
+              throw new Error(evt.error?.message || 'AI stream error');
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) continue; // partial JSON line
+            throw e;
+          }
+        }
+        const parsed = parseFormulaStream(raw);
+        setProgress({ section: parsed.currentSection, chars: raw.length });
+      }
+
+      // Assemble the final deliverable
+      const parsed = parseFormulaStream(raw);
+      if (!parsed.hero || parsed.sections.length < 15) {
+        throw new Error(`Generation incomplete (${parsed.sections.length}/15 sections) — try again`);
+      }
+      const html = buildFormulaHtml(parsed.hero, parsed.sections.slice(0, 15));
+      const title = `La Fórmula — ${client?.name ?? 'Client'}`;
+
+      const { error: insertErr } = await supabase.from('cluster_runs').insert({
+        user_id: user.id,
+        client_id: clientId,
+        cluster_key: CLUSTER_KEY,
+        title,
+        status: 'done',
+        output_html: html,
+        model: 'claude-sonnet-4-6',
+      });
+      if (insertErr) {
+        console.error(insertErr);
+        toast.error('Generated, but failed to save the run');
+      }
+
+      setViewerHtml(html);
+      setViewerTitle(title);
+      toast.success('Cluster completed');
+      loadAll();
+    } catch (e: any) {
+      toast.error(e.message || 'Cluster failed');
+    } finally {
+      if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
+      setRunning(false);
+    }
+  };
+
+  const viewRun = async (run: RunRow) => {
+    const { data } = await supabase.from('cluster_runs').select('output_html').eq('id', run.id).maybeSingle();
+    if (!data?.output_html) { toast.error('This run has no output'); return; }
+    setViewerHtml(data.output_html);
+    setViewerTitle(run.title);
+  };
+
+  const downloadHtml = (html: string, title: string) => {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g, '').replace(/\s+/g, '_').toLowerCase()}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from('cluster_runs').delete().eq('id', deleteTarget.id);
+    setDeleteTarget(null);
+    if (error) { toast.error('Error deleting run'); return; }
+    toast.success('Run deleted');
+    loadAll();
+  };
+
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  // Full-screen viewer
+  if (viewerHtml) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="h-12 px-3 flex items-center justify-between border-b border-border bg-background shrink-0">
+          <span className="text-sm font-semibold text-foreground truncate">{viewerTitle}</span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => downloadHtml(viewerHtml, viewerTitle)}>
+              <Download className="h-3.5 w-3.5 mr-1.5" /> Download HTML
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setViewerHtml(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <iframe
+          title={viewerTitle}
+          srcDoc={viewerHtml}
+          sandbox="allow-scripts"
+          className="flex-1 w-full border-0 bg-white"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5 max-w-4xl">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/clusters')}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Clients
+        </Button>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-foreground truncate">
+            {client ? `${client.name} — Projection Clusters` : 'Projection Clusters'}
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            AI strategy engines powered by this client's brief + real-time campaign activity
+          </p>
+        </div>
+      </div>
+
+      {/* Brief prerequisite notice */}
+      {hasBrief === false && (
+        <div className="border border-warning/40 bg-warning/5 rounded-lg p-4 flex items-start gap-3">
+          <FileText className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-foreground">This client's Brand Brief is empty</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Clusters are built FROM the briefing — complete it first to unlock the run.
+            </p>
+            <Button size="sm" variant="outline" className="mt-2" asChild>
+              <Link to={`/brief/${clientId}`}>Complete the Brand Brief</Link>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Cluster catalog */}
+      <Card className="p-5">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Network className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-semibold text-foreground">La Fórmula</h2>
+                <Badge variant="secondary" className="text-[10px]">Brand Strategy · V2</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Complete brand strategy in 15 sections: insights, SMART objectives, audiences,
+                brand structure, benchmark, strategic & creative concepts, 360° tactical plan,
+                content grid (20 pieces), SEO + Google Ads, big ideas and executive summary.
+                Briefing-centered, boosted with live paid media data. Delivered as a premium
+                client-ready HTML document in Spanish.
+              </p>
+            </div>
+          </div>
+          <Button onClick={runCluster} disabled={running || hasBrief !== true} className="shrink-0">
+            {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            {running ? 'Generating...' : 'Run Cluster'}
+          </Button>
+        </div>
+
+        {/* Live progress */}
+        {running && (
+          <div className="mt-4 pt-4 border-t border-border space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {progress.section === 0
+                  ? 'Analyzing brief and campaign data...'
+                  : `Writing ${FORMULA_NAV_LABELS[Math.min(progress.section - 1, 14)]} — section ${Math.min(progress.section, 15)} of 15`}
+              </span>
+              <span className="font-mono text-muted-foreground">
+                {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-700"
+                style={{ width: `${Math.max(4, (progress.section / 15) * 100)}%` }}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              This takes a few minutes — the AI is building the full strategy. Keep this tab open.
+            </p>
+          </div>
+        )}
+      </Card>
+
+      {/* Run history */}
+      <Card className="p-5">
+        <h2 className="font-semibold mb-3">Runs ({runs.length})</h2>
+        {runs.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">
+            No runs yet. Run La Fórmula to generate this client's first strategy.
+          </p>
+        ) : (
+          <div className="divide-y divide-border">
+            {runs.map(run => (
+              <div key={run.id} className="py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">{run.title}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {fmtDate(run.created_at)}{run.model ? ` · ${run.model}` : ''}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => viewRun(run)} title="View">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(run)} title="Delete">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this run?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The generated strategy document will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

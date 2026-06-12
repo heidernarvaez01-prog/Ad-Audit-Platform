@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun, Shield, HelpCircle } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun, Shield, HelpCircle, Network } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
@@ -11,6 +11,7 @@ import logo from '@/assets/apache-studio-logo.png.asset.json';
 const baseNav = [
   { to: '/', label: 'Monitoring Audit', icon: ClipboardCheck },
   { to: '/brief', label: 'Brand Brief', icon: FileText },
+  { to: '/clusters', label: 'Projection Clusters', icon: Network },
   { to: '/metrics-ai', label: 'AI Analysis', icon: Sparkles },
   { to: '/alerts', label: 'Alerts', icon: Bell },
   { to: '/how-it-works', label: 'How it works', icon: HelpCircle },
@@ -189,7 +190,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
           {navItems.map(({ to, label, icon: Icon }, index) => {
             const active = to === '/'
               ? location.pathname === '/' || location.pathname.startsWith('/client/') || location.pathname.startsWith('/audit/')
-              : location.pathname === to;
+              : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
             const linkContent = (
               <motion.div
