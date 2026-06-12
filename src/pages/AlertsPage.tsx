@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, CheckCircle2, Loader2, Send } from 'lucide-react';
+import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchCampaignData } from '@/lib/api';
+import { buildAuditRows } from '@/lib/audit-helpers';
+import { ALERT_TYPE_LABELS, type AuditAlert } from '@/lib/audit-alerts';
 import { toast } from '@/hooks/use-toast';
 
 interface AlertSettings {
@@ -19,17 +22,16 @@ interface AlertSettings {
   notify_frequency: 'daily' | 'weekly' | 'manual';
 }
 
-interface ComputedAlert {
+interface CampaignAlert {
+  clientName: string;
   campaign: string;
   account: string;
   platform: string | null;
-  level: 'critical' | 'warning' | 'ok';
+  alert: AuditAlert;
   spend: number;
   budget: number;
   spendPct: number;
   timePct: number;
-  deviation: number;
-  message: string;
 }
 
 const DEFAULT_SETTINGS: AlertSettings = {
@@ -40,22 +42,12 @@ const DEFAULT_SETTINGS: AlertSettings = {
   notify_frequency: 'daily',
 };
 
-function workdaysBetween(start: Date, end: Date) {
-  let count = 0;
-  const d = new Date(start);
-  while (d <= end) {
-    const day = d.getDay();
-    if (day !== 0 && day !== 6) count++;
-    d.setDate(d.getDate() + 1);
-  }
-  return Math.max(count, 1);
-}
-
 export default function AlertsPage() {
   const { user } = useAuth();
   const [settings, setSettings] = useState<AlertSettings>(DEFAULT_SETTINGS);
   const [emailInput, setEmailInput] = useState('');
-  const [alerts, setAlerts] = useState<ComputedAlert[]>([]);
+  const [alerts, setAlerts] = useState<CampaignAlert[]>([]);
+  const [healthyCount, setHealthyCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
@@ -64,6 +56,7 @@ export default function AlertsPage() {
     if (!user) return;
     (async () => {
       setLoading(true);
+
       // Load settings
       const { data: cfg } = await supabase.from('alert_settings').select('*').eq('user_id', user.id).maybeSingle();
       if (cfg) {
@@ -76,75 +69,45 @@ export default function AlertsPage() {
         });
       }
 
-      // Compute alerts
-      const { data: audits } = await supabase
-        .from('audit_records')
-        .select('account_id, campaign_name, platform, presupuesto_total, fecha_inicio, fecha_fin')
-        .eq('user_id', user.id);
+      // Compute alerts with the same engine as the audit matrix — per client
+      const [{ data: clients }, { data: records }, apiData] = await Promise.all([
+        supabase.from('audit_clients').select('id, name'),
+        supabase.from('audit_records').select('*'),
+        fetchCampaignData().catch(() => []),
+      ]);
+      const clientName = new Map((clients || []).map(c => [c.id, c.name]));
+      const rows = buildAuditRows(records || [], apiData);
 
-      const accountIds = Array.from(new Set((audits ?? []).map((a) => a.account_id)));
-      let metrics: any[] = [];
-      if (accountIds.length) {
-        const { data: m } = await supabase
-          .from('meta_datos')
-          .select('account_id, account_name, campaign_name, total_cost, fecha')
-          .in('account_id', accountIds);
-        metrics = m ?? [];
-      }
-
-      const today = new Date();
-      const computed: ComputedAlert[] = [];
-      for (const a of audits ?? []) {
-        const start = new Date(a.fecha_inicio);
-        const end = new Date(a.fecha_fin);
-        const totalDays = workdaysBetween(start, end);
-        const elapsedDays = workdaysBetween(start, today < end ? today : end);
-        const timePct = Math.min(100, (elapsedDays / totalDays) * 100);
-        const spend = metrics
-          .filter((m) => m.account_id === a.account_id && m.campaign_name === a.campaign_name)
-          .reduce((s, m) => s + Number(m.total_cost ?? 0), 0);
-        const budget = Number(a.presupuesto_total ?? 0);
-        const spendPct = budget > 0 ? (spend / budget) * 100 : 0;
-        const deviation = +(spendPct - timePct).toFixed(1);
-        const abs = Math.abs(deviation);
-        let level: ComputedAlert['level'] = 'ok';
-        if (abs > 20) level = 'critical';
-        else if (abs > 10) level = 'warning';
-
-        const accountName = metrics.find((m) => m.account_id === a.account_id)?.account_name ?? a.account_id;
-        let message = `Pacing on track (${deviation > 0 ? '+' : ''}${deviation}%)`;
-        if (level !== 'ok') {
-          message = deviation > 0
-            ? `Over-delivery of ${deviation}% (spend ${spendPct.toFixed(1)}% vs time ${timePct.toFixed(1)}%)`
-            : `Under-delivery of ${deviation}% (spend ${spendPct.toFixed(1)}% vs time ${timePct.toFixed(1)}%)`;
+      const computed: CampaignAlert[] = [];
+      let healthy = 0;
+      for (const row of rows) {
+        if (row.alerts.length === 0) { healthy += 1; continue; }
+        for (const alert of row.alerts) {
+          computed.push({
+            clientName: clientName.get((row as any).client_id) || '—',
+            campaign: row.campaign_name,
+            account: row.campaignApiData[0]?.account_name || row.account_id,
+            platform: row.platform ?? null,
+            alert,
+            spend: row.metrics.gastoActual,
+            budget: row.presupuesto_total,
+            spendPct: +row.metrics.porcentajeGastado.toFixed(1),
+            timePct: +row.metrics.porcentajeTiempo.toFixed(1),
+          });
         }
-
-        computed.push({
-          campaign: a.campaign_name,
-          account: accountName,
-          platform: a.platform,
-          level,
-          spend,
-          budget,
-          spendPct: +spendPct.toFixed(1),
-          timePct: +timePct.toFixed(1),
-          deviation,
-          message,
-        });
       }
-      computed.sort((x, y) => {
-        const order = { critical: 0, warning: 1, ok: 2 };
-        return order[x.level] - order[y.level];
-      });
+      const order = { danger: 0, warning: 1, info: 2 } as const;
+      computed.sort((a, b) => order[a.alert.severity] - order[b.alert.severity]);
       setAlerts(computed);
+      setHealthyCount(healthy);
       setLoading(false);
     })();
   }, [user]);
 
   const stats = useMemo(() => ({
-    critical: alerts.filter((a) => a.level === 'critical').length,
-    warning: alerts.filter((a) => a.level === 'warning').length,
-    ok: alerts.filter((a) => a.level === 'ok').length,
+    danger: alerts.filter(a => a.alert.severity === 'danger').length,
+    warning: alerts.filter(a => a.alert.severity === 'warning').length,
+    info: alerts.filter(a => a.alert.severity === 'info').length,
   }), [alerts]);
 
   const addEmail = () => {
@@ -180,18 +143,32 @@ export default function AlertsPage() {
       toast({ title: 'Add at least one recipient', variant: 'destructive' });
       return;
     }
-    const toSend = settings.only_critical ? alerts.filter((a) => a.level === 'critical') : alerts.filter((a) => a.level !== 'ok');
-    const criticalCount = alerts.filter((a) => a.level === 'critical').length;
-    const warningCount = alerts.filter((a) => a.level === 'warning').length;
+    const pool = settings.only_critical
+      ? alerts.filter(a => a.alert.severity === 'danger')
+      : alerts.filter(a => a.alert.severity !== 'info');
+    if (pool.length === 0) {
+      toast({ title: 'Nothing to send — no active critical or warning alerts' });
+      return;
+    }
+    // Map to the email function schema
+    const payload = pool.map(a => ({
+      campaign: a.campaign,
+      account: `${a.clientName} · ${a.account}`,
+      platform: a.platform,
+      level: a.alert.severity === 'danger' ? 'critical' as const : 'warning' as const,
+      spend: a.spend,
+      budget: a.budget,
+      spendPct: a.spendPct,
+      timePct: a.timePct,
+      deviation: +(a.spendPct - a.timePct).toFixed(1),
+      message: `${ALERT_TYPE_LABELS[a.alert.type]}: ${a.alert.message}`,
+    }));
+    const criticalCount = payload.filter(a => a.level === 'critical').length;
+    const warningCount = payload.filter(a => a.level === 'warning').length;
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-alert-email', {
-        body: {
-          to: settings.email_recipients,
-          alerts: toSend,
-          criticalCount,
-          warningCount,
-        },
+        body: { to: settings.email_recipients, alerts: payload, criticalCount, warningCount },
       });
       if (error || (data && (data as any).error)) {
         const msg = error?.message || (data as any)?.error || 'Unknown error';
@@ -206,6 +183,10 @@ export default function AlertsPage() {
     }
   };
 
+  const severityIcon = (s: AuditAlert['severity']) =>
+    s === 'danger' ? <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+    : s === 'warning' ? <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+    : <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -214,31 +195,39 @@ export default function AlertsPage() {
         <div>
           <h1 className="text-xl font-semibold">Alerts</h1>
           <p className="text-sm text-muted-foreground">
-            Monitor pacing deviations and configure email notifications.
+            Six high-signal rules only — each campaign is checked for overspend, zero delivery,
+            ending soon, cost spikes, early budget depletion and creative fatigue.
           </p>
         </div>
       </header>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="p-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-destructive" />
           <div>
-            <div className="text-2xl font-bold">{stats.critical}</div>
-            <div className="text-xs text-muted-foreground">Critical (&gt;20%)</div>
+            <div className="text-2xl font-bold">{stats.danger}</div>
+            <div className="text-xs text-muted-foreground">Critical</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-yellow-500" />
+          <AlertTriangle className="h-5 w-5 text-warning" />
           <div>
             <div className="text-2xl font-bold">{stats.warning}</div>
-            <div className="text-xs text-muted-foreground">Warnings (&gt;10%)</div>
+            <div className="text-xs text-muted-foreground">Warnings</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          <Info className="h-5 w-5 text-primary" />
           <div>
-            <div className="text-2xl font-bold">{stats.ok}</div>
-            <div className="text-xs text-muted-foreground">On track</div>
+            <div className="text-2xl font-bold">{stats.info}</div>
+            <div className="text-xs text-muted-foreground">Heads-up</div>
+          </div>
+        </Card>
+        <Card className="p-4 flex items-center gap-3">
+          <CheckCircle2 className="h-5 w-5 text-success" />
+          <div>
+            <div className="text-2xl font-bold">{healthyCount}</div>
+            <div className="text-xs text-muted-foreground">Healthy campaigns</div>
           </div>
         </Card>
       </div>
@@ -286,17 +275,7 @@ export default function AlertsPage() {
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Deviation threshold (%)</Label>
-            <Input
-              type="number"
-              min={1}
-              max={100}
-              value={settings.pacing_threshold_pct}
-              onChange={(e) => setSettings({ ...settings, pacing_threshold_pct: Number(e.target.value) })}
-            />
-          </div>
+        <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Frequency</Label>
             <Select
@@ -314,7 +293,7 @@ export default function AlertsPage() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <Label>Critical only</Label>
-              <p className="text-xs text-muted-foreground">Ignore warnings.</p>
+              <p className="text-xs text-muted-foreground">Ignore warnings in emails.</p>
             </div>
             <Switch checked={settings.only_critical} onCheckedChange={(v) => setSettings({ ...settings, only_critical: v })} />
           </div>
@@ -333,25 +312,32 @@ export default function AlertsPage() {
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-semibold mb-3">Active alerts</h2>
+        <h2 className="font-semibold mb-3">Active alerts ({alerts.length})</h2>
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
           </div>
         ) : alerts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No audited campaigns yet.</p>
+          <div className="text-center py-6 space-y-1">
+            <CheckCircle2 className="h-7 w-7 text-success mx-auto" />
+            <p className="text-sm text-foreground font-medium">All campaigns are healthy</p>
+            <p className="text-xs text-muted-foreground">No alert rule is currently triggered. That is the goal.</p>
+          </div>
         ) : (
           <div className="divide-y divide-border">
             {alerts.map((a, i) => (
               <div key={i} className="py-3 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
-                  {a.level === 'critical' ? <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                   : a.level === 'warning' ? <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
-                   : <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />}
+                  {severityIcon(a.alert.severity)}
                   <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">{a.campaign}</div>
-                    <div className="text-xs text-muted-foreground truncate">{a.account} · {a.platform ?? '—'}</div>
-                    <div className="text-xs mt-1">{a.message}</div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm truncate">{a.campaign}</span>
+                      <Badge variant="outline" className="text-[10px]">{ALERT_TYPE_LABELS[a.alert.type]}</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      {a.clientName} · {a.account}{a.platform ? ` · ${a.platform.toUpperCase()}` : ''}
+                    </div>
+                    <div className="text-xs mt-1">{a.alert.icon} {a.alert.message}</div>
                   </div>
                 </div>
                 <div className="text-right text-xs text-muted-foreground shrink-0">

@@ -17,6 +17,9 @@ export interface ApiCampaignRow {
     ctr: number;
     frequency: number;
     thruplay_actions: number;
+    link_clicks: number;
+    interactions: number;
+    conversions: number;
   };
 }
 
@@ -27,21 +30,35 @@ export function clearCampaignDataCache() {
   cache = null;
 }
 
+const FULL_COLUMNS =
+  "account_id,account_name,campaign_name,adset_name,plataforma,fecha,total_cost,clicks,impressions,reach,cpc,cpm,ctr_all,frequency,thruplay_actions,link_clicks,interactions,conversions";
+// Fallback while the DB migration adding link_clicks/interactions/conversions is pending
+const LEGACY_COLUMNS =
+  "account_id,account_name,campaign_name,adset_name,plataforma,fecha,total_cost,clicks,impressions,reach,cpc,cpm,ctr_all,frequency,thruplay_actions";
+
 export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
   if (cache && Date.now() - cache.ts < TTL_MS) return cache.data;
 
   const all: ApiCampaignRow[] = [];
   const PAGE = 1000;
   let from = 0;
+  let columns = FULL_COLUMNS;
 
   while (true) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("meta_datos")
-      .select(
-        "account_id,account_name,campaign_name,adset_name,plataforma,fecha,total_cost,clicks,impressions,reach,cpc,cpm,ctr_all,frequency,thruplay_actions"
-      )
+      .select(columns)
       .order("fecha", { ascending: true })
       .range(from, from + PAGE - 1);
+
+    if (error && columns === FULL_COLUMNS && error.code === "42703") {
+      columns = LEGACY_COLUMNS;
+      ({ data, error } = await supabase
+        .from("meta_datos")
+        .select(columns)
+        .order("fecha", { ascending: true })
+        .range(from, from + PAGE - 1));
+    }
 
     if (error) {
       console.error("fetchCampaignData error:", error);
@@ -49,7 +66,7 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
     }
     if (!data || data.length === 0) break;
 
-    for (const r of data) {
+    for (const r of data as any[]) {
       all.push({
         account_id: String(r.account_id ?? ""),
         account_name: String(r.account_name ?? ""),
@@ -67,6 +84,9 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
           ctr: Number(r.ctr_all ?? 0),
           frequency: Number(r.frequency ?? 0),
           thruplay_actions: Number(r.thruplay_actions ?? 0),
+          link_clicks: Number((r as any).link_clicks ?? 0),
+          interactions: Number((r as any).interactions ?? 0),
+          conversions: Number((r as any).conversions ?? 0),
         },
       });
     }

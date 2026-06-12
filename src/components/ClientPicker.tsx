@@ -21,7 +21,7 @@ interface Props {
   subtitle: string;
   basePath: string;          // e.g. '/brief' or '/clusters'
   icon: LucideIcon;
-  mode: 'brief' | 'clusters'; // which per-client badge to show
+  mode: 'brief' | 'clusters' | 'weekly' | 'reporting'; // which per-client badge to show
 }
 
 /**
@@ -49,20 +49,33 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
     setMigrationPending(false);
     setClients((data || []) as ClientRow[]);
 
-    // Per-client badge: brief completed or cluster runs count
+    // Per-client badge depending on the section
     const map: Record<string, string> = {};
     if (mode === 'brief') {
       const { data: briefs } = await supabase.from('brand_briefs').select('client_id, marca').not('client_id', 'is', null);
       for (const b of briefs || []) {
         if (b.client_id) map[b.client_id] = 'Brief started';
       }
-    } else {
+    } else if (mode === 'clusters') {
       const { data: runs } = await supabase.from('cluster_runs').select('client_id');
       for (const r of runs || []) {
         const n = (map[r.client_id] ? parseInt(map[r.client_id]) : 0) + 1;
         map[r.client_id] = `${n}`;
       }
       for (const k of Object.keys(map)) map[k] = `${map[k]} run${map[k] === '1' ? '' : 's'}`;
+    } else if (mode === 'weekly') {
+      const { data: reports } = await supabase
+        .from('weekly_reports').select('client_id, week_end')
+        .order('week_end', { ascending: false });
+      for (const r of reports || []) {
+        if (!map[r.client_id]) map[r.client_id] = `Last: ${r.week_end}`;
+      }
+    } else if (mode === 'reporting') {
+      const { data: cs } = await supabase.from('audit_clients').select('id, looker_report_url, looker_approved');
+      for (const c of cs || []) {
+        if (c.looker_approved && c.looker_report_url) map[c.id] = 'Approved';
+        else if (c.looker_report_url) map[c.id] = 'Pending approval';
+      }
     }
     setBadges(map);
     setLoading(false);

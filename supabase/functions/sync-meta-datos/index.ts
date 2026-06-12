@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const WINDSOR_URL =
-  "https://connectors.windsor.ai/facebook?api_key=3b97127322bd6bc821bf2cbe12046b84c3a1&date_preset=last_30d&fields=account_id,date,account_name,campaign,adset_name,campaign_objective,spend,clicks,impressions,ctr,link_clicks,frequency,cpm,actions_post_engagement,video_thruplay_watched_actions_video_view&select_accounts=204109401";
+  "https://connectors.windsor.ai/facebook?api_key=3b97127322bd6bc821bf2cbe12046b84c3a1&date_preset=last_30d&fields=account_id,date,account_name,campaign,adset_name,campaign_objective,spend,clicks,impressions,reach,ctr,link_clicks,frequency,cpm,actions_post_engagement,video_thruplay_watched_actions_video_view,conversions&select_accounts=204109401";
 
 function toDate(v: unknown): string | null {
   if (!v || typeof v !== "string") return null;
@@ -72,9 +72,12 @@ Deno.serve(async (req) => {
         frequency: toNum(r["frequency"]),
         ctr_all: toNum(r["ctr"]),
         clicks,
-        reach: null,
+        reach: toInt(r["reach"]),
         impressions: toInt(r["impressions"]),
         thruplay_actions: toInt(r["video_thruplay_watched_actions_video_view"]),
+        link_clicks: toInt(r["link_clicks"]),
+        interactions: toInt(r["actions_post_engagement"]),
+        conversions: toNum(r["conversions"]),
       };
     });
 

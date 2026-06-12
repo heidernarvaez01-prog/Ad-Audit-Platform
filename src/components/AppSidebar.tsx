@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Sparkles, Bell, LogOut, Moon, Sun, Shield, HelpCircle, Network } from 'lucide-react';
+import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Bell, LogOut, Moon, Sun, Shield, HelpCircle, Network, CalendarClock, PieChart } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
@@ -12,7 +12,8 @@ const baseNav = [
   { to: '/', label: 'Monitoring Audit', icon: ClipboardCheck },
   { to: '/brief', label: 'Brand Brief', icon: FileText },
   { to: '/clusters', label: 'Projection Clusters', icon: Network },
-  { to: '/metrics-ai', label: 'AI Analysis', icon: Sparkles },
+  { to: '/weekly-report', label: 'Weekly Report', icon: CalendarClock },
+  { to: '/reporting', label: 'Reporting', icon: PieChart },
   { to: '/alerts', label: 'Alerts', icon: Bell },
   { to: '/how-it-works', label: 'How it works', icon: HelpCircle },
 ];

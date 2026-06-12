@@ -27,29 +27,41 @@ serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    const { question, accountId } = await req.json();
+    const { question, accountId, clientId, campaignName } = await req.json();
     if (!question || typeof question !== "string") {
       return new Response(JSON.stringify({ error: "question is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Aggregate user's campaigns from audit_records to scope by account_id
-    const { data: audits } = await supabase
+    // Aggregate user's campaigns from audit_records — optionally scoped to a
+    // single client and/or campaign (floating AI chat flow)
+    let auditQuery = supabase
       .from("audit_records")
-      .select("account_id, campaign_name, platform, presupuesto_total, fecha_inicio, fecha_fin")
+      .select("account_id, campaign_name, platform, presupuesto_total, fecha_inicio, fecha_fin, client_id")
       .eq("user_id", userId);
+    if (clientId && typeof clientId === "string") auditQuery = auditQuery.eq("client_id", clientId);
+    if (campaignName && typeof campaignName === "string") auditQuery = auditQuery.eq("campaign_name", campaignName);
+    const { data: audits } = await auditQuery;
 
     const accountIds = Array.from(new Set((audits ?? []).map((a) => a.account_id).filter(Boolean)));
     const targetAccounts = accountId ? [accountId] : accountIds;
+    const targetCampaigns = Array.from(new Set((audits ?? []).map((a) => a.campaign_name).filter(Boolean)));
 
-    // Pull recent metrics for those accounts
+    // Pull recent metrics for those accounts (and campaign scope if given)
     let metrics: any[] = [];
-    if (targetAccounts.length) {
-      const { data } = await supabase
+    if (targetAccounts.length || targetCampaigns.length) {
+      let q = supabase
         .from("meta_datos")
-        .select("account_id, account_name, campaign_name, adset_name, plataforma, fecha, total_cost, impressions, clicks, reach, frequency, ctr_all, cpc, cpm, thruplay_actions, objective")
-        .in("account_id", targetAccounts)
+        .select("account_id, account_name, campaign_name, adset_name, plataforma, fecha, total_cost, impressions, clicks, reach, frequency, ctr_all, cpc, cpm, thruplay_actions, objective, link_clicks, interactions, conversions")
         .order("fecha", { ascending: false })
         .limit(800);
+      if (campaignName && typeof campaignName === "string") {
+        q = q.eq("campaign_name", campaignName);
+      } else if (clientId && targetCampaigns.length) {
+        q = q.in("campaign_name", targetCampaigns);
+      } else if (targetAccounts.length) {
+        q = q.in("account_id", targetAccounts);
+      }
+      const { data } = await q;
       metrics = data ?? [];
     }
 
@@ -84,12 +96,12 @@ serve(async (req) => {
       totalRows: metrics.length,
     };
 
-    const systemPrompt = `Eres un analista senior de performance marketing. Analiza los datos de campañas del usuario y responde a su pregunta en español. 
-Reglas:
-- Usa SOLO los datos del contexto JSON proporcionado. Si faltan datos, dilo.
-- Sé concreto: cita números (CTR, CPC, CPM, gasto) y nombres de campañas.
-- Estructura tu respuesta con markdown: hallazgos clave, diagnóstico y recomendaciones accionables.
-- Sé breve y directo (máx 350 palabras).`;
+    const systemPrompt = `You are a senior performance marketing analyst. Analyze the user's campaign data and answer their question in the same language they ask in.
+Rules:
+- Use ONLY the data in the provided JSON context. If data is missing, say so.
+- Be concrete: cite numbers (CTR, CPC, CPM, spend, conversions) and campaign names.
+- Structure your answer with markdown: key findings, diagnosis, and actionable recommendations.
+- Be brief and direct (max 350 words).`;
 
     const userPrompt = `Contexto (JSON):\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\`\n\nPregunta del usuario:\n${question}`;
 

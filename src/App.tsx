@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Menu, FileText, Network } from "lucide-react";
+import { Menu, FileText, Network, CalendarClock, PieChart } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +9,10 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
+import AIChatWidget from "@/components/AIChatWidget";
 import ClientPicker from "@/components/ClientPicker";
+import WeeklyReportPage from "@/pages/WeeklyReportPage";
+import ReportingPage from "@/pages/ReportingPage";
 import ClientsPage from "@/pages/ClientsPage";
 import AuditPage from "@/pages/AuditPage";
 import AuditDetailPage from "@/pages/AuditDetailPage";
@@ -57,6 +60,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto min-w-0">{children}</main>
       </div>
+      <AIChatWidget />
     </div>
   );
 }
@@ -105,6 +109,26 @@ function AppLayout() {
           />
         </AppShell></RequireAuth>} />
         <Route path="/clusters/:clientId" element={<RequireAuth><AppShell><ClusterPage /></AppShell></RequireAuth>} />
+        <Route path="/weekly-report" element={<RequireAuth><AppShell>
+          <ClientPicker
+            title="Weekly Performance Report"
+            subtitle="Sunday-to-Sunday performance per client — emailed automatically every Monday"
+            basePath="/weekly-report"
+            icon={CalendarClock}
+            mode="weekly"
+          />
+        </AppShell></RequireAuth>} />
+        <Route path="/weekly-report/:clientId" element={<RequireAuth><AppShell><WeeklyReportPage /></AppShell></RequireAuth>} />
+        <Route path="/reporting" element={<RequireAuth><AppShell>
+          <ClientPicker
+            title="Reporting"
+            subtitle="Looker Studio reports per client — only approved versions are visible"
+            basePath="/reporting"
+            icon={PieChart}
+            mode="reporting"
+          />
+        </AppShell></RequireAuth>} />
+        <Route path="/reporting/:clientId" element={<RequireAuth><AppShell><ReportingPage /></AppShell></RequireAuth>} />
         <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />
         <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AppShell><AdminPage /></AppShell></RequireAuth>} />

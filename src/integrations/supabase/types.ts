@@ -88,7 +88,10 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          looker_approved: boolean
+          looker_report_url: string | null
           name: string
+          report_recipients: string[]
           updated_at: string
           user_id: string
         }
@@ -96,7 +99,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          looker_approved?: boolean
+          looker_report_url?: string | null
           name: string
+          report_recipients?: string[]
           updated_at?: string
           user_id: string
         }
@@ -104,9 +110,72 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          looker_approved?: boolean
+          looker_report_url?: string | null
           name?: string
+          report_recipients?: string[]
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      alert_events: {
+        Row: {
+          alert_type: string
+          campaign_name: string
+          id: string
+          last_triggered_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          campaign_name: string
+          id?: string
+          last_triggered_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          campaign_name?: string
+          id?: string
+          last_triggered_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      weekly_reports: {
+        Row: {
+          client_id: string
+          created_at: string
+          html: string | null
+          id: string
+          sent_at: string | null
+          sent_to: string[]
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          html?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_to?: string[]
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          html?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_to?: string[]
+          user_id?: string
+          week_end?: string
+          week_start?: string
         }
         Relationships: []
       }
@@ -485,12 +554,15 @@ export type Database = {
           cpc: number | null
           cpm: number | null
           created_at: string
+          conversions: number | null
           ctr_all: number | null
           daily_budget: number | null
           fecha: string | null
           frequency: number | null
           id: number
           impressions: number | null
+          interactions: number | null
+          link_clicks: number | null
           objective: string | null
           plataforma: string | null
           reach: number | null
@@ -514,12 +586,15 @@ export type Database = {
           cpc?: number | null
           cpm?: number | null
           created_at?: string
+          conversions?: number | null
           ctr_all?: number | null
           daily_budget?: number | null
           fecha?: string | null
           frequency?: number | null
           id?: number
           impressions?: number | null
+          interactions?: number | null
+          link_clicks?: number | null
           objective?: string | null
           plataforma?: string | null
           reach?: number | null
@@ -543,12 +618,15 @@ export type Database = {
           cpc?: number | null
           cpm?: number | null
           created_at?: string
+          conversions?: number | null
           ctr_all?: number | null
           daily_budget?: number | null
           fecha?: string | null
           frequency?: number | null
           id?: number
           impressions?: number | null
+          interactions?: number | null
+          link_clicks?: number | null
           objective?: string | null
           plataforma?: string | null
           reach?: number | null

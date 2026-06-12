@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2, ExternalLink } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, Sparkles, Loader2, ExternalLink, Gauge, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
@@ -51,12 +52,53 @@ interface InsightData {
   riskLevel: 'critical' | 'moderate' | 'none';
 }
 
+// Aggregated real-time performance for one audited campaign
+interface RowPerf {
+  impressions: number;
+  reach: number;
+  conversions: number;
+  clicks: number;
+  linkClicks: number;
+  interactions: number;
+  ctr: number;
+  thruplay: number;
+  cpm: number;
+  cpc: number;
+  engagementRate: number;
+}
+
+function computePerf(api: ApiCampaignRow[]): RowPerf {
+  const sum = (f: (m: ApiCampaignRow['metrics']) => number) =>
+    api.reduce((s, r) => s + (isNaN(f(r.metrics)) ? 0 : f(r.metrics)), 0);
+  const impressions = sum(m => m.impressions);
+  const clicks = sum(m => m.clicks);
+  const cost = sum(m => m.cost);
+  const interactions = sum(m => m.interactions);
+  return {
+    impressions,
+    reach: sum(m => m.reach),
+    conversions: sum(m => m.conversions),
+    clicks,
+    linkClicks: sum(m => m.link_clicks),
+    interactions,
+    ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+    thruplay: sum(m => m.thruplay_actions),
+    cpm: impressions > 0 ? (cost / impressions) * 1000 : 0,
+    cpc: clicks > 0 ? cost / clicks : 0,
+    engagementRate: impressions > 0 ? (interactions / impressions) * 100 : 0,
+  };
+}
+
 function fmt(n: number) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtNum(n: number) {
   return n.toLocaleString('en-US');
+}
+
+function fmtPct(n: number) {
+  return `${n.toFixed(1)}%`;
 }
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -94,6 +136,21 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// % Actual colored against % Expected: the heart of pacing clarity
+function ActualPctCell({ actual, expected }: { actual: number; expected: number }) {
+  const diff = actual - expected;
+  const color = Math.abs(diff) <= 10
+    ? 'text-success'
+    : diff < 0
+      ? 'text-warning'
+      : 'text-destructive';
+  return (
+    <span className={`font-mono text-xs font-bold ${color}`}>
+      {fmtPct(actual)}
+    </span>
+  );
+}
+
 function RiskIndicator({ insight }: { insight: InsightData }) {
   if (insight.riskLevel === 'none') return null;
   const isCritical = insight.riskLevel === 'critical';
@@ -124,11 +181,7 @@ function MetricMini({ label, value }: { label: string; value: string }) {
 
 function CampaignSummary({ row }: { row: AuditRowData }) {
   const m = row.metrics;
-  const api = row.campaignApiData;
-  const clicks = api.reduce((s, r) => s + r.metrics.clicks, 0);
-  const impressions = api.reduce((s, r) => s + r.metrics.impressions, 0);
-  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-  const cpc = clicks > 0 ? m.gastoActual / clicks : 0;
+  const p = computePerf(row.campaignApiData);
   return (
     <div className="space-y-2.5">
       <div>
@@ -139,12 +192,12 @@ function CampaignSummary({ row }: { row: AuditRowData }) {
       <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-border">
         <MetricMini label="Spend" value={fmt(m.gastoActual)} />
         <MetricMini label="Budget" value={fmt(row.presupuesto_total)} />
-        <MetricMini label="Pacing" value={`${m.pacingPct.toFixed(1)}%`} />
+        <MetricMini label="% Expected" value={fmtPct(m.porcentajeTiempo)} />
+        <MetricMini label="% Actual" value={fmtPct(m.porcentajeGastado)} />
         <MetricMini label="Ideal daily" value={fmt(m.presupuestoDiarioIdeal)} />
-        <MetricMini label="Days left" value={m.diasRestantes.toString()} />
-        <MetricMini label="Status" value={m.pacingStatus === 'OK' ? 'On Track' : m.pacingStatus === 'SOBREGASTANDO' ? 'Over' : 'Under'} />
-        <MetricMini label="CTR" value={`${ctr.toFixed(2)}%`} />
-        <MetricMini label="CPC" value={fmt(cpc)} />
+        <MetricMini label="Remaining" value={fmt(m.presupuestoRestante)} />
+        <MetricMini label="CTR" value={fmtPct(p.ctr)} />
+        <MetricMini label="CPC" value={fmt(p.cpc)} />
       </div>
       {row.alerts.length > 0 && (
         <div className="pt-1.5 border-t border-border">
@@ -185,39 +238,49 @@ function ExpandedDetails({
   loadingInsight: boolean;
   onGenerateInsight: () => void;
 }) {
-  const apiData = row.campaignApiData;
-  const totalClicks = apiData.reduce((s, r) => s + r.metrics.clicks, 0);
-  const totalImpressions = apiData.reduce((s, r) => s + r.metrics.impressions, 0);
-  const totalCost = apiData.reduce((s, r) => s + r.metrics.cost, 0);
-  const totalReach = apiData.reduce((s, r) => s + r.metrics.reach, 0);
-  const cpc = totalClicks > 0 ? totalCost / totalClicks : 0;
-  const cpm = totalImpressions > 0 ? (totalCost / totalImpressions) * 1000 : 0;
-  const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const m = row.metrics;
+  const p = computePerf(row.campaignApiData);
 
   return (
     <div className="px-4 pb-4 space-y-4">
+      {/* Pacing bar — visual summary of expected vs actual */}
+      <div className="pt-3">
+        <PacingBar
+          porcentajeTiempo={m.porcentajeTiempo}
+          porcentajeGasto={m.porcentajeGastado}
+          status={m.pacingStatus}
+        />
+      </div>
+
       {/* Performance Charts */}
       <PerformanceCharts
-        apiRows={apiData}
+        apiRows={row.campaignApiData}
         budget={row.presupuesto_total}
         level="campaign"
       />
-      {/* API Metrics */}
+
+      {/* Full performance metrics */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 p-3 rounded-md bg-muted/50 border border-border">
-        <MetricMini label="Clicks" value={fmtNum(totalClicks)} />
-        <MetricMini label="Impressions" value={fmtNum(totalImpressions)} />
-        <MetricMini label="Reach" value={fmtNum(totalReach)} />
-        <MetricMini label="CTR" value={`${ctr.toFixed(2)}%`} />
-        <MetricMini label="CPC" value={fmt(cpc)} />
-        <MetricMini label="CPM" value={fmt(cpm)} />
+        <MetricMini label="Impressions" value={fmtNum(p.impressions)} />
+        <MetricMini label="Reach" value={fmtNum(p.reach)} />
+        <MetricMini label="Conversions" value={fmtNum(p.conversions)} />
+        <MetricMini label="Clicks" value={fmtNum(p.clicks)} />
+        <MetricMini label="Link Clicks" value={fmtNum(p.linkClicks)} />
+        <MetricMini label="Interactions" value={fmtNum(p.interactions)} />
+        <MetricMini label="CTR" value={fmtPct(p.ctr)} />
+        <MetricMini label="Thruplay" value={fmtNum(p.thruplay)} />
+        <MetricMini label="CPM" value={fmt(p.cpm)} />
+        <MetricMini label="CPC" value={fmt(p.cpc)} />
+        <MetricMini label="Engagement" value={fmtPct(p.engagementRate)} />
+        <MetricMini label="Daily Spend Avg" value={fmt(m.gastoDiarioActual)} />
       </div>
 
       {/* Pacing detail */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded-md bg-muted/50 border border-border">
-        <MetricMini label="Total Days" value={row.metrics.diasTotales.toString()} />
-        <MetricMini label="Days Elapsed" value={row.metrics.diasTranscurridos.toString()} />
-        <MetricMini label="Days Left" value={row.metrics.diasRestantes.toString()} />
-        <MetricMini label="Current Daily Spend" value={fmt(row.metrics.gastoDiarioActual)} />
+        <MetricMini label="Total Days" value={m.diasTotales.toString()} />
+        <MetricMini label="Days Elapsed" value={m.diasTranscurridos.toString()} />
+        <MetricMini label="Days Left" value={m.diasRestantes.toString()} />
+        <MetricMini label="Expected Spend" value={fmt(m.gastoEsperado)} />
       </div>
 
       {/* AI Insight */}
@@ -267,6 +330,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [insights, setInsights] = useState<Record<string, InsightData>>({});
   const [loadingInsights, setLoadingInsights] = useState<Record<string, boolean>>({});
+  const [view, setView] = useState<'pacing' | 'performance'>('pacing');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
 
@@ -280,6 +344,12 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
     return () => ro.disconnect();
   }, []);
 
+  const perfByRow = useMemo(() => {
+    const map = new Map<string, RowPerf>();
+    for (const row of rows) map.set(row.id, computePerf(row.campaignApiData));
+    return map;
+  }, [rows]);
+
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
@@ -291,14 +361,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
 
   const generateInsight = async (row: AuditRowData) => {
     setLoadingInsights(prev => ({ ...prev, [row.id]: true }));
-
-    const apiData = row.campaignApiData;
-    const totalClicks = apiData.reduce((s, r) => s + r.metrics.clicks, 0);
-    const totalImpressions = apiData.reduce((s, r) => s + r.metrics.impressions, 0);
-    const totalCost = apiData.reduce((s, r) => s + r.metrics.cost, 0);
-    const totalReach = apiData.reduce((s, r) => s + r.metrics.reach, 0);
-    const cpc = totalClicks > 0 ? totalCost / totalClicks : 0;
-    const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+    const p = computePerf(row.campaignApiData);
 
     try {
       const { data, error } = await supabase.functions.invoke('audit-insight', {
@@ -315,11 +378,11 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
             pacingPct: row.metrics.pacingPct.toFixed(1),
             gastoDiarioActual: row.metrics.gastoDiarioActual.toFixed(2),
             presupuestoDiarioIdeal: row.metrics.presupuestoDiarioIdeal.toFixed(2),
-            ctr: ctr.toFixed(2),
-            cpc: cpc.toFixed(2),
-            impressions: totalImpressions,
-            clicks: totalClicks,
-            reach: totalReach,
+            ctr: p.ctr.toFixed(2),
+            cpc: p.cpc.toFixed(2),
+            impressions: p.impressions,
+            clicks: p.clicks,
+            reach: p.reach,
           },
         },
       });
@@ -350,6 +413,25 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
 
   return (
     <>
+      {/* View toggle: budget pacing vs performance results */}
+      <div className="hidden md:flex items-center justify-between mb-2">
+        <Tabs value={view} onValueChange={(v) => setView(v as 'pacing' | 'performance')}>
+          <TabsList className="h-8">
+            <TabsTrigger value="pacing" className="text-xs gap-1.5 h-6">
+              <Gauge className="h-3.5 w-3.5" /> Budget Pacing
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="text-xs gap-1.5 h-6">
+              <BarChart3 className="h-3.5 w-3.5" /> Performance
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <p className="text-[11px] text-muted-foreground">
+          {view === 'pacing'
+            ? 'Is each campaign spending what it should by today?'
+            : 'Real-time results synced from the ad platforms'}
+        </p>
+      </div>
+
       {/* Mobile: cards/accordions */}
       <div className="md:hidden space-y-3">
         {rows.map(row => {
@@ -391,8 +473,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <MetricMini label="Spend" value={fmt(m.gastoActual)} />
                       <MetricMini label="Budget" value={fmt(row.presupuesto_total)} />
-                      <MetricMini label="Ideal daily" value={fmt(m.presupuestoDiarioIdeal)} />
-                      <MetricMini label="Days left" value={m.diasRestantes.toString()} />
+                      <MetricMini label="% Expected" value={fmtPct(m.porcentajeTiempo)} />
+                      <MetricMini label="% Actual" value={fmtPct(m.porcentajeGastado)} />
                     </div>
                   </button>
                 </CollapsibleTrigger>
@@ -459,60 +541,95 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
 
       {/* Desktop: full table */}
       <div ref={wrapperRef} className="hidden md:block border border-border rounded-lg overflow-hidden relative">
-        <Table className="min-w-[1200px]">
+        <Table className={view === 'pacing' ? 'min-w-[1450px]' : 'min-w-[1350px]'}>
         <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead className="w-8"></TableHead>
-            <TableHead className="text-xs">Platform</TableHead>
-            <TableHead className="text-xs">Campaign</TableHead>
-            <TableHead className="text-xs">Account</TableHead>
-            <TableHead className="text-xs w-[140px]">Start date</TableHead>
-            <TableHead className="text-xs w-[140px]">End date</TableHead>
-            <TableHead className="text-xs w-[140px]">Schedule</TableHead>
-            <TableHead className="text-xs w-[120px] text-right">
-              Budget
-              <MetricInfo label="Approved budget">
-                Total amount approved for the campaign during the audited period. It is the baseline against which actual spend is compared to calculate pacing.
-              </MetricInfo>
-            </TableHead>
-            <TableHead className="text-xs w-40">
-              Pacing
-              <MetricInfo label="Dual pacing">
-                Top bar: % of time elapsed (business or calendar days depending on schedule). Bottom bar: % of budget spent. Ideally both move together.
-              </MetricInfo>
-            </TableHead>
-            <TableHead className="text-xs">
-              Status
-              <MetricInfo label="Pacing status">
-                Under-pacing: spend &gt;10% below time. Over-pacing: spend &gt;10% above. On-pace: within ±10%.
-              </MetricInfo>
-            </TableHead>
-            <TableHead className="text-xs text-right">
-              Spent / Approved
-              <MetricInfo label="Actual spend vs approved">
-                Sum of platform-reported spend vs approved budget. The % shows how much of the budget has been consumed.
-              </MetricInfo>
-            </TableHead>
-            <TableHead className="text-xs text-right">
-              Ideal Daily
-              <MetricInfo label="Ideal daily spend">
-                Remaining budget divided by the business days left in the period. It is what you should spend per day to land exactly on budget.
-              </MetricInfo>
-            </TableHead>
-            <TableHead className="text-xs w-10 text-center">
-              AI
-              <MetricInfo label="AI diagnosis">
-                On-demand AI analysis that classifies budget risk: Critical, Moderate, or No Risk.
-              </MetricInfo>
-            </TableHead>
-            <TableHead className="text-xs w-20"></TableHead>
-          </TableRow>
+          {view === 'pacing' ? (
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-8"></TableHead>
+              <TableHead className="text-xs">Platform</TableHead>
+              <TableHead className="text-xs">Campaign</TableHead>
+              <TableHead className="text-xs">Account</TableHead>
+              <TableHead className="text-xs w-[132px]">Start date</TableHead>
+              <TableHead className="text-xs w-[132px]">End date</TableHead>
+              <TableHead className="text-xs w-[110px]">Schedule</TableHead>
+              <TableHead className="text-xs w-[110px] text-right">
+                Programmed Budget
+                <MetricInfo label="Programmed budget">
+                  Total budget approved for the campaign during the audited period.
+                </MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">
+                Actual Spend
+                <MetricInfo label="Actual spend">
+                  Real spend reported by the platform so far (excludes today and yesterday while data consolidates).
+                </MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">
+                % Expected
+                <MetricInfo label="% Expected spend to date">
+                  How much of the budget SHOULD be spent by today if pacing were perfect. Based on days elapsed vs total days of the schedule.
+                </MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">
+                % Actual
+                <MetricInfo label="% Actual spend to date">
+                  How much of the budget has ACTUALLY been spent. Green = within ±10% of expected. Amber = behind (underspending). Red = ahead (overspending).
+                </MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">
+                Ideal Daily
+                <MetricInfo label="Ideal daily budget">
+                  Remaining balance divided by the days left. Spend this per day to land exactly on budget.
+                </MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">
+                Remaining
+                <MetricInfo label="Remaining balance">
+                  Programmed budget minus actual spend.
+                </MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs w-20"></TableHead>
+            </TableRow>
+          ) : (
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-8"></TableHead>
+              <TableHead className="text-xs">Platform</TableHead>
+              <TableHead className="text-xs">Campaign</TableHead>
+              <TableHead className="text-xs text-right">Impressions</TableHead>
+              <TableHead className="text-xs text-right">Reach</TableHead>
+              <TableHead className="text-xs text-right">Conversions</TableHead>
+              <TableHead className="text-xs text-right">Clicks</TableHead>
+              <TableHead className="text-xs text-right">Link Clicks</TableHead>
+              <TableHead className="text-xs text-right">Interactions</TableHead>
+              <TableHead className="text-xs text-right">
+                CTR
+                <MetricInfo label="Click-through rate">Clicks / impressions × 100.</MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">Thruplay</TableHead>
+              <TableHead className="text-xs text-right">
+                CPM
+                <MetricInfo label="Cost per mille">Cost per 1,000 impressions.</MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">
+                CPC
+                <MetricInfo label="Cost per click">Total spend / clicks.</MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs text-right">
+                Engagement
+                <MetricInfo label="Engagement rate">Interactions / impressions × 100.</MetricInfo>
+              </TableHead>
+              <TableHead className="text-xs w-20"></TableHead>
+            </TableRow>
+          )}
         </TableHeader>
         <TableBody>
           {rows.map(row => {
             const m = row.metrics;
+            const p = perfByRow.get(row.id)!;
             const isExpanded = expandedIds.has(row.id);
             const insight = insights[row.id] || null;
+            const colCount = 15;
             return (
               <Collapsible key={row.id} open={isExpanded} onOpenChange={() => toggleExpand(row.id)} asChild>
                 <>
@@ -530,7 +647,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                       <TableCell>
                         <HoverCard openDelay={200} closeDelay={80}>
                           <HoverCardTrigger asChild>
-                            <span className="text-sm font-medium text-foreground truncate max-w-[200px] block cursor-help">
+                            <span className="text-sm font-medium text-foreground truncate max-w-[180px] block cursor-help">
                               {row.campaign_name}
                             </span>
                           </HoverCardTrigger>
@@ -539,74 +656,93 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                           </HoverCardContent>
                         </HoverCard>
                       </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const apiRow = row.campaignApiData[0];
-                          const name = apiRow?.account_name || row.account_id;
-                          return <span className="text-xs text-muted-foreground">{name}</span>;
-                        })()}
-                      </TableCell>
-                      <TableCell onClick={e => e.stopPropagation()}>
-                        <Input
-                          type="date"
-                          value={row.fecha_inicio}
-                          onChange={e => onUpdateRecord?.(row.id, { fecha_inicio: e.target.value })}
-                          className="h-8 text-xs"
-                        />
-                      </TableCell>
-                      <TableCell onClick={e => e.stopPropagation()}>
-                        <Input
-                          type="date"
-                          value={row.fecha_fin}
-                          onChange={e => onUpdateRecord?.(row.id, { fecha_fin: e.target.value })}
-                          className="h-8 text-xs"
-                        />
-                      </TableCell>
-                      <TableCell onClick={e => e.stopPropagation()}>
-                        <Select
-                          value={row.tipo_calendario}
-                          onValueChange={v => onUpdateRecord?.(row.id, { tipo_calendario: v })}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
-                            <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
-                            <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell onClick={e => e.stopPropagation()}>
-                        <Input
-                          type="number"
-                          value={row.presupuesto_total}
-                          onChange={e => onUpdateRecord?.(row.id, { presupuesto_total: parseFloat(e.target.value) || 0 })}
-                          className="h-8 text-xs text-right font-mono"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <PacingBar
-                          porcentajeTiempo={m.porcentajeTiempo}
-                          porcentajeGasto={m.porcentajeGastado}
-                          status={m.pacingStatus}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={m.pacingStatus} />
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        <span className={m.pacingStatus === 'SOBREGASTANDO' ? 'text-destructive font-bold' : 'text-foreground'}>
-                          {fmt(m.gastoActual)}
-                        </span>
-                        <span className="text-muted-foreground"> / {fmt(row.presupuesto_total)}</span>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs text-foreground">
-                        {fmt(m.presupuestoDiarioIdeal)}
-                      </TableCell>
-                      <TableCell className="text-center" onClick={e => e.stopPropagation()}>
-                        {insight && <RiskIndicator insight={insight} />}
-                      </TableCell>
+
+                      {view === 'pacing' ? (
+                        <>
+                          <TableCell>
+                            {(() => {
+                              const apiRow = row.campaignApiData[0];
+                              const name = apiRow?.account_name || row.account_id;
+                              return <span className="text-xs text-muted-foreground">{name}</span>;
+                            })()}
+                          </TableCell>
+                          <TableCell onClick={e => e.stopPropagation()}>
+                            <Input
+                              type="date"
+                              value={row.fecha_inicio}
+                              onChange={e => onUpdateRecord?.(row.id, { fecha_inicio: e.target.value })}
+                              className="h-8 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell onClick={e => e.stopPropagation()}>
+                            <Input
+                              type="date"
+                              value={row.fecha_fin}
+                              onChange={e => onUpdateRecord?.(row.id, { fecha_fin: e.target.value })}
+                              className="h-8 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell onClick={e => e.stopPropagation()}>
+                            <Select
+                              value={row.tipo_calendario}
+                              onValueChange={v => onUpdateRecord?.(row.id, { tipo_calendario: v })}
+                            >
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
+                                <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
+                                <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell onClick={e => e.stopPropagation()}>
+                            <Input
+                              type="number"
+                              value={row.presupuesto_total}
+                              onChange={e => onUpdateRecord?.(row.id, { presupuesto_total: parseFloat(e.target.value) || 0 })}
+                              className="h-8 text-xs text-right font-mono"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            <span className={m.pacingStatus === 'SOBREGASTANDO' ? 'text-destructive font-bold' : 'text-foreground'}>
+                              {fmt(m.gastoActual)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                            {fmtPct(m.porcentajeTiempo)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <ActualPctCell actual={m.porcentajeGastado} expected={m.porcentajeTiempo} />
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-foreground">
+                            {fmt(m.presupuestoDiarioIdeal)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-foreground">
+                            {fmt(m.presupuestoRestante)}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={m.pacingStatus} />
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell className="text-right font-mono text-xs">{fmtNum(p.impressions)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmtNum(p.reach)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold">{fmtNum(p.conversions)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmtNum(p.clicks)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmtNum(p.linkClicks)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmtNum(p.interactions)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmtPct(p.ctr)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmtNum(p.thruplay)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmt(p.cpm)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmt(p.cpc)}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{fmtPct(p.engagementRate)}</TableCell>
+                        </>
+                      )}
+
                       <TableCell className="text-right">
                         <div className="flex items-center gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
+                          {insight && <RiskIndicator insight={insight} />}
                           <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
                             <Link to={`/audit/${row.id}`} title="View details">
                               <ExternalLink className="h-3.5 w-3.5" />
@@ -624,7 +760,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                   </CollapsibleTrigger>
                   <CollapsibleContent asChild forceMount>
                     <tr className={isExpanded ? '' : 'hidden'}>
-                      <td colSpan={14} className="p-0 bg-muted/20 border-t border-border">
+                      <td colSpan={colCount} className="p-0 bg-muted/20 border-t border-border">
                         <div
                           className="sticky left-0 animate-fade-in"
                           style={{ width: viewportWidth ? `${viewportWidth}px` : '100%' }}
