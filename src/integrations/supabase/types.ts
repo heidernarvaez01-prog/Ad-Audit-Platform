@@ -44,6 +44,30 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_events: {
+        Row: {
+          alert_type: string
+          campaign_name: string
+          id: string
+          last_triggered_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          campaign_name: string
+          id?: string
+          last_triggered_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          campaign_name?: string
+          id?: string
+          last_triggered_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       alert_settings: {
         Row: {
           created_at: string
@@ -116,66 +140,6 @@ export type Database = {
           report_recipients?: string[]
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      alert_events: {
-        Row: {
-          alert_type: string
-          campaign_name: string
-          id: string
-          last_triggered_at: string
-          user_id: string
-        }
-        Insert: {
-          alert_type: string
-          campaign_name: string
-          id?: string
-          last_triggered_at?: string
-          user_id: string
-        }
-        Update: {
-          alert_type?: string
-          campaign_name?: string
-          id?: string
-          last_triggered_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      weekly_reports: {
-        Row: {
-          client_id: string
-          created_at: string
-          html: string | null
-          id: string
-          sent_at: string | null
-          sent_to: string[]
-          user_id: string
-          week_end: string
-          week_start: string
-        }
-        Insert: {
-          client_id: string
-          created_at?: string
-          html?: string | null
-          id?: string
-          sent_at?: string | null
-          sent_to?: string[]
-          user_id: string
-          week_end: string
-          week_start: string
-        }
-        Update: {
-          client_id?: string
-          created_at?: string
-          html?: string | null
-          id?: string
-          sent_at?: string | null
-          sent_to?: string[]
-          user_id?: string
-          week_end?: string
-          week_start?: string
         }
         Relationships: []
       }
@@ -551,10 +515,10 @@ export type Database = {
           campaign_name: string | null
           campaign_start_date: string | null
           clicks: number | null
+          conversions: number | null
           cpc: number | null
           cpm: number | null
           created_at: string
-          conversions: number | null
           ctr_all: number | null
           daily_budget: number | null
           fecha: string | null
@@ -583,10 +547,10 @@ export type Database = {
           campaign_name?: string | null
           campaign_start_date?: string | null
           clicks?: number | null
+          conversions?: number | null
           cpc?: number | null
           cpm?: number | null
           created_at?: string
-          conversions?: number | null
           ctr_all?: number | null
           daily_budget?: number | null
           fecha?: string | null
@@ -615,10 +579,10 @@ export type Database = {
           campaign_name?: string | null
           campaign_start_date?: string | null
           clicks?: number | null
+          conversions?: number | null
           cpc?: number | null
           cpm?: number | null
           created_at?: string
-          conversions?: number | null
           ctr_all?: number | null
           daily_budget?: number | null
           fecha?: string | null
@@ -679,6 +643,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      weekly_reports: {
+        Row: {
+          client_id: string
+          created_at: string
+          html: string | null
+          id: string
+          sent_at: string | null
+          sent_to: string[]
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          html?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_to?: string[]
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          html?: string | null
+          id?: string
+          sent_at?: string | null
+          sent_to?: string[]
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "audit_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
