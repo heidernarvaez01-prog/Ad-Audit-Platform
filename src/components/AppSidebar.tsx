@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardCheck, ChevronLeft, ChevronRight, FileText, Bell, LogOut, Moon, Sun, Shield, HelpCircle, Network, CalendarClock, PieChart } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  ClipboardCheck, ChevronsLeft, ChevronsRight, FileText, Bell, LogOut, Moon, Sun,
+  Shield, HelpCircle, Network, CalendarClock, PieChart, type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/apache-studio-logo.png.asset.json';
 
-const baseNav = [
+interface NavLeaf { to: string; label: string; icon: LucideIcon }
+
+// Main action menu — order requested by the team
+const mainNav: NavLeaf[] = [
   { to: '/', label: 'Monitoring Audit', icon: ClipboardCheck },
-  { to: '/brief', label: 'Brand Brief', icon: FileText },
+  { to: '/weekly-report', label: 'Weekly Performance Report', icon: CalendarClock },
+  { to: '/reporting', label: 'Looker Reporting', icon: PieChart },
   { to: '/clusters', label: 'Projection Clusters', icon: Network },
-  { to: '/weekly-report', label: 'Weekly Report', icon: CalendarClock },
-  { to: '/reporting', label: 'Reporting', icon: PieChart },
   { to: '/alerts', label: 'Alerts', icon: Bell },
-  { to: '/how-it-works', label: 'How it works', icon: HelpCircle },
+  { to: '/brief', label: 'Brand Brief', icon: FileText },
 ];
 
 interface AppSidebarProps {
@@ -25,11 +28,10 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ forceExpanded = false, hideToggle = false }: AppSidebarProps = {}) {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState(!forceExpanded);
-  const [scrolled, setScrolled] = useState(false);
   const { user, signOut } = useAuth();
   const { theme, toggle } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pinned, setPinned] = useState(false); // arrow keeps it open
 
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
@@ -37,355 +39,118 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
       .then(({ data }) => setIsAdmin(!!data));
   }, [user]);
 
-  // Detect scroll for glass effect enhancement
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  // "Open" = always wide (mobile sheet or pinned). Otherwise it's a rail that
+  // expands on hover via pure CSS (group-hover) — reliable, no layout shift.
+  const open = forceExpanded || pinned;
+  const RAIL = 60;
+  const FULL = 240;
+  // label/header visibility: shown when open, OR on hover when it's a rail
+  const labelCls = open
+    ? 'opacity-100'
+    : 'opacity-0 group-hover/side:opacity-100';
 
-  const navItems = isAdmin ? [...baseNav, { to: '/admin', label: 'Admin', icon: Shield }] : baseNav;
+  const isActive = (to: string) =>
+    to === '/'
+      ? location.pathname === '/' || location.pathname.startsWith('/client/') || location.pathname.startsWith('/audit/')
+      : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
-  const sidebarVariants = {
-    collapsed: { width: 56 },
-    expanded: { width: 224 }
+  const NavRow = ({ to, label, icon: Icon }: NavLeaf) => {
+    const active = isActive(to);
+    return (
+      <NavLink
+        to={to}
+        className={`group relative flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium
+          transition-colors duration-150 overflow-hidden
+          ${active
+            ? 'bg-sidebar-accent/80 text-sidebar-accent-foreground'
+            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/30'}`}
+        title={!open ? label : undefined}
+      >
+        <Icon className="h-[18px] w-[18px] shrink-0" />
+        <span className={`whitespace-nowrap transition-opacity duration-200 ${labelCls}`}>
+          {label}
+        </span>
+        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-primary" />}
+      </NavLink>
+    );
   };
 
-  const containerVariants = {
-    collapsed: { opacity: 1 },
-    expanded: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    collapsed: { opacity: 0, x: -10 },
-    expanded: { opacity: 1, x: 0 }
-  };
+  const ActionRow = ({
+    icon: Icon, label, onClick, danger,
+  }: { icon: LucideIcon; label: string; onClick: () => void; danger?: boolean }) => (
+    <button
+      onClick={onClick}
+      title={!open ? label : undefined}
+      className={`w-full flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium
+        transition-colors duration-150 overflow-hidden
+        ${danger
+          ? 'text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10'
+          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/30'}`}
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0" />
+      <span className={`whitespace-nowrap transition-opacity duration-200 ${labelCls}`}>
+        {label}
+      </span>
+    </button>
+  );
 
   return (
-    <motion.aside
-      initial={false}
-      animate={collapsed ? 'collapsed' : 'expanded'}
-      variants={sidebarVariants}
-      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className={`
-        min-h-screen flex flex-col relative
-        ${scrolled ? 'glass-effect glass-border' : 'bg-sidebar/95 backdrop-blur-sm'}
-        border-r border-sidebar-border/50
-        transition-all duration-300 ease-out
-      `}
-      style={{
-        background: scrolled
-          ? 'rgba(var(--sidebar-background-rgb, 15, 17, 28), 0.7)'
-          : 'hsl(var(--sidebar-background))'
-      }}
-    >
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
-
-      {/* Header */}
-      <motion.div
-        className={`
-          ${collapsed ? 'p-2 flex-col gap-2' : 'p-4 justify-between gap-2'}
-          border-b border-sidebar-border/50 flex items-center relative z-10
-          backdrop-blur-sm
-        `}
+    // Outer reserves only the rail width; the panel overlays on hover so the
+    // page content never shifts (that was the "feels like a bug" part).
+    <div className="group/side relative shrink-0" style={{ width: open ? FULL : RAIL }}>
+      <aside
+        className={`absolute inset-y-0 left-0 z-40 min-h-screen flex flex-col
+          bg-sidebar border-r border-sidebar-border/50 shadow-xl shadow-black/5
+          transition-[width] duration-200 ease-out
+          ${open ? 'w-[240px]' : 'w-[60px] hover:w-[240px]'}`}
+        style={{ background: 'hsl(var(--sidebar-background))' }}
       >
-        {collapsed ? (
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="flex flex-col items-center gap-2 w-full"
-          >
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              className="relative"
+        {/* Header */}
+        <div className="h-16 flex items-center gap-2.5 px-3 border-b border-sidebar-border/50 shrink-0">
+          <img src={logo.url} alt="Apache Studio" className="h-9 w-9 object-contain shrink-0" />
+          <div className={`min-w-0 transition-opacity duration-200 ${labelCls}`}>
+            <h1 className="text-sm font-bold tracking-tight truncate text-sidebar-foreground">Apache Studio</h1>
+            <p className="text-[11px] text-sidebar-foreground/60 truncate">Ad Audit</p>
+          </div>
+          {!hideToggle && (
+            <button
+              onClick={() => setPinned(p => !p)}
+              className={`ml-auto p-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground
+                hover:bg-sidebar-accent/40 transition-opacity shrink-0 ${labelCls}`}
+              title={pinned ? 'Unpin menu' : 'Keep menu open'}
             >
-              <img src={logo.url} alt="Apache Studio" className="h-8 w-8 object-contain" />
-              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-            </motion.div>
+              {pinned ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
 
-            {!hideToggle && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <motion.button
-                    onClick={() => setCollapsed(false)}
-                    whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                    whileTap={{ scale: 0.95 }}
-                    className="w-full flex items-center justify-center p-1.5 rounded-lg
-                      text-sidebar-foreground/70 hover:text-sidebar-foreground
-                      transition-colors duration-200"
-                    aria-label="Expand menu"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </motion.button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">Expand menu</TooltipContent>
-              </Tooltip>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center justify-between w-full"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                className="relative"
-              >
-                <img src={logo.url} alt="Apache Studio" className="h-10 w-10 object-contain shrink-0" />
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute inset-0 bg-primary/30 blur-xl rounded-full"
-                />
-              </motion.div>
-              <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="min-w-0"
-              >
-                <h1 className="text-base font-bold tracking-tight truncate bg-gradient-to-r from-sidebar-foreground to-sidebar-foreground/70 bg-clip-text text-transparent">
-                  Apache Studio
-                </h1>
-                <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">Ad Audit</p>
-              </motion.div>
-            </div>
-            {!hideToggle && (
-              <motion.button
-                onClick={() => setCollapsed(true)}
-                whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                whileTap={{ scale: 0.95 }}
-                className="p-1.5 rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground
-                  transition-colors duration-200 shrink-0"
-                aria-label="Collapse menu"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </motion.button>
-            )}
-          </motion.div>
-        )}
-      </motion.div>
+        {/* Main navigation */}
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto overflow-x-hidden">
+          {mainNav.map(item => <NavRow key={item.to} {...item} />)}
+        </nav>
 
-      {/* Navigation */}
-      <motion.nav
-        variants={containerVariants}
-        className={`flex-1 ${collapsed ? 'p-1.5' : 'p-2'} space-y-0.5 relative z-10`}
-      >
-        <AnimatePresence mode="wait">
-          {navItems.map(({ to, label, icon: Icon }, index) => {
-            const active = to === '/'
-              ? location.pathname === '/' || location.pathname.startsWith('/client/') || location.pathname.startsWith('/audit/')
-              : location.pathname === to || location.pathname.startsWith(`${to}/`);
-
-            const linkContent = (
-              <motion.div
-                initial={false}
-                whileHover={{ x: collapsed ? 0 : 4, scale: collapsed ? 1.05 : 1 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                className="relative"
-              >
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={`
-                    flex items-center gap-2.5 relative z-10
-                    ${collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2'}
-                    rounded-lg text-sm font-medium transition-all duration-200
-                    ${active
-                      ? 'text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/70 hover:text-sidebar-foreground'
-                    }
-                  `}
-                >
-                  {/* Active background with glow */}
-                  {active && (
-                    <motion.div
-                      layoutId="activeNav"
-                      className="absolute inset-0 bg-sidebar-accent/80 rounded-lg"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-
-                  {/* Hover background */}
-                  {!active && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      whileHover={{ opacity: 1 }}
-                      className="absolute inset-0 bg-sidebar-accent/30 rounded-lg"
-                      transition={{ duration: 0.2 }}
-                    />
-                  )}
-
-                  {/* Icon with glow effect on active */}
-                  <motion.div
-                    animate={active ? { scale: [1, 1.1, 1] } : {}}
-                    transition={{ duration: 0.3 }}
-                    className="relative"
-                  >
-                    <Icon className="h-4 w-4 shrink-0 relative z-10" />
-                    {active && (
-                      <motion.div
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0.8, 0.5] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                        className="absolute inset-0 bg-primary blur-md"
-                      />
-                    )}
-                  </motion.div>
-
-                  {!collapsed && (
-                    <motion.span
-                      variants={itemVariants}
-                      className="truncate relative z-10"
-                    >
-                      {label}
-                    </motion.span>
-                  )}
-                </NavLink>
-              </motion.div>
-            );
-
-            return collapsed ? (
-              <Tooltip key={to}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">{label}</TooltipContent>
-              </Tooltip>
-            ) : (
-              <motion.div
-                key={to}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                {linkContent}
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.nav>
-
-      {/* Theme Toggle */}
-      <div className={`border-t border-sidebar-border/50 ${collapsed ? 'p-1.5' : 'p-2'} space-y-1 relative z-10`}>
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.button
-                onClick={toggle}
-                whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                whileTap={{ scale: 0.95, rotate: 15 }}
-                className="w-full flex items-center justify-center p-2 rounded-lg
-                  text-sidebar-foreground/70 hover:text-sidebar-foreground
-                  transition-colors duration-200"
-                aria-label="Toggle theme"
-              >
-                <motion.div
-                  initial={false}
-                  animate={{ rotate: theme === 'dark' ? 0 : 180 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </motion.div>
-              </motion.button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">
-              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <motion.button
+        {/* Settings group (bottom): Dark mode · How it works · Admin · account · Sign out */}
+        <div className="border-t border-sidebar-border/50 p-2 space-y-1 shrink-0">
+          <ActionRow
+            icon={theme === 'dark' ? Sun : Moon}
+            label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
             onClick={toggle}
-            whileHover={{ scale: 1.02, backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
-              text-sm font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground
-              transition-all duration-200"
-          >
-            <motion.div
-              animate={{ rotate: theme === 'dark' ? 0 : 180 }}
-              transition={{ duration: 0.3 }}
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-            </motion.div>
-            <motion.span
-              variants={itemVariants}
-              className="truncate"
-            >
-              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            </motion.span>
-          </motion.button>
-        )}
-      </div>
+          />
+          <NavRow to="/how-it-works" label="How it works" icon={HelpCircle} />
+          {isAdmin && <NavRow to="/admin" label="Admin" icon={Shield} />}
 
-      {/* User Section */}
-      {user && (
-        <motion.div
-          className={`border-t border-sidebar-border/50 ${collapsed ? 'p-1.5' : 'p-2'} space-y-1 relative z-10`}
-        >
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="px-2 mb-1"
-            >
-              <p className="text-xs text-sidebar-foreground/60 truncate" title={user.email ?? ''}>
-                {user.email}
-              </p>
-            </motion.div>
+          {user && (
+            <>
+              <div className={`px-3 pt-1.5 pb-0.5 transition-opacity duration-200 ${labelCls}`}>
+                <p className="text-[11px] text-sidebar-foreground/50 truncate" title={user.email ?? ''}>
+                  {user.email}
+                </p>
+              </div>
+              <ActionRow icon={LogOut} label="Sign out" onClick={() => signOut()} danger />
+            </>
           )}
-
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <motion.button
-                  onClick={() => signOut()}
-                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full flex items-center justify-center p-2 rounded-lg
-                    text-sidebar-foreground/70 hover:text-destructive
-                    transition-colors duration-200"
-                  aria-label="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </motion.button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">Sign out</TooltipContent>
-            </Tooltip>
-          ) : (
-            <motion.button
-              onClick={() => signOut()}
-              whileHover={{ scale: 1.02, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
-                text-sm font-medium text-sidebar-foreground/70 hover:text-destructive
-                transition-all duration-200"
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-              <motion.span
-                variants={itemVariants}
-                className="truncate"
-              >
-                Sign out
-              </motion.span>
-            </motion.button>
-          )}
-        </motion.div>
-      )}
-    </motion.aside>
+        </div>
+      </aside>
+    </div>
   );
 }

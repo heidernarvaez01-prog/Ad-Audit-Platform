@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, FolderOpen, Briefcase, ArrowRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, FolderOpen, Briefcase, ArrowRight, Search } from 'lucide-react';
 import type { ApiCampaignRow } from '@/lib/api';
 import type { AuditRowData } from '@/components/AuditTable';
 import { toast } from 'sonner';
@@ -57,6 +57,14 @@ export default function ClientsPage() {
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<ClientRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filteredClients = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q));
+  }, [clients, search]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -174,8 +182,8 @@ export default function ClientsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-lg sm:text-xl font-bold text-foreground">Clients</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            One audit workspace per client or brand — audits never mix between clients
+          <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
+            Each client has its own space. Open one to track its campaigns, budgets and results in real time.
           </p>
         </div>
         <Button size="sm" onClick={openCreate}>
@@ -200,6 +208,19 @@ export default function ClientsPage() {
         </div>
       )}
 
+      {/* Search */}
+      {clients.length > 0 && (
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search clients..."
+            className="pl-9 h-9"
+          />
+        </div>
+      )}
+
       {/* Client cards */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -214,9 +235,13 @@ export default function ClientsPage() {
             <Plus className="h-3.5 w-3.5 mr-1.5" /> New Client
           </Button>
         </div>
+      ) : filteredClients.length === 0 ? (
+        <div className="border border-dashed border-border rounded-lg p-10 text-center text-muted-foreground">
+          <p className="text-sm">No clients match "{search}".</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {clients.map(c => {
+          {filteredClients.map(c => {
             const s = summaries.get(c.id) || { campaigns: 0, budget: 0, spent: 0, ok: 0, under: 0, over: 0 };
             return (
               <div

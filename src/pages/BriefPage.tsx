@@ -122,7 +122,7 @@ export default function BriefPage() {
               {client ? `${client.name} — Brand Brief` : 'Brand Brief'}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Strategic context for this client — primary input of the AI projection clusters
+              Tell us about this brand. The more complete, the sharper the AI strategies will be.
             </p>
           </div>
         </div>

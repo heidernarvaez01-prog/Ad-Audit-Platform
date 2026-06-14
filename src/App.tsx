@@ -92,7 +92,7 @@ function AppLayout() {
         <Route path="/brief" element={<RequireAuth><AppShell>
           <ClientPicker
             title="Brand Brief"
-            subtitle="Strategic context per client — primary input of the AI projection clusters"
+            subtitle="The story of each brand: who they are, what they sell and who they talk to. It powers the AI strategies."
             basePath="/brief"
             icon={FileText}
             mode="brief"
@@ -102,7 +102,7 @@ function AppLayout() {
         <Route path="/clusters" element={<RequireAuth><AppShell>
           <ClientPicker
             title="Projection Clusters"
-            subtitle="AI strategy engines per client — built from the brief, boosted with live campaign data"
+            subtitle="Full AI marketing strategies for each client, built from their brief and real campaign results."
             basePath="/clusters"
             icon={Network}
             mode="clusters"
@@ -112,7 +112,7 @@ function AppLayout() {
         <Route path="/weekly-report" element={<RequireAuth><AppShell>
           <ClientPicker
             title="Weekly Performance Report"
-            subtitle="Sunday-to-Sunday performance per client — emailed automatically every Monday"
+            subtitle="A clear summary of how each client's campaigns did this week, delivered to their inbox every Monday."
             basePath="/weekly-report"
             icon={CalendarClock}
             mode="weekly"
@@ -121,8 +121,8 @@ function AppLayout() {
         <Route path="/weekly-report/:clientId" element={<RequireAuth><AppShell><WeeklyReportPage /></AppShell></RequireAuth>} />
         <Route path="/reporting" element={<RequireAuth><AppShell>
           <ClientPicker
-            title="Reporting"
-            subtitle="Looker Studio reports per client — only approved versions are visible"
+            title="Looker Reporting"
+            subtitle="The full visual report for each client, in one place. Only the version you approve is shown here."
             basePath="/reporting"
             icon={PieChart}
             mode="reporting"

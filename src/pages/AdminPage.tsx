@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 
-interface UserRow { id: string; email: string | null; last_sign_in_at: string | null; }
+interface UserRow { id: string; email: string | null; last_sign_in_at: string | null; confirmed?: boolean; }
 interface Assignment { id: string; user_id: string; account_id: string; account_name: string | null; platform: string | null; }
 interface AccountOpt { account_id: string; account_name: string | null; platform: string | null; }
 interface RoleRow { user_id: string; role: 'admin' | 'user'; }
@@ -28,6 +28,33 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Invite member
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+
+  const loadData = async () => {
+    const [usersRes, accountsRes, assignmentsRes, rolesRes] = await Promise.all([
+      supabase.functions.invoke('admin-users'),
+      supabase.from('meta_datos').select('account_id, account_name, plataforma').not('account_id', 'is', null),
+      supabase.from('account_assignments').select('*').order('created_at', { ascending: false }),
+      supabase.from('user_roles').select('user_id, role'),
+    ]);
+    if (usersRes.data?.users) setUsers(usersRes.data.users);
+    if (assignmentsRes.data) setAssignments(assignmentsRes.data as Assignment[]);
+    if (rolesRes.data) setRoles(rolesRes.data as RoleRow[]);
+
+    const seen = new Set<string>();
+    const opts: AccountOpt[] = [];
+    for (const r of accountsRes.data ?? []) {
+      const key = `${r.account_id}|${r.plataforma ?? ''}`;
+      if (seen.has(key) || !r.account_id) continue;
+      seen.add(key);
+      opts.push({ account_id: r.account_id, account_name: r.account_name, platform: r.plataforma });
+    }
+    opts.sort((a, b) => (a.account_name ?? '').localeCompare(b.account_name ?? ''));
+    setAccounts(opts);
+  };
+
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -36,31 +63,10 @@ export default function AdminPage() {
         .from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle();
       const admin = !!roleRow;
       setIsAdmin(admin);
-      if (!admin) { setLoading(false); return; }
-
-      const [usersRes, accountsRes, assignmentsRes, rolesRes] = await Promise.all([
-        supabase.functions.invoke('admin-users'),
-        supabase.from('meta_datos').select('account_id, account_name, plataforma').not('account_id', 'is', null),
-        supabase.from('account_assignments').select('*').order('created_at', { ascending: false }),
-        supabase.from('user_roles').select('user_id, role'),
-      ]);
-
-      if (usersRes.data?.users) setUsers(usersRes.data.users);
-      if (assignmentsRes.data) setAssignments(assignmentsRes.data as Assignment[]);
-      if (rolesRes.data) setRoles(rolesRes.data as RoleRow[]);
-
-      const seen = new Set<string>();
-      const opts: AccountOpt[] = [];
-      for (const r of accountsRes.data ?? []) {
-        const key = `${r.account_id}|${r.plataforma ?? ''}`;
-        if (seen.has(key) || !r.account_id) continue;
-        seen.add(key);
-        opts.push({ account_id: r.account_id, account_name: r.account_name, platform: r.plataforma });
-      }
-      opts.sort((a, b) => (a.account_name ?? '').localeCompare(b.account_name ?? ''));
-      setAccounts(opts);
+      if (admin) await loadData();
       setLoading(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const userById = useMemo(() => Object.fromEntries(users.map((u) => [u.id, u])), [users]);
@@ -74,6 +80,37 @@ export default function AdminPage() {
       return email.toLowerCase().includes(q) || (a.account_name ?? '').toLowerCase().includes(q) || a.account_id.includes(q);
     });
   }, [assignments, search, userById]);
+
+  const invite = async () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: 'Invalid email', variant: 'destructive' });
+      return;
+    }
+    setInviting(true);
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { action: 'invite', email, redirectTo: `${window.location.origin}/auth` },
+    });
+    setInviting(false);
+    if (error || (data as any)?.error) {
+      toast({ title: 'Could not send invite', description: error?.message || (data as any)?.error, variant: 'destructive' });
+      return;
+    }
+    toast({ title: (data as any)?.alreadyMember ? 'That email is already a member' : `Invitation sent to ${email}` });
+    setInviteEmail('');
+    setTimeout(loadData, 1500);
+  };
+
+  const sendReset = async (email: string) => {
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { action: 'reset_password', email, redirectTo: `${window.location.origin}/auth` },
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: 'Could not send reset link', description: error?.message || (data as any)?.error, variant: 'destructive' });
+      return;
+    }
+    toast({ title: `Password reset link sent to ${email}` });
+  };
 
   const assign = async () => {
     if (!selUser || !selAccount) {
@@ -128,25 +165,55 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <header className="flex items-center gap-2">
         <Shield className="h-5 w-5 text-primary" />
         <div>
           <h1 className="text-xl font-semibold">Admin</h1>
-          <p className="text-sm text-muted-foreground">Link accounts to users and manage permissions.</p>
+          <p className="text-sm text-muted-foreground">
+            Invite your team, give each member access to specific accounts, and manage permissions.
+          </p>
         </div>
       </header>
 
+      {/* STEP 1 — Invite member */}
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold">1 · Invite a team member</h2>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-1">
+          They receive an email to set their password and join. Then you can assign them accounts below.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            type="email"
+            placeholder="teammate@agency.com"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') invite(); }}
+          />
+          <Button onClick={invite} disabled={inviting}>
+            {inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+            Send invite
+          </Button>
+        </div>
+      </Card>
+
+      {/* STEP 2 — Assign account access */}
       <Card className="p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Link2 className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">New assignment</h2>
+          <h2 className="font-semibold">2 · Give access to an account</h2>
         </div>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Each member only sees the ad accounts you assign here. Admins and the owner see everything.
+        </p>
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="space-y-1.5">
-            <Label>User (email)</Label>
+            <Label>Member</Label>
             <Select value={selUser} onValueChange={setSelUser}>
-              <SelectTrigger><SelectValue placeholder="Select email" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
                   <SelectItem key={u.id} value={u.id}>{u.email ?? u.id}</SelectItem>
@@ -155,7 +222,7 @@ export default function AdminPage() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Account</Label>
+            <Label>Ad account</Label>
             <Select value={selAccount} onValueChange={setSelAccount}>
               <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
               <SelectContent>
@@ -179,11 +246,12 @@ export default function AdminPage() {
         </div>
       </Card>
 
+      {/* Assignments list */}
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">Assignments ({assignments.length})</h2>
+            <h2 className="font-semibold">Access assignments ({assignments.length})</h2>
           </div>
           <Input
             placeholder="Search by email, account or ID..."
@@ -193,7 +261,7 @@ export default function AdminPage() {
           />
         </div>
         {filteredAssignments.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">No assignments.</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">No assignments yet.</p>
         ) : (
           <div className="divide-y divide-border">
             {filteredAssignments.map((a) => (
@@ -213,29 +281,41 @@ export default function AdminPage() {
         )}
       </Card>
 
+      {/* Team members + roles + password reset */}
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">Administrators</h2>
+          <h2 className="font-semibold">Team members ({users.length})</h2>
         </div>
+        <p className="text-xs text-muted-foreground -mt-2 mb-3">
+          Admins have full control over every account. Send a reset link so members can set or change their own password.
+        </p>
         <div className="divide-y divide-border">
           {users.map((u) => {
             const isA = adminIds.has(u.id);
+            const isSelf = u.id === user!.id;
             return (
-              <div key={u.id} className="py-2.5 flex items-center justify-between gap-3">
+              <div key={u.id} className="py-2.5 flex items-center justify-between gap-3 flex-wrap">
                 <div className="min-w-0 flex items-center gap-2">
-                  <span className="text-sm truncate">{u.email ?? u.id}</span>
+                  <span className="text-sm truncate">{u.email}</span>
                   {isA && <Badge variant="secondary" className="text-xs">admin</Badge>}
+                  {u.confirmed === false && <Badge variant="outline" className="text-[10px] text-warning">invited</Badge>}
+                  {isSelf && <Badge variant="outline" className="text-[10px]">you</Badge>}
                 </div>
-                <Button
-                  variant={isA ? 'outline' : 'secondary'}
-                  size="sm"
-                  onClick={() => toggleAdmin(u.id)}
-                  disabled={u.id === user!.id}
-                  title={u.id === user!.id ? "You can't remove your own role" : ''}
-                >
-                  {isA ? <><ShieldOff className="h-3.5 w-3.5 mr-1.5" />Remove admin</> : <><ShieldCheck className="h-3.5 w-3.5 mr-1.5" />Make admin</>}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => u.email && sendReset(u.email)} title="Send password reset link">
+                    <KeyRound className="h-3.5 w-3.5 mr-1.5" /> Reset password
+                  </Button>
+                  <Button
+                    variant={isA ? 'outline' : 'secondary'}
+                    size="sm"
+                    onClick={() => toggleAdmin(u.id)}
+                    disabled={isSelf}
+                    title={isSelf ? "You can't change your own role" : ''}
+                  >
+                    {isA ? <><ShieldOff className="h-3.5 w-3.5 mr-1.5" />Remove admin</> : <><ShieldCheck className="h-3.5 w-3.5 mr-1.5" />Make admin</>}
+                  </Button>
+                </div>
               </div>
             );
           })}

@@ -233,7 +233,7 @@ export default function ClusterPage() {
             {client ? `${client.name} — Projection Clusters` : 'Projection Clusters'}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            AI strategy engines powered by this client's brief + real-time campaign activity
+            Generate a complete marketing strategy for this client with one click, ready to present.
           </p>
         </div>
       </div>

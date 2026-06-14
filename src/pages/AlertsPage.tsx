@@ -194,9 +194,9 @@ export default function AlertsPage() {
         <Bell className="h-5 w-5 text-primary" />
         <div>
           <h1 className="text-xl font-semibold">Alerts</h1>
-          <p className="text-sm text-muted-foreground">
-            Six high-signal rules only — each campaign is checked for overspend, zero delivery,
-            ending soon, cost spikes, early budget depletion and creative fatigue.
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            Only the alerts that matter: we flag a campaign when it overspends, stops delivering,
+            is about to end, gets more expensive, or its creatives wear out. No noise.
           </p>
         </div>
       </header>

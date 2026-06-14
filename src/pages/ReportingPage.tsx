@@ -84,7 +84,7 @@ export default function ReportingPage() {
               {client ? `${client.name} — Reporting` : 'Reporting'}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Looker Studio report — only the approved version is displayed
+              This client's full visual report. Edit it in Looker, approve it here, and it goes live.
             </p>
           </div>
         </div>

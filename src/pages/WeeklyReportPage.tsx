@@ -158,7 +158,7 @@ export default function WeeklyReportPage() {
               {client ? `${client.name} — Weekly Report` : 'Weekly Report'}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Sunday-to-Sunday performance per audited campaign — emailed every Monday
+              This week's results for each campaign, ready to share with the client every Monday.
             </p>
           </div>
         </div>

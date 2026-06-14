@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Loader2, FolderOpen, ArrowRight, Briefcase, type LucideIcon } from 'lucide-react';
+import { Plus, Loader2, FolderOpen, ArrowRight, Briefcase, Search, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ClientRow {
@@ -41,6 +41,14 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q));
+  }, [clients, search]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -129,6 +137,19 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
         </Button>
       </div>
 
+      {/* Search */}
+      {clients.length > 0 && (
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search clients..."
+            className="pl-9 h-9"
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -142,9 +163,13 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
             <Plus className="h-3.5 w-3.5 mr-1.5" /> New Client
           </Button>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="border border-dashed border-border rounded-lg p-10 text-center text-muted-foreground">
+          <p className="text-sm">No clients match "{search}".</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {clients.map(c => (
+          {filtered.map(c => (
             <div
               key={c.id}
               onClick={() => navigate(`${basePath}/${c.id}`)}

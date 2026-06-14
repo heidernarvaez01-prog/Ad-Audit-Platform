@@ -151,7 +151,7 @@ export default function AuditPage() {
               {client ? client.name : 'Audit Matrix'}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {client?.description || 'Spend pacing vs approved budget per campaign'}
+              {client?.description || 'Track in real time whether each campaign is spending right and performing well.'}
             </p>
           </div>
         </div>
