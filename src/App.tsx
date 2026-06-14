@@ -19,6 +19,7 @@ import AuditDetailPage from "@/pages/AuditDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import BriefPage from "@/pages/BriefPage";
 import ClusterPage from "@/pages/ClusterPage";
+import MyTasksPage from "@/pages/MyTasksPage";
 import MetricsAIPage from "@/pages/MetricsAIPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AdminPage from "@/pages/AdminPage";
@@ -129,6 +130,7 @@ function AppLayout() {
           />
         </AppShell></RequireAuth>} />
         <Route path="/reporting/:clientId" element={<RequireAuth><AppShell><ReportingPage /></AppShell></RequireAuth>} />
+        <Route path="/my-tasks" element={<RequireAuth><AppShell><MyTasksPage /></AppShell></RequireAuth>} />
         <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />
         <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AppShell><AdminPage /></AppShell></RequireAuth>} />

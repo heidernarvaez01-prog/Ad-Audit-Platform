@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, CalendarClock, Loader2, Plus, X as XIcon, Send, Eye, Download, Trash2, X, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,6 +30,7 @@ export default function WeeklyReportPage() {
   const [savingRecipients, setSavingRecipients] = useState(false);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [generating, setGenerating] = useState<'preview' | 'send' | null>(null);
+  const [includeMonthly, setIncludeMonthly] = useState(true);
   const [viewerHtml, setViewerHtml] = useState<string | null>(null);
   const [viewerTitle, setViewerTitle] = useState('');
 
@@ -84,7 +86,7 @@ export default function WeeklyReportPage() {
     setGenerating(send ? 'send' : 'preview');
     try {
       const { data, error } = await supabase.functions.invoke('weekly-report', {
-        body: { clientId, send },
+        body: { clientId, send, includeMonthly },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -162,7 +164,11 @@ export default function WeeklyReportPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <Switch checked={includeMonthly} onCheckedChange={setIncludeMonthly} />
+            Monthly comparison
+          </label>
           <Button variant="outline" size="sm" onClick={() => generate(false)} disabled={!!generating}>
             {generating === 'preview' ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Eye className="h-3.5 w-3.5 mr-1.5" />}
             Generate preview

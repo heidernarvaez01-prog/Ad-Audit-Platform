@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   ClipboardCheck, ChevronsLeft, ChevronsRight, FileText, Bell, LogOut, Moon, Sun,
-  Shield, HelpCircle, Network, CalendarClock, PieChart, type LucideIcon,
+  Shield, HelpCircle, Network, CalendarClock, PieChart, ListChecks, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
@@ -18,6 +18,7 @@ const mainNav: NavLeaf[] = [
   { to: '/reporting', label: 'Looker Reporting', icon: PieChart },
   { to: '/clusters', label: 'Projection Clusters', icon: Network },
   { to: '/alerts', label: 'Alerts', icon: Bell },
+  { to: '/my-tasks', label: 'My Tasks', icon: ListChecks },
   { to: '/brief', label: 'Brand Brief', icon: FileText },
 ];
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -134,6 +134,22 @@ export default function AdminPage() {
     const { error } = await supabase.from('account_assignments').delete().eq('id', id);
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     setAssignments(assignments.filter((a) => a.id !== id));
+  };
+
+  // Owner revoke: strip every account assignment + admin role from a member.
+  // Their login still exists but they can no longer see any account.
+  const revokeAccess = async (uid: string, email: string | null) => {
+    const [a, r] = await Promise.all([
+      supabase.from('account_assignments').delete().eq('user_id', uid),
+      supabase.from('user_roles').delete().eq('user_id', uid),
+    ]);
+    if (a.error || r.error) {
+      toast({ title: 'Error revoking access', description: a.error?.message || r.error?.message, variant: 'destructive' });
+      return;
+    }
+    setAssignments(prev => prev.filter(x => x.user_id !== uid));
+    setRoles(prev => prev.filter(x => x.user_id !== uid));
+    toast({ title: `Access revoked for ${email ?? 'member'}` });
   };
 
   const toggleAdmin = async (uid: string) => {
@@ -302,7 +318,7 @@ export default function AdminPage() {
                   {u.confirmed === false && <Badge variant="outline" className="text-[10px] text-warning">invited</Badge>}
                   {isSelf && <Badge variant="outline" className="text-[10px]">you</Badge>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button variant="ghost" size="sm" onClick={() => u.email && sendReset(u.email)} title="Send password reset link">
                     <KeyRound className="h-3.5 w-3.5 mr-1.5" /> Reset password
                   </Button>
@@ -315,6 +331,17 @@ export default function AdminPage() {
                   >
                     {isA ? <><ShieldOff className="h-3.5 w-3.5 mr-1.5" />Remove admin</> : <><ShieldCheck className="h-3.5 w-3.5 mr-1.5" />Make admin</>}
                   </Button>
+                  {!isSelf && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => revokeAccess(u.id, u.email)}
+                      title="Remove all account access and admin role"
+                    >
+                      <Ban className="h-3.5 w-3.5 mr-1.5" /> Revoke access
+                    </Button>
+                  )}
                 </div>
               </div>
             );

@@ -79,12 +79,20 @@ function aggregate(rows: any[], from: string, to: string): Record<string, number
   };
 }
 
+interface MonthlyBlock {
+  curLabel: string;
+  prevLabel: string;
+  cur: Record<string, number>;
+  prev: Record<string, number>;
+}
+
 function renderHtml(
   clientName: string,
   weekStart: string,
   weekEnd: string,
   campaigns: CampaignWeek[],
   aiSummary: string,
+  monthly: MonthlyBlock | null = null,
 ): string {
   const totals = campaigns.reduce(
     (t, c) => ({
@@ -172,6 +180,34 @@ function renderHtml(
             <div style="font-size:13px;line-height:1.65;color:#1f2937;white-space:pre-line;">${esc(aiSummary)}</div>
           </div>
         </td></tr>` : ""}
+        ${monthly ? `
+        <tr><td style="padding:8px 30px 4px;">
+          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;font-weight:600;margin-bottom:8px;">
+            Monthly comparison · ${esc(monthly.curLabel)} vs ${esc(monthly.prevLabel)}
+          </div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+            <tr style="background:#f9fafb;">
+              <th style="text-align:left;padding:9px 12px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">Metric</th>
+              <th style="text-align:right;padding:9px 12px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">${esc(monthly.curLabel)}</th>
+              <th style="text-align:right;padding:9px 12px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">${esc(monthly.prevLabel)}</th>
+              <th style="text-align:right;padding:9px 12px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">Change</th>
+            </tr>
+            ${[
+              ['Spend', monthly.cur.spend, monthly.prev.spend, true],
+              ['Impressions', monthly.cur.impressions, monthly.prev.impressions, false],
+              ['Clicks', monthly.cur.clicks, monthly.prev.clicks, false],
+              ['Conversions', monthly.cur.conversions, monthly.prev.conversions, false],
+              ['CTR', monthly.cur.ctr, monthly.prev.ctr, false],
+              ['CPC', monthly.cur.cpc, monthly.prev.cpc, true],
+            ].map(([label, cur, prev, money]) => `
+              <tr>
+                <td style="padding:8px 12px;border-top:1px solid #f3f4f6;font-size:12px;color:#111827;">${label}</td>
+                <td style="padding:8px 12px;border-top:1px solid #f3f4f6;text-align:right;font-size:12px;font-family:monospace;color:#111827;">${money ? fmtMoney(cur as number) : (label === 'CTR' ? (cur as number).toFixed(2) + '%' : fmtNum(cur as number))}</td>
+                <td style="padding:8px 12px;border-top:1px solid #f3f4f6;text-align:right;font-size:12px;font-family:monospace;color:#6b7280;">${money ? fmtMoney(prev as number) : (label === 'CTR' ? (prev as number).toFixed(2) + '%' : fmtNum(prev as number))}</td>
+                <td style="padding:8px 12px;border-top:1px solid #f3f4f6;text-align:right;font-size:11px;">${delta(cur as number, prev as number)}</td>
+              </tr>`).join('')}
+          </table>
+        </td></tr>` : ""}
         <tr><td style="padding:14px 30px 26px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;border-collapse:separate;">
             <tr style="background:#f9fafb;">
@@ -211,11 +247,26 @@ function countDays(from: string, to: string, schedule: string): number {
   return Math.max(count, 1);
 }
 
+// Current and previous calendar-month windows [start, endExclusive)
+function monthWindows(): { curStart: string; curEnd: string; prevStart: string; prevEnd: string; curLabel: string; prevLabel: string } {
+  const now = new Date();
+  const curStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const fmtL = (d: Date) => d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return {
+    curStart: iso(curStart), curEnd: iso(nextStart),
+    prevStart: iso(prevStart), prevEnd: iso(curStart),
+    curLabel: fmtL(curStart), prevLabel: fmtL(prevStart),
+  };
+}
+
 async function generateForClient(
   supabase: any,
   client: { id: string; name: string; user_id: string; report_recipients: string[] },
   send: boolean,
   anthropicKey: string | undefined,
+  includeMonthly = false,
 ): Promise<{ html: string; week_start: string; week_end: string; sent: boolean }> {
   const { start, end } = lastWeekWindow();
 
@@ -291,7 +342,16 @@ async function generateForClient(
     }
   }
 
-  const html = renderHtml(client.name, start, end, campaigns, aiSummary);
+  // Optional monthly comparison (this calendar month vs the previous one)
+  let monthly: MonthlyBlock | null = null;
+  if (includeMonthly) {
+    const mw = monthWindows();
+    const cur = aggregate(metrics, mw.curStart, mw.curEnd);
+    const prev = aggregate(metrics, mw.prevStart, mw.prevEnd);
+    monthly = { curLabel: mw.curLabel, prevLabel: mw.prevLabel, cur, prev };
+  }
+
+  const html = renderHtml(client.name, start, end, campaigns, aiSummary, monthly);
 
   // Send via Resend (Lovable gateway) when requested and recipients exist
   let sent = false;
@@ -369,7 +429,7 @@ serve(async (req) => {
       for (const c of clients ?? []) {
         if (!c.report_recipients?.length) continue;
         try {
-          const r = await generateForClient(supabase, c, true, ANTHROPIC_API_KEY);
+          const r = await generateForClient(supabase, c, true, ANTHROPIC_API_KEY, true);
           generated++;
           if (r.sent) sentCount++;
         } catch (e) {
@@ -385,7 +445,7 @@ serve(async (req) => {
     if (userErr || !userData.user) return jsonRes({ error: "Unauthorized" }, 401);
     const userId = userData.user.id;
 
-    const { clientId, send } = await req.json();
+    const { clientId, send, includeMonthly } = await req.json();
     if (!clientId) return jsonRes({ error: "clientId is required" }, 400);
 
     const { data: client } = await supabase
@@ -395,7 +455,7 @@ serve(async (req) => {
       .maybeSingle();
     if (!client || client.user_id !== userId) return jsonRes({ error: "Client not found" }, 404);
 
-    const result = await generateForClient(supabase, client, !!send, ANTHROPIC_API_KEY);
+    const result = await generateForClient(supabase, client, !!send, ANTHROPIC_API_KEY, !!includeMonthly);
     return jsonRes(result);
   } catch (e) {
     console.error(e);

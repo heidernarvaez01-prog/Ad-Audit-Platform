@@ -7,8 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, PieChart, Loader2, Save, ExternalLink, EyeOff } from 'lucide-react';
+import { ArrowLeft, PieChart, Loader2, Save, ExternalLink, EyeOff, Sparkles, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
 /**
  * Per-client Looker Studio embed with an approval flow:
@@ -23,6 +24,11 @@ export default function ReportingPage() {
   const [approved, setApproved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  // AI period conclusions
+  const [period, setPeriod] = useState<'last_7' | 'last_30' | 'this_month' | 'last_month'>('last_30');
+  const [conclusions, setConclusions] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
 
   const loadAll = useCallback(async () => {
     if (!clientId) return;
@@ -67,6 +73,34 @@ export default function ReportingPage() {
     setSaving(false);
     if (error) { toast.error('Error saving'); return; }
     toast.success('Reporting settings saved');
+  };
+
+  const PERIOD_LABEL: Record<typeof period, string> = {
+    last_7: 'the last 7 days',
+    last_30: 'the last 30 days',
+    this_month: 'the current month',
+    last_month: 'the previous month',
+  };
+
+  const generateConclusions = async () => {
+    if (!clientId) return;
+    setAnalyzing(true);
+    setConclusions('');
+    const question = `Write executive conclusions for ${client?.name ?? 'this client'} covering ${PERIOD_LABEL[period]}, to accompany their Looker Studio report. Focus on: overall performance, what improved or worsened, and 2-3 clear takeaways the account manager can paraphrase to the client. Keep it concise and presentation-ready. Answer in Spanish.`;
+    const { data, error } = await supabase.functions.invoke('metrics-ai-analysis', {
+      body: { question, clientId },
+    });
+    setAnalyzing(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || 'Could not generate conclusions');
+      return;
+    }
+    setConclusions((data as any).answer || '');
+  };
+
+  const copyConclusions = () => {
+    navigator.clipboard.writeText(conclusions);
+    toast.success('Conclusions copied');
   };
 
   const embedUrl = toEmbedUrl(url);
@@ -146,7 +180,49 @@ export default function ReportingPage() {
               sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
             />
           </Card>
-        ) : (
+        ) : null
+      )}
+
+      {/* AI period conclusions — available once the report is approved */}
+      {loaded && approved && url && (
+        <Card className="p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">AI conclusions for this period</h2>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-1">
+            A ready-to-paraphrase read of this client's performance, to send alongside the report.
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
+              <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="last_7">Last 7 days</SelectItem>
+                <SelectItem value="last_30">Last 30 days</SelectItem>
+                <SelectItem value="this_month">This month</SelectItem>
+                <SelectItem value="last_month">Last month</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" onClick={generateConclusions} disabled={analyzing}>
+              {analyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+              Generate conclusions
+            </Button>
+            {conclusions && (
+              <Button size="sm" variant="ghost" onClick={copyConclusions}>
+                <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy
+              </Button>
+            )}
+          </div>
+          {conclusions && (
+            <div className="border border-border rounded-lg bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none [&_p]:my-1.5 [&_ul]:my-1.5">
+              <ReactMarkdown>{conclusions}</ReactMarkdown>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Empty / pending state */}
+      {loaded && !(approved && embedUrl) && (
           <div className="border border-dashed border-border rounded-lg p-12 text-center text-muted-foreground space-y-2">
             <EyeOff className="h-8 w-8 mx-auto" />
             <p className="text-sm font-medium text-foreground">
@@ -158,7 +234,6 @@ export default function ReportingPage() {
                 : 'Paste the Looker Studio URL above to connect this client\'s report.'}
             </p>
           </div>
-        )
       )}
     </div>
   );
