@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2, ChevronDown, SlidersHorizontal, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -136,11 +136,23 @@ export default function AlertsPage() {
     })();
   }, [user]);
 
+  const [alertSearch, setAlertSearch] = useState('');
+
   // Only alerts whose rule is currently enabled
   const visibleAlerts = useMemo(
     () => alerts.filter(a => !disabledTypes.has(a.alert.type)),
     [alerts, disabledTypes],
   );
+
+  // ...further filtered by the client/campaign search box
+  const searchedAlerts = useMemo(() => {
+    const q = alertSearch.trim().toLowerCase();
+    if (!q) return visibleAlerts;
+    return visibleAlerts.filter(a =>
+      a.clientName.toLowerCase().includes(q) ||
+      a.campaign.toLowerCase().includes(q) ||
+      a.account.toLowerCase().includes(q));
+  }, [visibleAlerts, alertSearch]);
 
   const stats = useMemo(() => ({
     danger: visibleAlerts.filter(a => a.alert.severity === 'danger').length,
@@ -304,12 +316,17 @@ export default function AlertsPage() {
         </Card>
       </Collapsible>
 
-      <Card className="p-5 space-y-5">
-        <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">Email settings</h2>
-        </div>
-
+      <Collapsible>
+      <Card className="overflow-hidden">
+        <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-sm">Email settings</h2>
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+        <div className="px-5 pb-5 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <Label>Alerts enabled</Label>
@@ -381,27 +398,46 @@ export default function AlertsPage() {
             Save settings
           </Button>
         </div>
+        </div>
+        </CollapsibleContent>
       </Card>
+      </Collapsible>
 
-      <Card className="p-5">
-        <h2 className="font-semibold mb-3">Active alerts ({visibleAlerts.length})</h2>
+      <Collapsible defaultOpen>
+      <Card className="overflow-hidden">
+        <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-sm">Active alerts ({searchedAlerts.length})</h2>
+          </div>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+        <div className="px-5 pb-5">
+        {/* Client search */}
+        {visibleAlerts.length > 0 && (
+          <div className="relative max-w-sm mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input value={alertSearch} onChange={e => setAlertSearch(e.target.value)} placeholder="Search by client or campaign..." className="pl-9 h-9" />
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
           </div>
-        ) : visibleAlerts.length === 0 ? (
+        ) : searchedAlerts.length === 0 ? (
           <div className="text-center py-6 space-y-1">
             <CheckCircle2 className="h-7 w-7 text-success mx-auto" />
             <p className="text-sm text-foreground font-medium">
-              {alerts.length > 0 ? 'No active alerts from enabled rules' : 'All campaigns are healthy'}
+              {alertSearch ? `No alerts match "${alertSearch}"` : alerts.length > 0 ? 'No active alerts from enabled rules' : 'All campaigns are healthy'}
             </p>
             <p className="text-xs text-muted-foreground">
-              {alerts.length > 0 ? 'Some alerts are hidden by disabled rules above.' : 'No alert rule is currently triggered. That is the goal.'}
+              {alertSearch ? 'Try another client or campaign.' : alerts.length > 0 ? 'Some alerts are hidden by disabled rules above.' : 'No alert rule is currently triggered. That is the goal.'}
             </p>
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {visibleAlerts.map((a, i) => (
+            {searchedAlerts.map((a, i) => (
               <div key={i} className="py-3 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   {severityIcon(a.alert.severity)}
@@ -424,7 +460,10 @@ export default function AlertsPage() {
             ))}
           </div>
         )}
+        </div>
+        </CollapsibleContent>
       </Card>
+      </Collapsible>
     </div>
   );
 }

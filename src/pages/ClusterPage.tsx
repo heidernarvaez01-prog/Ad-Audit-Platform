@@ -9,8 +9,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Sparkles, Loader2, Download, Trash2, Eye, X, FileText, Network } from 'lucide-react';
-import { buildFormulaHtml, parseFormulaStream, FORMULA_NAV_LABELS } from '@/lib/formula-template';
+import { ArrowLeft, Sparkles, Loader2, Download, Trash2, Eye, X, FileText, Network, Lock } from 'lucide-react';
+import { buildFormulaHtml, parseFormulaStream, CLUSTER_CATALOG, getClusterDef } from '@/lib/formula-template';
 import { toast } from 'sonner';
 
 interface RunRow {
@@ -22,8 +22,6 @@ interface RunRow {
   model: string | null;
 }
 
-const CLUSTER_KEY = 'la_formula_v2';
-
 export default function ClusterPage() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
@@ -32,8 +30,8 @@ export default function ClusterPage() {
   const [hasBrief, setHasBrief] = useState<boolean | null>(null);
   const [runs, setRuns] = useState<RunRow[]>([]);
 
-  // Generation state
-  const [running, setRunning] = useState(false);
+  // Generation state (which cluster is currently running)
+  const [runningKey, setRunningKey] = useState<string | null>(null);
   const [progress, setProgress] = useState({ section: 0, chars: 0 });
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<number | null>(null);
@@ -70,12 +68,22 @@ export default function ClusterPage() {
   }, [clientId, navigate]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
-
   useEffect(() => () => { if (timerRef.current) window.clearInterval(timerRef.current); }, []);
 
-  const runCluster = async () => {
-    if (!clientId || !user || running) return;
-    setRunning(true);
+  // A cluster is monthly-locked if it already ran this calendar month
+  const runThisMonth = (clusterKey: string): RunRow | undefined => {
+    const now = new Date();
+    return runs.find(r =>
+      r.cluster_key === clusterKey &&
+      (() => { const d = new Date(r.created_at); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); })()
+    );
+  };
+
+  const runCluster = async (clusterKey: string) => {
+    if (!clientId || !user || runningKey) return;
+    const def = getClusterDef(clusterKey);
+    const total = def.navLabels.length;
+    setRunningKey(clusterKey);
     setProgress({ section: 0, chars: 0 });
     setElapsed(0);
     timerRef.current = window.setInterval(() => setElapsed(e => e + 1), 1000);
@@ -91,7 +99,7 @@ export default function ClusterPage() {
           Authorization: `Bearer ${session.access_token}`,
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ clientId }),
+        body: JSON.stringify({ clientId, clusterKey }),
       });
 
       if (!res.ok) {
@@ -101,7 +109,6 @@ export default function ClusterPage() {
       }
       if (!res.body) throw new Error('No response stream');
 
-      // Parse the Anthropic SSE stream and accumulate the generated text
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -119,13 +126,10 @@ export default function ClusterPage() {
           if (!payload || payload === '[DONE]') continue;
           try {
             const evt = JSON.parse(payload);
-            if (evt.type === 'content_block_delta' && evt.delta?.text) {
-              raw += evt.delta.text;
-            } else if (evt.type === 'error') {
-              throw new Error(evt.error?.message || 'AI stream error');
-            }
+            if (evt.type === 'content_block_delta' && evt.delta?.text) raw += evt.delta.text;
+            else if (evt.type === 'error') throw new Error(evt.error?.message || 'AI stream error');
           } catch (e) {
-            if (e instanceof SyntaxError) continue; // partial JSON line
+            if (e instanceof SyntaxError) continue;
             throw e;
           }
         }
@@ -133,27 +137,23 @@ export default function ClusterPage() {
         setProgress({ section: parsed.currentSection, chars: raw.length });
       }
 
-      // Assemble the final deliverable
       const parsed = parseFormulaStream(raw);
-      if (!parsed.hero || parsed.sections.length < 15) {
-        throw new Error(`Generation incomplete (${parsed.sections.length}/15 sections) — try again`);
+      if (!parsed.hero || parsed.sections.length < total) {
+        throw new Error(`Generation incomplete (${parsed.sections.length}/${total} sections) — try again`);
       }
-      const html = buildFormulaHtml(parsed.hero, parsed.sections.slice(0, 15));
-      const title = `La Fórmula — ${client?.name ?? 'Client'}`;
+      const html = buildFormulaHtml(parsed.hero, parsed.sections.slice(0, total), def.navLabels);
+      const title = `${def.title} — ${client?.name ?? 'Client'}`;
 
       const { error: insertErr } = await supabase.from('cluster_runs').insert({
         user_id: user.id,
         client_id: clientId,
-        cluster_key: CLUSTER_KEY,
+        cluster_key: clusterKey,
         title,
         status: 'done',
         output_html: html,
         model: 'claude-sonnet-4-6',
       });
-      if (insertErr) {
-        console.error(insertErr);
-        toast.error('Generated, but failed to save the run');
-      }
+      if (insertErr) { console.error(insertErr); toast.error('Generated, but failed to save the run'); }
 
       setViewerHtml(html);
       setViewerTitle(title);
@@ -163,7 +163,7 @@ export default function ClusterPage() {
       toast.error(e.message || 'Cluster failed');
     } finally {
       if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
-      setRunning(false);
+      setRunningKey(null);
     }
   };
 
@@ -179,7 +179,7 @@ export default function ClusterPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${title.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g, '').replace(/\s+/g, '_').toLowerCase()}.html`;
+    a.download = `${title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').toLowerCase()}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -196,6 +196,11 @@ export default function ClusterPage() {
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+  const nextMonthLabel = () => {
+    const d = new Date(); d.setMonth(d.getMonth() + 1, 1);
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  };
+
   // Full-screen viewer
   if (viewerHtml) {
     return (
@@ -211,12 +216,7 @@ export default function ClusterPage() {
             </Button>
           </div>
         </div>
-        <iframe
-          title={viewerTitle}
-          srcDoc={viewerHtml}
-          sandbox="allow-scripts"
-          className="flex-1 w-full border-0 bg-white"
-        />
+        <iframe title={viewerTitle} srcDoc={viewerHtml} sandbox="allow-scripts" className="flex-1 w-full border-0 bg-white" />
       </div>
     );
   }
@@ -233,7 +233,7 @@ export default function ClusterPage() {
             {client ? `${client.name} — Projection Clusters` : 'Projection Clusters'}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Generate a complete marketing strategy for this client with one click, ready to present.
+            Generate complete AI strategies for this client, ready to present. One run per cluster each month.
           </p>
         </div>
       </div>
@@ -245,7 +245,7 @@ export default function ClusterPage() {
           <div className="text-sm">
             <p className="font-medium text-foreground">This client's Brand Brief is empty</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Clusters are built FROM the briefing — complete it first to unlock the run.
+              Clusters are built FROM the briefing — complete it first to unlock the runs.
             </p>
             <Button size="sm" variant="outline" className="mt-2" asChild>
               <Link to={`/brief/${clientId}`}>Complete the Brand Brief</Link>
@@ -254,65 +254,80 @@ export default function ClusterPage() {
         </div>
       )}
 
-      {/* Cluster catalog */}
-      <Card className="p-5">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Network className="h-5 w-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-semibold text-foreground">La Fórmula</h2>
-                <Badge variant="secondary" className="text-[10px]">Brand Strategy · V2</Badge>
+      {/* Cluster catalog — one card per cluster */}
+      <div className="space-y-3">
+        {CLUSTER_CATALOG.map(def => {
+          const locked = !!runThisMonth(def.key);
+          const isRunning = runningKey === def.key;
+          const total = def.navLabels.length;
+          return (
+            <Card key={def.key} className="p-5">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Network className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="font-semibold text-foreground">{def.title}</h2>
+                      <Badge variant="secondary" className="text-[10px]">{def.badge}</Badge>
+                      {locked && (
+                        <Badge variant="outline" className="text-[10px] gap-1"><Lock className="h-2.5 w-2.5" /> Used this month</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{def.description}</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => runCluster(def.key)}
+                  disabled={!!runningKey || hasBrief !== true || locked}
+                  className="shrink-0"
+                  title={locked ? `Available again on ${nextMonthLabel()}` : undefined}
+                >
+                  {isRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : locked ? <Lock className="h-4 w-4 mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  {isRunning ? 'Generating...' : locked ? 'Next month' : 'Run Cluster'}
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Complete brand strategy in 15 sections: insights, SMART objectives, audiences,
-                brand structure, benchmark, strategic & creative concepts, 360° tactical plan,
-                content grid (20 pieces), SEO + Google Ads, big ideas and executive summary.
-                Briefing-centered, boosted with live paid media data. Delivered as a premium
-                client-ready HTML document in Spanish.
-              </p>
-            </div>
-          </div>
-          <Button onClick={runCluster} disabled={running || hasBrief !== true} className="shrink-0">
-            {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-            {running ? 'Generating...' : 'Run Cluster'}
-          </Button>
-        </div>
 
-        {/* Live progress */}
-        {running && (
-          <div className="mt-4 pt-4 border-t border-border space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">
-                {progress.section === 0
-                  ? 'Analyzing brief and campaign data...'
-                  : `Writing ${FORMULA_NAV_LABELS[Math.min(progress.section - 1, 14)]} — section ${Math.min(progress.section, 15)} of 15`}
-              </span>
-              <span className="font-mono text-muted-foreground">
-                {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-700"
-                style={{ width: `${Math.max(4, (progress.section / 15) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              This takes a few minutes — the AI is building the full strategy. Keep this tab open.
-            </p>
-          </div>
-        )}
-      </Card>
+              {/* Live progress for the running cluster */}
+              {isRunning && (
+                <div className="mt-4 pt-4 border-t border-border space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      {progress.section === 0
+                        ? 'Analyzing brief and campaign data...'
+                        : `Writing ${def.navLabels[Math.min(progress.section - 1, total - 1)]} — section ${Math.min(progress.section, total)} of ${total}`}
+                    </span>
+                    <span className="font-mono text-muted-foreground">
+                      {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all duration-700"
+                      style={{ width: `${Math.max(4, (progress.section / total) * 100)}%` }} />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    This takes a few minutes — keep this tab open while the AI builds it.
+                  </p>
+                </div>
+              )}
+
+              {locked && !isRunning && (
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Already generated this month. Available again on {nextMonthLabel()}.
+                </p>
+              )}
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Run history */}
       <Card className="p-5">
         <h2 className="font-semibold mb-3">Runs ({runs.length})</h2>
         {runs.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            No runs yet. Run La Fórmula to generate this client's first strategy.
+            No runs yet. Run a cluster to generate this client's first strategy.
           </p>
         ) : (
           <div className="divide-y divide-border">

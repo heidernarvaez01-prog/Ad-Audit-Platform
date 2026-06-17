@@ -86,7 +86,7 @@ export default function ReportingPage() {
     if (!clientId) return;
     setAnalyzing(true);
     setConclusions('');
-    const question = `Write executive conclusions for ${client?.name ?? 'this client'} covering ${PERIOD_LABEL[period]}, to accompany their Looker Studio report. Focus on: overall performance, what improved or worsened, and 2-3 clear takeaways the account manager can paraphrase to the client. Keep it concise and presentation-ready. Answer in Spanish.`;
+    const question = `Write executive conclusions for ${client?.name ?? 'this client'} covering ${PERIOD_LABEL[period]}, to accompany their Looker Studio report. Focus on: overall performance, what improved or worsened, and 2-3 clear takeaways the account manager can paraphrase to the client. Keep it concise and presentation-ready. Answer in English.`;
     const { data, error } = await supabase.functions.invoke('metrics-ai-analysis', {
       body: { question, clientId },
     });

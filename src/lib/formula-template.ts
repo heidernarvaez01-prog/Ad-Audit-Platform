@@ -4,10 +4,57 @@
 // deliverable is consistent and client-ready.
 
 export const FORMULA_NAV_LABELS = [
-  '01 Contexto', '02 Insights', '03 Objetivos', '04 Audiencias', '05 Marca',
-  '06 Benchmark', '07 Est. Estratégico', '08 Creatividad', '09 Plan Táctico',
-  '10 Slogans', '11 Parrilla', '12 SEO / Ads', '13 Big Ideas', '14 Resumen', '15 Cierre',
+  '01 Context', '02 Insights', '03 Objectives', '04 Audiences', '05 Brand',
+  '06 Benchmark', '07 Strategic Concept', '08 Creative', '09 Media Plan',
+  '10 Slogans', '11 Content Grid', '12 SEO / Ads', '13 Big Ideas', '14 Summary', '15 Closing',
 ];
+
+// Catalog of available clusters. navLabels MUST match the section count the
+// edge function emits for that cluster. One run per client per calendar month.
+export interface ClusterDef {
+  key: string;
+  title: string;
+  badge: string;
+  description: string;
+  navLabels: string[];
+}
+
+export const CLUSTER_CATALOG: ClusterDef[] = [
+  {
+    key: 'la_formula_v2',
+    title: 'La Fórmula',
+    badge: 'Brand Strategy',
+    description:
+      'A complete brand strategy in 15 sections: insights, SMART objectives, audiences, brand structure, benchmark, strategic & creative concepts, 360° media plan, content grid (20 pieces), SEO + Google Ads, big ideas and an executive summary. Briefing-centered, boosted with live data. Premium client-ready deliverable.',
+    navLabels: FORMULA_NAV_LABELS,
+  },
+  {
+    key: 'tactical_optimization',
+    title: 'Tactical Optimization',
+    badge: 'Weekly Optimization',
+    description:
+      "A media-buyer-grade optimization plan for the week: root-cause diagnosis by funnel layer, the exact moves to make (pause, scale, reallocate) with the numbers that justify them, what NOT to touch, and a watchlist. Built from this client's real campaign and ad-set data.",
+    navLabels: [
+      '01 Diagnosis', '02 Funnel Diagnosis', '03 Actions', '04 Don\'t Touch',
+      '05 Budget Reallocation', '06 Watchlist',
+    ],
+  },
+  {
+    key: 'keywords_google_ads',
+    title: 'Keywords & Google Ads',
+    badge: 'SEM',
+    description:
+      'A complete, ready-to-launch SEM plan: keyword clusters by intent, themed ad groups, negative keywords, 15 headlines and 15 descriptions within Google Ads limits, sitelinks & extensions, a SEM benchmark and quick wins. Built from the brief and any live Google Ads data.',
+    navLabels: [
+      '01 SEM Strategy', '02 Keyword Clusters', '03 Ad Groups', '04 Negatives',
+      '05 Headlines', '06 Descriptions', '07 Extensions', '08 SEM Benchmark', '09 Quick Wins',
+    ],
+  },
+];
+
+export function getClusterDef(key: string): ClusterDef {
+  return CLUSTER_CATALOG.find(c => c.key === key) ?? CLUSTER_CATALOG[0];
+}
 
 export interface FormulaHero {
   eye: string;          // e.g. "La Fórmula™ · Estrategia de Marca 2026"
@@ -128,7 +175,11 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-export function buildFormulaHtml(hero: FormulaHero, sections: string[]): string {
+export function buildFormulaHtml(
+  hero: FormulaHero,
+  sections: string[],
+  navLabels: string[] = FORMULA_NAV_LABELS,
+): string {
   // Last word of the brand title gets the gold highlight
   const words = hero.title.trim().split(/\s+/);
   const last = words.pop() || '';
@@ -140,7 +191,7 @@ export function buildFormulaHtml(hero: FormulaHero, sections: string[]): string 
     `<div class="hm"><strong>${escapeHtml(m.strong)}</strong>${escapeHtml(m.label)}</div>`
   ).join('\n    ');
 
-  const navHtml = FORMULA_NAV_LABELS.map((label, i) =>
+  const navHtml = navLabels.map((label, i) =>
     `<button class="nb${i === 0 ? ' on' : ''}" onclick="go(${i})">${label}</button>`
   ).join('\n    ');
 
@@ -148,11 +199,11 @@ export function buildFormulaHtml(hero: FormulaHero, sections: string[]): string 
   const secsJs = `const SECS = [\n${sections.map(s => JSON.stringify(s)).join(',\n')}\n];`;
 
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>La Fórmula — ${escapeHtml(hero.title)}</title>
+<title>${escapeHtml(hero.title)} — Strategy</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>${FORMULA_CSS}</style>
 </head>

@@ -326,10 +326,10 @@ async function generateForClient(
           model: "claude-sonnet-4-6",
           max_tokens: 700,
           system:
-            "Eres un analista senior de paid media. Escribe un resumen ejecutivo semanal en español para el cliente: 3-5 frases sobre el performance de la semana (gasto, resultados, pacing) + 2 recomendaciones accionables. Tono profesional y claro, sin tecnicismos innecesarios. Texto plano, sin markdown.",
+            "You are a senior paid media analyst. Write a weekly executive summary in English for the client: 3-5 sentences on the week's performance (spend, results, pacing) + 2 actionable recommendations. Professional, clear tone, no unnecessary jargon. Plain text, no markdown.",
           messages: [{
             role: "user",
-            content: `Cliente: ${client.name}. Semana ${start} a ${end}. Datos por campaña (week = esta semana, prev = semana anterior):\n${JSON.stringify(campaigns, null, 1)}`,
+            content: `Client: ${client.name}. Week ${start} to ${end}. Per-campaign data (week = this week, prev = previous week):\n${JSON.stringify(campaigns, null, 1)}`,
           }],
         }),
       });
