@@ -1,18 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2 } from 'lucide-react';
+import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchCampaignData } from '@/lib/api';
 import { buildAuditRows } from '@/lib/audit-helpers';
-import { ALERT_TYPE_LABELS, type AuditAlert } from '@/lib/audit-alerts';
+import { ALERT_TYPE_LABELS, type AuditAlert, type AlertType } from '@/lib/audit-alerts';
 import { toast } from '@/hooks/use-toast';
+
+// What each rule does, for the toggle list
+const ALERT_TYPE_DESC: Record<AlertType, string> = {
+  OVERSPEND_50: 'Spending 50%+ above what was expected by today.',
+  NOT_SPENDING: 'An active campaign stopped delivering (no recent spend).',
+  ENDING_SOON: 'Campaign is 90%+ through its schedule — plan renewal/closing.',
+  COST_SPIKE: 'CPC or CPM jumped more than 65% vs the previous week.',
+  BUDGET_EARLY_DEPLETION: 'At the current pace the budget runs out before the end date.',
+  CREATIVE_FATIGUE: 'High frequency + falling CTR — time to rotate creatives.',
+};
+const ALL_ALERT_TYPES = Object.keys(ALERT_TYPE_LABELS) as AlertType[];
 
 interface AlertSettings {
   enabled: boolean;
@@ -51,6 +63,26 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+
+  // Which alert rules are active (persisted per user in the browser)
+  const storageKey = user ? `apache_disabled_alerts_${user.id}` : 'apache_disabled_alerts';
+  const [disabledTypes, setDisabledTypes] = useState<Set<AlertType>>(new Set());
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) setDisabledTypes(new Set(JSON.parse(raw)));
+    } catch { /* ignore */ }
+  }, [storageKey]);
+
+  const toggleType = (t: AlertType) => {
+    setDisabledTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t); else next.add(t);
+      try { localStorage.setItem(storageKey, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -104,11 +136,17 @@ export default function AlertsPage() {
     })();
   }, [user]);
 
+  // Only alerts whose rule is currently enabled
+  const visibleAlerts = useMemo(
+    () => alerts.filter(a => !disabledTypes.has(a.alert.type)),
+    [alerts, disabledTypes],
+  );
+
   const stats = useMemo(() => ({
-    danger: alerts.filter(a => a.alert.severity === 'danger').length,
-    warning: alerts.filter(a => a.alert.severity === 'warning').length,
-    info: alerts.filter(a => a.alert.severity === 'info').length,
-  }), [alerts]);
+    danger: visibleAlerts.filter(a => a.alert.severity === 'danger').length,
+    warning: visibleAlerts.filter(a => a.alert.severity === 'warning').length,
+    info: visibleAlerts.filter(a => a.alert.severity === 'info').length,
+  }), [visibleAlerts]);
 
   const addEmail = () => {
     const e = emailInput.trim();
@@ -144,8 +182,8 @@ export default function AlertsPage() {
       return;
     }
     const pool = settings.only_critical
-      ? alerts.filter(a => a.alert.severity === 'danger')
-      : alerts.filter(a => a.alert.severity !== 'info');
+      ? visibleAlerts.filter(a => a.alert.severity === 'danger')
+      : visibleAlerts.filter(a => a.alert.severity !== 'info');
     if (pool.length === 0) {
       toast({ title: 'Nothing to send — no active critical or warning alerts' });
       return;
@@ -232,6 +270,40 @@ export default function AlertsPage() {
         </Card>
       </div>
 
+      {/* Alert rules — collapsible enable/disable per rule */}
+      <Collapsible>
+        <Card className="overflow-hidden">
+          <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
+            <div className="flex items-center gap-2 min-w-0">
+              <SlidersHorizontal className="h-4 w-4 text-primary shrink-0" />
+              <div className="text-left">
+                <h2 className="font-semibold text-sm">Alert rules</h2>
+                <p className="text-xs text-muted-foreground">
+                  {ALL_ALERT_TYPES.length - disabledTypes.size} of {ALL_ALERT_TYPES.length} active · turn rules on or off
+                </p>
+              </div>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-5 pb-4 pt-1 divide-y divide-border">
+              {ALL_ALERT_TYPES.map((t) => {
+                const active = !disabledTypes.has(t);
+                return (
+                  <div key={t} className="py-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground">{ALERT_TYPE_LABELS[t]}</div>
+                      <div className="text-xs text-muted-foreground">{ALERT_TYPE_DESC[t]}</div>
+                    </div>
+                    <Switch checked={active} onCheckedChange={() => toggleType(t)} />
+                  </div>
+                );
+              })}
+            </div>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
       <Card className="p-5 space-y-5">
         <div className="flex items-center gap-2">
           <Mail className="h-4 w-4 text-primary" />
@@ -312,20 +384,24 @@ export default function AlertsPage() {
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-semibold mb-3">Active alerts ({alerts.length})</h2>
+        <h2 className="font-semibold mb-3">Active alerts ({visibleAlerts.length})</h2>
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
           </div>
-        ) : alerts.length === 0 ? (
+        ) : visibleAlerts.length === 0 ? (
           <div className="text-center py-6 space-y-1">
             <CheckCircle2 className="h-7 w-7 text-success mx-auto" />
-            <p className="text-sm text-foreground font-medium">All campaigns are healthy</p>
-            <p className="text-xs text-muted-foreground">No alert rule is currently triggered. That is the goal.</p>
+            <p className="text-sm text-foreground font-medium">
+              {alerts.length > 0 ? 'No active alerts from enabled rules' : 'All campaigns are healthy'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {alerts.length > 0 ? 'Some alerts are hidden by disabled rules above.' : 'No alert rule is currently triggered. That is the goal.'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {alerts.map((a, i) => (
+            {visibleAlerts.map((a, i) => (
               <div key={i} className="py-3 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   {severityIcon(a.alert.severity)}
