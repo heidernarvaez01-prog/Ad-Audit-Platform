@@ -170,5 +170,15 @@
   .scrollbar-visible::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.7);
   }
+
+  /* Hide a scrollbar while keeping the element scrollable (content pane
+     under a synced sticky scrollbar) */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 

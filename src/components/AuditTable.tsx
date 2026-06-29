@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import StickyXScroll from '@/components/StickyXScroll';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -50,6 +51,36 @@ interface Props {
 interface InsightData {
   insight: string;
   riskLevel: 'critical' | 'moderate' | 'none';
+}
+
+// Period filter for the Performance view (visualize any date range)
+export type PerfPeriod = 'all' | 'last_7' | 'last_30' | 'this_month' | 'last_month';
+export const PERF_PERIOD_LABELS: Record<PerfPeriod, string> = {
+  all: 'Full campaign',
+  last_7: 'Last 7 days',
+  last_30: 'Last 30 days',
+  this_month: 'This month',
+  last_month: 'Last month',
+};
+
+function periodWindow(p: PerfPeriod): { from: string; to: string } | null {
+  if (p === 'all') return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  if (p === 'last_7') { const f = new Date(today); f.setDate(f.getDate() - 7); return { from: iso(f), to: iso(today) }; }
+  if (p === 'last_30') { const f = new Date(today); f.setDate(f.getDate() - 30); return { from: iso(f), to: iso(today) }; }
+  if (p === 'this_month') { return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) }; }
+  // last_month
+  return {
+    from: iso(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+    to: iso(new Date(today.getFullYear(), today.getMonth(), 0)),
+  };
+}
+
+function filterByPeriod(rows: ApiCampaignRow[], p: PerfPeriod): ApiCampaignRow[] {
+  const w = periodWindow(p);
+  if (!w) return rows;
+  return rows.filter(r => r.date >= w.from && r.date <= w.to);
 }
 
 // Aggregated real-time performance for one audited campaign
@@ -232,14 +263,17 @@ function ExpandedDetails({
   insight,
   loadingInsight,
   onGenerateInsight,
+  period = 'all',
 }: {
   row: AuditRowData;
   insight: InsightData | null;
   loadingInsight: boolean;
   onGenerateInsight: () => void;
+  period?: PerfPeriod;
 }) {
   const m = row.metrics;
-  const p = computePerf(row.campaignApiData);
+  const periodRows = filterByPeriod(row.campaignApiData, period);
+  const p = computePerf(periodRows);
 
   return (
     <div className="px-4 pb-4 space-y-4">
@@ -254,10 +288,16 @@ function ExpandedDetails({
 
       {/* Performance Charts */}
       <PerformanceCharts
-        apiRows={row.campaignApiData}
+        apiRows={periodRows}
         budget={row.presupuesto_total}
         level="campaign"
       />
+
+      {period !== 'all' && (
+        <p className="text-[11px] text-muted-foreground -mt-1">
+          Showing performance for <span className="font-medium text-foreground">{PERF_PERIOD_LABELS[period]}</span>.
+        </p>
+      )}
 
       {/* Full performance metrics */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 p-3 rounded-md bg-muted/50 border border-border">
@@ -331,6 +371,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   const [insights, setInsights] = useState<Record<string, InsightData>>({});
   const [loadingInsights, setLoadingInsights] = useState<Record<string, boolean>>({});
   const [view, setView] = useState<'pacing' | 'performance'>('pacing');
+  const [perfPeriod, setPerfPeriod] = useState<PerfPeriod>('all');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
 
@@ -346,9 +387,9 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
 
   const perfByRow = useMemo(() => {
     const map = new Map<string, RowPerf>();
-    for (const row of rows) map.set(row.id, computePerf(row.campaignApiData));
+    for (const row of rows) map.set(row.id, computePerf(filterByPeriod(row.campaignApiData, perfPeriod)));
     return map;
-  }, [rows]);
+  }, [rows, perfPeriod]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -425,11 +466,23 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <p className="text-[11px] text-muted-foreground">
-          {view === 'pacing'
-            ? 'Is each campaign spending what it should by today?'
-            : 'Real-time results synced from the ad platforms'}
-        </p>
+        <div className="flex items-center gap-3">
+          {view === 'performance' && (
+            <Select value={perfPeriod} onValueChange={(v) => setPerfPeriod(v as PerfPeriod)}>
+              <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PERF_PERIOD_LABELS) as PerfPeriod[]).map(k => (
+                  <SelectItem key={k} value={k} className="text-xs">{PERF_PERIOD_LABELS[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <p className="text-[11px] text-muted-foreground hidden lg:block">
+            {view === 'pacing'
+              ? 'Is each campaign spending what it should by today?'
+              : 'Real-time results for the selected period'}
+          </p>
+        </div>
       </div>
 
       {/* Mobile: cards/accordions */}
@@ -517,6 +570,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                       insight={insight}
                       loadingInsight={loadingInsights[row.id] || false}
                       onGenerateInsight={() => generateInsight(row)}
+                      period={perfPeriod}
                     />
                     <div className="flex items-center gap-1 justify-end pt-1 border-t border-border" onClick={e => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
@@ -540,8 +594,9 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
       </div>
 
       {/* Desktop: full table */}
-      <div ref={wrapperRef} className="hidden md:block border border-border rounded-lg overflow-hidden relative">
-        <Table className={view === 'pacing' ? 'min-w-[1450px]' : 'min-w-[1350px]'}>
+      <div ref={wrapperRef} className="hidden md:block relative">
+        <StickyXScroll className="border border-border rounded-lg">
+        <table className={`w-full caption-bottom text-sm ${view === 'pacing' ? 'min-w-[1450px]' : 'min-w-[1350px]'}`}>
         <TableHeader>
           {view === 'pacing' ? (
             <TableRow className="bg-muted/50">
@@ -770,6 +825,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                             insight={insight}
                             loadingInsight={loadingInsights[row.id] || false}
                             onGenerateInsight={() => generateInsight(row)}
+                            period={perfPeriod}
                           />
                         </div>
                       </td>
@@ -780,7 +836,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
             );
           })}
         </TableBody>
-        </Table>
+        </table>
+        </StickyXScroll>
       </div>
     </>
   );

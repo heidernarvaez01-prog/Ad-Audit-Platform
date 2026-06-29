@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import StickyXScroll from '@/components/StickyXScroll';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -376,8 +377,9 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
       </div>
 
       {/* Desktop: full table */}
-      <div className="hidden md:block border border-border rounded-lg overflow-x-auto">
-        <Table className="min-w-[800px]">
+      <div className="hidden md:block">
+        <StickyXScroll className="border border-border rounded-lg">
+        <table className="w-full caption-bottom text-sm min-w-[800px]">
         <TableHeader>
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
@@ -516,7 +518,8 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
             );
           })}
         </TableBody>
-        </Table>
+        </table>
+        </StickyXScroll>
       </div>
     </>
   );
