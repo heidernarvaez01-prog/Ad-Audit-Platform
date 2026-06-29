@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import StickyXScroll from '@/components/StickyXScroll';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -54,17 +53,22 @@ interface InsightData {
 }
 
 // Period filter for the Performance view (visualize any date range)
-export type PerfPeriod = 'all' | 'last_7' | 'last_30' | 'this_month' | 'last_month';
+export type PerfPeriod = 'all' | 'last_7' | 'last_30' | 'this_month' | 'last_month' | 'custom';
 export const PERF_PERIOD_LABELS: Record<PerfPeriod, string> = {
   all: 'Full campaign',
   last_7: 'Last 7 days',
   last_30: 'Last 30 days',
   this_month: 'This month',
   last_month: 'Last month',
+  custom: 'Custom range',
 };
 
-function periodWindow(p: PerfPeriod): { from: string; to: string } | null {
+export function periodWindow(p: PerfPeriod, cf?: string, ct?: string): { from: string; to: string } | null {
   if (p === 'all') return null;
+  if (p === 'custom') {
+    if (!cf && !ct) return null;
+    return { from: cf || '0000-01-01', to: ct || '9999-12-31' };
+  }
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   if (p === 'last_7') { const f = new Date(today); f.setDate(f.getDate() - 7); return { from: iso(f), to: iso(today) }; }
@@ -77,8 +81,8 @@ function periodWindow(p: PerfPeriod): { from: string; to: string } | null {
   };
 }
 
-function filterByPeriod(rows: ApiCampaignRow[], p: PerfPeriod): ApiCampaignRow[] {
-  const w = periodWindow(p);
+export function filterByPeriod(rows: ApiCampaignRow[], p: PerfPeriod, cf?: string, ct?: string): ApiCampaignRow[] {
+  const w = periodWindow(p, cf, ct);
   if (!w) return rows;
   return rows.filter(r => r.date >= w.from && r.date <= w.to);
 }
@@ -264,15 +268,19 @@ function ExpandedDetails({
   loadingInsight,
   onGenerateInsight,
   period = 'all',
+  customFrom,
+  customTo,
 }: {
   row: AuditRowData;
   insight: InsightData | null;
   loadingInsight: boolean;
   onGenerateInsight: () => void;
   period?: PerfPeriod;
+  customFrom?: string;
+  customTo?: string;
 }) {
   const m = row.metrics;
-  const periodRows = filterByPeriod(row.campaignApiData, period);
+  const periodRows = filterByPeriod(row.campaignApiData, period, customFrom, customTo);
   const p = computePerf(periodRows);
 
   return (
@@ -372,6 +380,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   const [loadingInsights, setLoadingInsights] = useState<Record<string, boolean>>({});
   const [view, setView] = useState<'pacing' | 'performance'>('pacing');
   const [perfPeriod, setPerfPeriod] = useState<PerfPeriod>('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
 
@@ -387,9 +397,9 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
 
   const perfByRow = useMemo(() => {
     const map = new Map<string, RowPerf>();
-    for (const row of rows) map.set(row.id, computePerf(filterByPeriod(row.campaignApiData, perfPeriod)));
+    for (const row of rows) map.set(row.id, computePerf(filterByPeriod(row.campaignApiData, perfPeriod, customFrom, customTo)));
     return map;
-  }, [rows, perfPeriod]);
+  }, [rows, perfPeriod, customFrom, customTo]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -466,22 +476,31 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {view === 'performance' && (
-            <Select value={perfPeriod} onValueChange={(v) => setPerfPeriod(v as PerfPeriod)}>
-              <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PERF_PERIOD_LABELS) as PerfPeriod[]).map(k => (
-                  <SelectItem key={k} value={k} className="text-xs">{PERF_PERIOD_LABELS[k]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <>
+              <Select value={perfPeriod} onValueChange={(v) => setPerfPeriod(v as PerfPeriod)}>
+                <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(PERF_PERIOD_LABELS) as PerfPeriod[]).map(k => (
+                    <SelectItem key={k} value={k} className="text-xs">{PERF_PERIOD_LABELS[k]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {perfPeriod === 'custom' && (
+                <div className="flex items-center gap-1">
+                  <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="h-8 w-[140px] text-xs" />
+                  <span className="text-xs text-muted-foreground">→</span>
+                  <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="h-8 w-[140px] text-xs" />
+                </div>
+              )}
+            </>
           )}
-          <p className="text-[11px] text-muted-foreground hidden lg:block">
-            {view === 'pacing'
-              ? 'Is each campaign spending what it should by today?'
-              : 'Real-time results for the selected period'}
-          </p>
+          {view === 'pacing' && (
+            <p className="text-[11px] text-muted-foreground hidden lg:block">
+              Is each campaign spending what it should by today?
+            </p>
+          )}
         </div>
       </div>
 
@@ -571,6 +590,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                       loadingInsight={loadingInsights[row.id] || false}
                       onGenerateInsight={() => generateInsight(row)}
                       period={perfPeriod}
+                      customFrom={customFrom}
+                      customTo={customTo}
                     />
                     <div className="flex items-center gap-1 justify-end pt-1 border-t border-border" onClick={e => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
@@ -594,10 +615,13 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
       </div>
 
       {/* Desktop: full table */}
-      <div ref={wrapperRef} className="hidden md:block relative">
-        <StickyXScroll className="border border-border rounded-lg">
+      <div
+        ref={wrapperRef}
+        className="hidden md:block border border-border rounded-lg overflow-auto scrollbar-visible relative"
+        style={{ maxHeight: 'calc(100vh - 230px)' }}
+      >
         <table className={`w-full caption-bottom text-sm ${view === 'pacing' ? 'min-w-[1450px]' : 'min-w-[1350px]'}`}>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-20 bg-card [&_tr]:bg-card">
           {view === 'pacing' ? (
             <TableRow className="bg-muted/50">
               <TableHead className="w-8"></TableHead>
@@ -826,6 +850,8 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                             loadingInsight={loadingInsights[row.id] || false}
                             onGenerateInsight={() => generateInsight(row)}
                             period={perfPeriod}
+                            customFrom={customFrom}
+                            customTo={customTo}
                           />
                         </div>
                       </td>
@@ -837,7 +863,6 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
           })}
         </TableBody>
         </table>
-        </StickyXScroll>
       </div>
     </>
   );

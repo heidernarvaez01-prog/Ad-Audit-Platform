@@ -6,10 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, ChevronsUpDown, Check, Search } from 'lucide-react';
+import { Loader2, ChevronsUpDown, Check, Search, X, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ApiCampaignRow } from '@/lib/api';
@@ -32,6 +31,13 @@ interface Props {
   } | null;
 }
 
+// Per-campaign config in bulk mode — each campaign keeps its own values
+interface BulkCfg { presupuesto: string; inicio: string; fin: string; cal: string; expanded: boolean }
+
+const SCHEDULE_LABEL: Record<string, string> = {
+  corridos: 'Every day', lun_vie: 'Mon–Fri', lun_sab: 'Mon–Sat',
+};
+
 export default function AuditForm({ open, onClose, onSaved, apiData, clientId, editRecord }: Props) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -47,8 +53,13 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
   const [comboOpen, setComboOpen] = useState(false);
 
   // Bulk mode
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [configs, setConfigs] = useState<Record<string, BulkCfg>>({});
   const [bulkSearch, setBulkSearch] = useState('');
+  // "Apply to all" shared values
+  const [applyBudget, setApplyBudget] = useState('');
+  const [applyStart, setApplyStart] = useState('');
+  const [applyEnd, setApplyEnd] = useState('');
+  const [applyCal, setApplyCal] = useState('corridos');
 
   useEffect(() => {
     if (editRecord) {
@@ -78,7 +89,6 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
     return [...new Set(filtered.map(r => r.campaign_name).filter(Boolean))].sort();
   }, [apiData, platform, accountName]);
 
-  // Date range available for a campaign (from synced data)
   const campaignDates = (name: string): { start: string; end: string } | null => {
     const rows = apiData.filter(r => r.campaign_name === name && (!platform || r.platform === platform));
     const dates = rows.map(r => r.date).filter(Boolean).sort();
@@ -86,6 +96,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
     return { start: dates[0].slice(0, 10), end: dates[dates.length - 1].slice(0, 10) };
   };
 
+  // ── Single mode ──
   const handleCampaignSelect = (name: string) => {
     setCampaignName(name);
     setComboOpen(false);
@@ -98,28 +109,8 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
     }
   };
 
-  const resetAccount = (v: string) => { setAccountName(v); setCampaignName(''); setSelected(new Set()); };
-
-  const bulkVisible = useMemo(() => {
-    const q = bulkSearch.trim().toLowerCase();
-    return q ? filteredCampaigns.filter(c => c.toLowerCase().includes(q)) : filteredCampaigns;
-  }, [filteredCampaigns, bulkSearch]);
-
-  const toggleCampaign = (name: string) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name); else next.add(name);
-      return next;
-    });
-  };
-  const allSelected = bulkVisible.length > 0 && bulkVisible.every(c => selected.has(c));
-  const toggleAll = () => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (allSelected) bulkVisible.forEach(c => next.delete(c));
-      else bulkVisible.forEach(c => next.add(c));
-      return next;
-    });
+  const resetAccount = (v: string) => {
+    setAccountName(v); setCampaignName(''); setConfigs({});
   };
 
   const handleSaveSingle = async () => {
@@ -129,15 +120,9 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
     }
     setLoading(true);
     const record = {
-      user_id: user.id,
-      client_id: clientId,
-      account_id: accountName,
-      campaign_name: campaignName,
-      presupuesto_total: parseFloat(presupuesto),
-      fecha_inicio: fechaInicio,
-      fecha_fin: fechaFin,
-      tipo_calendario: tipoCalendario,
-      platform: platform || null,
+      user_id: user.id, client_id: clientId, account_id: accountName, campaign_name: campaignName,
+      presupuesto_total: parseFloat(presupuesto), fecha_inicio: fechaInicio, fecha_fin: fechaFin,
+      tipo_calendario: tipoCalendario, platform: platform || null,
     };
     let error;
     if (editRecord) ({ error } = await supabase.from('audit_records').update(record).eq('id', editRecord.id));
@@ -147,21 +132,74 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
     setLoading(false);
   };
 
+  // ── Bulk mode ──
+  const bulkVisible = useMemo(() => {
+    const q = bulkSearch.trim().toLowerCase();
+    return q ? filteredCampaigns.filter(c => c.toLowerCase().includes(q)) : filteredCampaigns;
+  }, [filteredCampaigns, bulkSearch]);
+
+  const selectedNames = Object.keys(configs);
+
+  const toggleCampaign = (name: string) => {
+    setConfigs(prev => {
+      const next = { ...prev };
+      if (next[name]) { delete next[name]; return next; }
+      const d = campaignDates(name);
+      next[name] = { presupuesto: applyBudget, inicio: d?.start || applyStart, fin: d?.end || applyEnd, cal: applyCal, expanded: false };
+      return next;
+    });
+  };
+  const allSelected = bulkVisible.length > 0 && bulkVisible.every(c => configs[c]);
+  const toggleAll = () => {
+    setConfigs(prev => {
+      const next = { ...prev };
+      if (allSelected) { bulkVisible.forEach(c => delete next[c]); return next; }
+      bulkVisible.forEach(c => {
+        if (!next[c]) { const d = campaignDates(c); next[c] = { presupuesto: applyBudget, inicio: d?.start || applyStart, fin: d?.end || applyEnd, cal: applyCal, expanded: false }; }
+      });
+      return next;
+    });
+  };
+
+  const setCfg = (name: string, patch: Partial<BulkCfg>) =>
+    setConfigs(prev => ({ ...prev, [name]: { ...prev[name], ...patch } }));
+
+  const applyToAll = () => {
+    setConfigs(prev => {
+      const next = { ...prev };
+      for (const name of Object.keys(next)) {
+        next[name] = {
+          ...next[name],
+          ...(applyBudget !== '' ? { presupuesto: applyBudget } : {}),
+          ...(applyStart !== '' ? { inicio: applyStart } : {}),
+          ...(applyEnd !== '' ? { fin: applyEnd } : {}),
+          cal: applyCal,
+        };
+      }
+      return next;
+    });
+    toast.success('Applied to all selected');
+  };
+
   const handleSaveBulk = async () => {
     if (!user || !accountName) { toast.error('Select an account'); return; }
-    if (selected.size === 0) { toast.error('Select at least one campaign'); return; }
-    if (!presupuesto || !fechaInicio || !fechaFin) { toast.error('Fill budget and dates'); return; }
+    if (selectedNames.length === 0) { toast.error('Select at least one campaign'); return; }
+    const missing = selectedNames.filter(n => {
+      const c = configs[n];
+      return !c.presupuesto || !c.inicio || !c.fin;
+    });
+    if (missing.length) {
+      toast.error(`${missing.length} campaign(s) missing budget or dates`);
+      // auto-expand the first incomplete one
+      setCfg(missing[0], { expanded: true });
+      return;
+    }
     setLoading(true);
-    const records = [...selected].map(name => ({
-      user_id: user.id,
-      client_id: clientId,
-      account_id: accountName,
-      campaign_name: name,
-      presupuesto_total: parseFloat(presupuesto),
-      fecha_inicio: fechaInicio,
-      fecha_fin: fechaFin,
-      tipo_calendario: tipoCalendario,
-      platform: platform || null,
+    const records = selectedNames.map(name => ({
+      user_id: user.id, client_id: clientId, account_id: accountName, campaign_name: name,
+      presupuesto_total: parseFloat(configs[name].presupuesto),
+      fecha_inicio: configs[name].inicio, fecha_fin: configs[name].fin,
+      tipo_calendario: configs[name].cal, platform: platform || null,
     }));
     const { error } = await supabase.from('audit_records').insert(records);
     if (error) toast.error('Error creating campaigns');
@@ -169,85 +207,58 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
     setLoading(false);
   };
 
-  const SharedValues = (
-    <>
-      <div>
-        <Label className="text-xs text-muted-foreground">
-          {mode === 'bulk' ? 'Approved Budget (applied to each campaign)' : 'Total Approved Budget'}
-        </Label>
-        <Input type="number" value={presupuesto} onChange={e => setPresupuesto(e.target.value)} placeholder="0.00" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label className="text-xs text-muted-foreground">Start Date</Label>
-          <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
-        </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">End Date</Label>
-          <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
-        </div>
-      </div>
-      <div>
-        <Label className="text-xs text-muted-foreground">Schedule Type</Label>
-        <Select value={tipoCalendario} onValueChange={setTipoCalendario}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="corridos">Every day</SelectItem>
-            <SelectItem value="lun_vie">Monday to Friday</SelectItem>
-            <SelectItem value="lun_sab">Monday to Saturday</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </>
-  );
-
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">
             {editRecord ? 'Edit Audit Record' : 'Add Campaigns'}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Mode toggle (only when creating) */}
+        {/* Mode toggle — segmented control */}
         {!editRecord && (
-          <Tabs value={mode} onValueChange={(v) => setMode(v as 'single' | 'bulk')}>
-            <TabsList className="w-full">
-              <TabsTrigger value="single" className="flex-1 text-xs">Single</TabsTrigger>
-              <TabsTrigger value="bulk" className="flex-1 text-xs">Bulk (multiple)</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
+            {(['single', 'bulk'] as const).map(m => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  'text-xs font-medium py-1.5 rounded-md transition-colors',
+                  mode === m ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {m === 'single' ? 'Single campaign' : 'Bulk (multiple)'}
+              </button>
+            ))}
+          </div>
         )}
 
         <div className="space-y-4 mt-2">
-          {/* Platform */}
-          <div>
-            <Label className="text-xs text-muted-foreground">Platform</Label>
-            <Select value={platform} onValueChange={(v) => { setPlatform(v); resetAccount(''); }}>
-              <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
-              <SelectContent>
-                {platforms.map(p => (
-                  <SelectItem key={p} value={p}><span className="capitalize">{p}</span></SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Account */}
-          <div>
-            <Label className="text-xs text-muted-foreground">Account</Label>
-            <Select value={accountName} onValueChange={resetAccount}>
-              <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
-              <SelectContent>
-                {accountNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          {/* Platform + Account (both modes) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Platform</Label>
+              <Select value={platform} onValueChange={(v) => { setPlatform(v); resetAccount(''); }}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {platforms.map(p => <SelectItem key={p} value={p}><span className="capitalize">{p}</span></SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Account</Label>
+              <Select value={accountName} onValueChange={resetAccount}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {accountNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {mode === 'single' ? (
             <>
-              {/* Single campaign combobox */}
               <div>
                 <Label className="text-xs text-muted-foreground">Campaign</Label>
                 <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -278,7 +289,31 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
                   </PopoverContent>
                 </Popover>
               </div>
-              {SharedValues}
+              <div>
+                <Label className="text-xs text-muted-foreground">Total Approved Budget</Label>
+                <Input type="number" value={presupuesto} onChange={e => setPresupuesto(e.target.value)} placeholder="0.00" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Start Date</Label>
+                  <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">End Date</Label>
+                  <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Schedule Type</Label>
+                <Select value={tipoCalendario} onValueChange={setTipoCalendario}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="corridos">Every day</SelectItem>
+                    <SelectItem value="lun_vie">Monday to Friday</SelectItem>
+                    <SelectItem value="lun_sab">Monday to Saturday</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button onClick={handleSaveSingle} disabled={loading} className="w-full">
                 {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {editRecord ? 'Save Changes' : 'Create Record'}
@@ -286,11 +321,11 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
             </>
           ) : (
             <>
-              {/* Bulk: multi-select campaign list */}
+              {/* Campaign multi-select */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <Label className="text-xs text-muted-foreground">
-                    Campaigns {selected.size > 0 && <span className="text-primary font-medium">· {selected.size} selected</span>}
+                    Campaigns {selectedNames.length > 0 && <span className="text-primary font-medium">· {selectedNames.length} selected</span>}
                   </Label>
                   {filteredCampaigns.length > 0 && (
                     <button type="button" onClick={toggleAll} className="text-[11px] text-primary hover:underline">
@@ -310,42 +345,110 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
                   <div className="border border-border rounded-md">
                     <div className="relative p-2 border-b border-border">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                      <Input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)}
-                        placeholder="Filter campaigns..." className="pl-8 h-8 text-xs" />
+                      <Input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)} placeholder="Filter campaigns..." className="pl-8 h-8 text-xs" />
                     </div>
-                    <div className="max-h-52 overflow-y-auto p-1">
+                    <div className="max-h-40 overflow-y-auto p-1">
                       {bulkVisible.map(c => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => toggleCampaign(c)}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-muted/60 transition-colors"
-                        >
-                          <span className={cn(
-                            'h-4 w-4 shrink-0 rounded border flex items-center justify-center',
-                            selected.has(c) ? 'bg-primary border-primary text-primary-foreground' : 'border-input',
-                          )}>
-                            {selected.has(c) && <Check className="h-3 w-3" />}
+                        <button key={c} type="button" onClick={() => toggleCampaign(c)}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-muted/60 transition-colors">
+                          <span className={cn('h-4 w-4 shrink-0 rounded border flex items-center justify-center',
+                            configs[c] ? 'bg-primary border-primary text-primary-foreground' : 'border-input')}>
+                            {configs[c] && <Check className="h-3 w-3" />}
                           </span>
                           <span className="truncate text-xs text-foreground">{c}</span>
                         </button>
                       ))}
-                      {bulkVisible.length === 0 && (
-                        <p className="text-xs text-muted-foreground text-center py-3">No matches.</p>
-                      )}
+                      {bulkVisible.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">No matches.</p>}
                     </div>
                   </div>
                 )}
               </div>
 
-              <p className="text-[11px] text-muted-foreground -mt-1">
-                These values apply to every selected campaign. You can fine-tune dates/budget per campaign later in the table.
-              </p>
-              {SharedValues}
+              {selectedNames.length > 0 && (
+                <>
+                  {/* Apply to all — quick fill */}
+                  <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                    <p className="text-[11px] font-medium text-foreground">Quick fill — apply to all selected</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input type="number" value={applyBudget} onChange={e => setApplyBudget(e.target.value)} placeholder="Budget" className="h-8 text-xs" />
+                      <Select value={applyCal} onValueChange={setApplyCal}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
+                          <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
+                          <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input type="date" value={applyStart} onChange={e => setApplyStart(e.target.value)} className="h-8 text-xs" />
+                      <Input type="date" value={applyEnd} onChange={e => setApplyEnd(e.target.value)} className="h-8 text-xs" />
+                    </div>
+                    <Button type="button" size="sm" variant="secondary" className="w-full h-8 text-xs" onClick={applyToAll}>
+                      Apply to all {selectedNames.length}
+                    </Button>
+                  </div>
+
+                  {/* Per-campaign editable rows */}
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] text-muted-foreground">Each campaign keeps its own values — expand to fine-tune.</p>
+                    {selectedNames.map(name => {
+                      const c = configs[name];
+                      const incomplete = !c.presupuesto || !c.inicio || !c.fin;
+                      return (
+                        <div key={name} className="border border-border rounded-md">
+                          <button type="button" onClick={() => setCfg(name, { expanded: !c.expanded })}
+                            className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left hover:bg-muted/40 transition-colors">
+                            <span className="truncate text-xs font-medium text-foreground flex items-center gap-1.5">
+                              {incomplete && <span className="h-1.5 w-1.5 rounded-full bg-warning shrink-0" />}
+                              {name}
+                            </span>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {c.presupuesto ? `$${c.presupuesto}` : '—'}
+                              </span>
+                              <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', c.expanded && 'rotate-180')} />
+                            </span>
+                          </button>
+                          {c.expanded && (
+                            <div className="px-2.5 pb-2.5 pt-1 grid grid-cols-2 gap-2 border-t border-border">
+                              <div className="col-span-2">
+                                <Label className="text-[10px] text-muted-foreground">Budget</Label>
+                                <Input type="number" value={c.presupuesto} onChange={e => setCfg(name, { presupuesto: e.target.value })} placeholder="0.00" className="h-8 text-xs" />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground">Start</Label>
+                                <Input type="date" value={c.inicio} onChange={e => setCfg(name, { inicio: e.target.value })} className="h-8 text-xs" />
+                              </div>
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground">End</Label>
+                                <Input type="date" value={c.fin} onChange={e => setCfg(name, { fin: e.target.value })} className="h-8 text-xs" />
+                              </div>
+                              <div className="col-span-2">
+                                <Label className="text-[10px] text-muted-foreground">Schedule</Label>
+                                <Select value={c.cal} onValueChange={v => setCfg(name, { cal: v })}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
+                                    <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
+                                    <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <button type="button" onClick={() => toggleCampaign(name)}
+                                className="col-span-2 text-[11px] text-destructive hover:underline flex items-center gap-1 justify-center pt-0.5">
+                                <X className="h-3 w-3" /> Remove
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
 
               <Button onClick={handleSaveBulk} disabled={loading} className="w-full">
                 {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Add {selected.size > 0 ? selected.size : ''} campaign{selected.size === 1 ? '' : 's'}
+                Add {selectedNames.length > 0 ? selectedNames.length : ''} campaign{selectedNames.length === 1 ? '' : 's'}
               </Button>
             </>
           )}
