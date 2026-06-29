@@ -384,20 +384,40 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   const [customTo, setCustomTo] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
+  // Cap the table height to whatever space is left below it, so the horizontal
+  // scrollbar (bottom of this box) is always on screen — even with expanded rows.
+  const [maxH, setMaxH] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
     const el = wrapperRef.current;
-    const update = () => setViewportWidth(el.clientWidth);
+    const update = () => {
+      setViewportWidth(el.clientWidth);
+      const top = el.getBoundingClientRect().top;
+      setMaxH(Math.max(360, Math.round(window.innerHeight - top - 24)));
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    window.addEventListener('resize', update);
+    const t = window.setTimeout(update, 350); // after summary cards/layout settle
+    return () => { ro.disconnect(); window.removeEventListener('resize', update); window.clearTimeout(t); };
+  }, [rows.length, view]);
 
   const perfByRow = useMemo(() => {
     const map = new Map<string, RowPerf>();
     for (const row of rows) map.set(row.id, computePerf(filterByPeriod(row.campaignApiData, perfPeriod, customFrom, customTo)));
+    return map;
+  }, [rows, perfPeriod, customFrom, customTo]);
+
+  // Spend within the selected period (for the Budget Pacing "Actual Spend" column)
+  const periodSpendByRow = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      const sum = filterByPeriod(row.campaignApiData, perfPeriod, customFrom, customTo)
+        .reduce((s, r) => s + (isNaN(r.metrics.cost) ? 0 : r.metrics.cost), 0);
+      map.set(row.id, sum);
+    }
     return map;
   }, [rows, perfPeriod, customFrom, customTo]);
 
@@ -477,32 +497,30 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-2">
-          {view === 'performance' && (
-            <>
-              <Select value={perfPeriod} onValueChange={(v) => setPerfPeriod(v as PerfPeriod)}>
-                <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(PERF_PERIOD_LABELS) as PerfPeriod[]).map(k => (
-                    <SelectItem key={k} value={k} className="text-xs">{PERF_PERIOD_LABELS[k]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {perfPeriod === 'custom' && (
-                <div className="flex items-center gap-1">
-                  <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="h-8 w-[140px] text-xs" />
-                  <span className="text-xs text-muted-foreground">→</span>
-                  <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="h-8 w-[140px] text-xs" />
-                </div>
-              )}
-            </>
-          )}
-          {view === 'pacing' && (
-            <p className="text-[11px] text-muted-foreground hidden lg:block">
-              Is each campaign spending what it should by today?
-            </p>
+          <Select value={perfPeriod} onValueChange={(v) => setPerfPeriod(v as PerfPeriod)}>
+            <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(Object.keys(PERF_PERIOD_LABELS) as PerfPeriod[]).map(k => (
+                <SelectItem key={k} value={k} className="text-xs">{PERF_PERIOD_LABELS[k]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {perfPeriod === 'custom' && (
+            <div className="flex items-center gap-1">
+              <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="h-8 w-[140px] text-xs" />
+              <span className="text-xs text-muted-foreground">→</span>
+              <Input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} className="h-8 w-[140px] text-xs" />
+            </div>
           )}
         </div>
       </div>
+      {perfPeriod !== 'all' && (
+        <p className="hidden md:block text-[11px] text-muted-foreground mb-2 -mt-1">
+          {view === 'pacing'
+            ? `Actual Spend shows spend for ${PERF_PERIOD_LABELS[perfPeriod]}. Pacing % stay vs the full schedule.`
+            : `Performance metrics for ${PERF_PERIOD_LABELS[perfPeriod]}.`}
+        </p>
+      )}
 
       {/* Mobile: cards/accordions */}
       <div className="md:hidden space-y-3">
@@ -618,7 +636,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
       <div
         ref={wrapperRef}
         className="hidden md:block border border-border rounded-lg overflow-auto scrollbar-visible relative"
-        style={{ maxHeight: 'calc(100vh - 230px)' }}
+        style={{ maxHeight: maxH ? `${maxH}px` : 'calc(100vh - 340px)' }}
       >
         <table className={`w-full caption-bottom text-sm ${view === 'pacing' ? 'min-w-[1450px]' : 'min-w-[1350px]'}`}>
         <TableHeader className="sticky top-0 z-20 bg-card [&_tr]:bg-card">
@@ -783,9 +801,12 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                             />
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">
-                            <span className={m.pacingStatus === 'SOBREGASTANDO' ? 'text-destructive font-bold' : 'text-foreground'}>
-                              {fmt(m.gastoActual)}
+                            <span className={m.pacingStatus === 'SOBREGASTANDO' && perfPeriod === 'all' ? 'text-destructive font-bold' : 'text-foreground'}>
+                              {perfPeriod === 'all' ? fmt(m.gastoActual) : fmt(periodSpendByRow.get(row.id) ?? 0)}
                             </span>
+                            {perfPeriod !== 'all' && (
+                              <span className="block text-[9px] text-muted-foreground uppercase tracking-wide">period</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs text-muted-foreground">
                             {fmtPct(m.porcentajeTiempo)}
