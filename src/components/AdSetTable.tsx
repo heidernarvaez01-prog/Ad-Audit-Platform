@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import HScroll from '@/components/HScroll';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -376,12 +377,10 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
       </div>
 
       {/* Desktop: full table */}
-      <div
-        className="hidden md:block border border-border rounded-lg overflow-auto scrollbar-visible"
-        style={{ maxHeight: 'calc(100vh - 230px)' }}
-      >
+      <div className="hidden md:block">
+        <HScroll className="border border-border rounded-lg">
         <table className="w-full caption-bottom text-sm min-w-[800px]">
-        <TableHeader className="sticky top-0 z-20 bg-card [&_tr]:bg-card">
+        <TableHeader>
 
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
@@ -521,6 +520,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
           })}
         </TableBody>
         </table>
+        </HScroll>
       </div>
     </>
   );

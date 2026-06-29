@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import HScroll from '@/components/HScroll';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -384,25 +385,16 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
   const [customTo, setCustomTo] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState<number | undefined>(undefined);
-  // Cap the table height to whatever space is left below it, so the horizontal
-  // scrollbar (bottom of this box) is always on screen — even with expanded rows.
-  const [maxH, setMaxH] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
     const el = wrapperRef.current;
-    const update = () => {
-      setViewportWidth(el.clientWidth);
-      const top = el.getBoundingClientRect().top;
-      setMaxH(Math.max(360, Math.round(window.innerHeight - top - 24)));
-    };
+    const update = () => setViewportWidth(el.clientWidth);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    window.addEventListener('resize', update);
-    const t = window.setTimeout(update, 350); // after summary cards/layout settle
-    return () => { ro.disconnect(); window.removeEventListener('resize', update); window.clearTimeout(t); };
-  }, [rows.length, view]);
+    return () => ro.disconnect();
+  }, []);
 
   const perfByRow = useMemo(() => {
     const map = new Map<string, RowPerf>();
@@ -633,13 +625,10 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
       </div>
 
       {/* Desktop: full table */}
-      <div
-        ref={wrapperRef}
-        className="hidden md:block border border-border rounded-lg overflow-auto scrollbar-visible relative"
-        style={{ maxHeight: maxH ? `${maxH}px` : 'calc(100vh - 340px)' }}
-      >
+      <div ref={wrapperRef} className="hidden md:block relative">
+        <HScroll className="border border-border rounded-lg">
         <table className={`w-full caption-bottom text-sm ${view === 'pacing' ? 'min-w-[1450px]' : 'min-w-[1350px]'}`}>
-        <TableHeader className="sticky top-0 z-20 bg-card [&_tr]:bg-card">
+        <TableHeader>
           {view === 'pacing' ? (
             <TableRow className="bg-muted/50">
               <TableHead className="w-8"></TableHead>
@@ -884,6 +873,7 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
           })}
         </TableBody>
         </table>
+        </HScroll>
       </div>
     </>
   );

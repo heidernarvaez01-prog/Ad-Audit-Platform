@@ -50,13 +50,22 @@ export default function ReportingPage() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Normalize a Looker Studio link into its embeddable form
+  // Normalize a Looker Studio link (or a pasted <iframe> snippet) into its
+  // embeddable form. Handles /u/0/, /edit suffixes, and raw report links.
   const toEmbedUrl = (raw: string): string => {
-    const t = raw.trim();
+    let t = raw.trim();
     if (!t) return '';
+    // If they pasted the whole "Embed report" iframe HTML, pull out the src
+    const srcMatch = t.match(/src=["']([^"']+)["']/i);
+    if (srcMatch) t = srcMatch[1];
+    t = t.trim();
     if (t.includes('/embed/')) return t;
+    // Drop the account segment (/u/0/) and any trailing /edit
+    t = t.replace('lookerstudio.google.com/u/0/', 'lookerstudio.google.com/')
+         .replace('datastudio.google.com/u/0/', 'datastudio.google.com/')
+         .replace(/\/edit(\b|\/|\?|$)/, '$1');
     return t.replace('lookerstudio.google.com/reporting/', 'lookerstudio.google.com/embed/reporting/')
-            .replace('lookerstudio.google.com/u/0/reporting/', 'lookerstudio.google.com/embed/reporting/');
+            .replace('datastudio.google.com/reporting/', 'datastudio.google.com/embed/reporting/');
   };
 
   const save = async () => {
@@ -177,8 +186,12 @@ export default function ReportingPage() {
               className="w-full border-0 bg-white"
               style={{ height: 'calc(100vh - 320px)', minHeight: 480 }}
               allowFullScreen
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              referrerPolicy="no-referrer-when-downgrade"
             />
+            <div className="px-4 py-2 border-t border-border text-[11px] text-muted-foreground">
+              Blank? In Looker Studio open <span className="font-medium">File → Embed report</span> and turn on
+              <span className="font-medium"> "Enable embedding"</span>, then make sure link sharing is set so anyone with the link can view.
+            </div>
           </Card>
         ) : null
       )}
