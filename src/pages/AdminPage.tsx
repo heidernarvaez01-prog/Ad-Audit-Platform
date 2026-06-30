@@ -184,6 +184,21 @@ export default function AdminPage() {
     }
   };
 
+  // Permanent delete: removes the member's login + all their access.
+  const deleteUser = async (uid: string, email: string | null) => {
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { action: 'delete_user', userId: uid },
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: 'Error deleting member', description: error?.message || (data as any)?.error, variant: 'destructive' });
+      return;
+    }
+    setUsers((prev) => prev.filter((u) => u.id !== uid));
+    setAssignments((prev) => prev.filter((a) => a.user_id !== uid));
+    setRoles((prev) => prev.filter((r) => r.user_id !== uid));
+    toast({ title: `Member deleted`, description: email ?? uid });
+  };
+
   if (loading) {
     return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>;
   }
