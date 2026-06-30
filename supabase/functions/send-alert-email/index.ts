@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
         'X-Connection-Api-Key': RESEND_API_KEY,
       },
       body: JSON.stringify({
-        from: 'Apache Studio Ad Audit <onboarding@resend.dev>',
+        from: 'Apache Studio Ad Audit <alertas@apachestudio.mx>',
         to,
         subject: finalSubject,
         html,
