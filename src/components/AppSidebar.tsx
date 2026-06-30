@@ -107,9 +107,9 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
           ${open ? 'w-[240px]' : 'w-[60px] hover:w-[240px]'}`}
       >
         {/* Header */}
-        <div className="h-16 flex items-center gap-3 px-3 border-b border-sidebar-border shrink-0 bg-[#23272b]">
-          <div className="h-9 w-9 shrink-0 rounded-lg bg-sidebar-primary/10 ring-1 ring-sidebar-primary/15 flex items-center justify-center overflow-hidden">
-            <img src={logo.url} alt="Apache Studio" className="h-7 w-7 object-contain" />
+        <div className="h-20 flex items-center gap-3 px-3 border-b border-sidebar-border shrink-0 bg-[#23272b]">
+          <div className="h-12 w-12 shrink-0 rounded-xl bg-sidebar-primary/10 ring-1 ring-sidebar-primary/20 flex items-center justify-center overflow-hidden shadow-sm">
+            <img src={logo.url} alt="Apache Studio" className="h-10 w-10 object-contain" />
           </div>
           <div className={`min-w-0 transition-opacity duration-200 ${labelCls}`}>
             <h1 className="text-sm font-semibold tracking-tight truncate text-white">Apache Studio</h1>
