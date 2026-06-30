@@ -801,7 +801,11 @@ export default function AuditTable({ rows, onEdit, onDelete, onUpdateRecord }: P
                             {fmtPct(m.porcentajeTiempo)}
                           </TableCell>
                           <TableCell className="text-right">
-                            <ActualPctCell actual={m.porcentajeGastado} expected={m.porcentajeTiempo} />
+                            {perfPeriod === 'all'
+                              ? <ActualPctCell actual={m.porcentajeGastado} expected={m.porcentajeTiempo} />
+                              : <span className="font-mono text-xs text-foreground">
+                                  {row.presupuesto_total > 0 ? fmtPct(((periodSpendByRow.get(row.id) ?? 0) / row.presupuesto_total) * 100) : '—'}
+                                </span>}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs text-foreground">
                             {fmt(m.presupuestoDiarioIdeal)}

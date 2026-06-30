@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { openaiChat } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -265,7 +266,6 @@ async function generateForClient(
   supabase: any,
   client: { id: string; name: string; user_id: string; report_recipients: string[] },
   send: boolean,
-  anthropicKey: string | undefined,
   includeMonthly = false,
 ): Promise<{ html: string; week_start: string; week_end: string; sent: boolean }> {
   const { start, end } = lastWeekWindow();
@@ -311,32 +311,27 @@ async function generateForClient(
     };
   });
 
-  // AI executive summary — performance-centered, short and actionable
+  // AI executive summary — strategist-grade, goes beyond the raw metrics
   let aiSummary = "";
-  if (anthropicKey && campaigns.length > 0) {
+  if (campaigns.length > 0) {
     try {
-      const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": anthropicKey,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 700,
-          system:
-            "You are a senior paid media analyst. Write a weekly executive summary in English for the client: 3-5 sentences on the week's performance (spend, results, pacing) + 2 actionable recommendations. Professional, clear tone, no unnecessary jargon. Plain text, no markdown.",
-          messages: [{
-            role: "user",
-            content: `Client: ${client.name}. Week ${start} to ${end}. Per-campaign data (week = this week, prev = previous week):\n${JSON.stringify(campaigns, null, 1)}`,
-          }],
-        }),
+      const ai = await openaiChat({
+        model: "gpt-4o",
+        maxTokens: 900,
+        temperature: 0.6,
+        system:
+          "You are a senior paid media strategist writing the weekly executive summary a client actually wants to read. The client can already see raw numbers in Meta/Google Ads — your value is INTERPRETATION, not repetition. " +
+          "Explain WHY performance moved week over week, what it means for the client's goals, and where things are heading if the trend holds (a concrete projection). Be confident and specific, cite a few key numbers only to support the story. " +
+          "Structure as short labeled paragraphs:\n" +
+          "1) Headline — the single most important takeaway of the week.\n" +
+          "2) What's working — and the reason behind it.\n" +
+          "3) What needs attention — the issue, the likely cause, and the risk if ignored.\n" +
+          "4) Projection — where spend/results are trending and what to expect next week if nothing changes.\n" +
+          "5) Recommendations — 2-3 prioritized, specific actions (what to do, on which campaign, expected effect).\n" +
+          "Professional, plain-spoken, client-friendly. No fluff, no generic advice. ~200-260 words. Plain text, no markdown symbols.",
+        user: `Client: ${client.name}. Week ${start} to ${end}.\nPer-campaign data (week = this week, prev = previous week, budget/spendPct/timePct describe full-campaign pacing):\n${JSON.stringify(campaigns, null, 1)}`,
       });
-      if (aiRes.ok) {
-        const data = await aiRes.json();
-        aiSummary = data?.content?.[0]?.text ?? "";
-      }
+      aiSummary = ai.text || "";
     } catch (e) {
       console.error("AI summary failed", e);
     }
@@ -410,7 +405,6 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
     const CRON_SECRET = Deno.env.get("CRON_SECRET");
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -429,7 +423,7 @@ serve(async (req) => {
       for (const c of clients ?? []) {
         if (!c.report_recipients?.length) continue;
         try {
-          const r = await generateForClient(supabase, c, true, ANTHROPIC_API_KEY, true);
+          const r = await generateForClient(supabase, c, true, true);
           generated++;
           if (r.sent) sentCount++;
         } catch (e) {
@@ -455,7 +449,7 @@ serve(async (req) => {
       .maybeSingle();
     if (!client || client.user_id !== userId) return jsonRes({ error: "Client not found" }, 404);
 
-    const result = await generateForClient(supabase, client, !!send, ANTHROPIC_API_KEY, !!includeMonthly);
+    const result = await generateForClient(supabase, client, !!send, !!includeMonthly);
     return jsonRes(result);
   } catch (e) {
     console.error(e);

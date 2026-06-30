@@ -110,6 +110,19 @@ export default function BriefPage() {
     debounceRef.current = window.setTimeout(() => persist(next), 1200);
   };
 
+  const saveNow = () => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    persist({ ...brief, client_id: clientId });
+  };
+
+  // Completion across all brief fields (for the progress + badge)
+  const allKeys = SECTIONS.flatMap(s => s.fields.map(f => f.key));
+  const filledCount = allKeys.filter(k => {
+    const v = brief[k];
+    return v !== null && v !== undefined && String(v).trim() !== '';
+  }).length;
+  const pct = Math.round((filledCount / allKeys.length) * 100);
+
   return (
     <div className="space-y-5 max-w-4xl">
       <div className="flex items-center justify-between gap-4">
@@ -126,7 +139,7 @@ export default function BriefPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           {saving ? (
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
               <Save className="h-3 w-3 animate-pulse" /> Saving...
@@ -136,7 +149,23 @@ export default function BriefPage() {
               <Check className="h-3 w-3" /> Saved
             </span>
           ) : null}
+          <Button size="sm" onClick={saveNow} disabled={saving}>
+            <Save className="h-3.5 w-3.5 mr-1.5" /> Save brief
+          </Button>
         </div>
+      </div>
+
+      {/* Completion progress */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${pct >= 80 ? 'bg-success' : pct >= 40 ? 'bg-warning' : 'bg-primary'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="text-xs text-muted-foreground shrink-0">
+          {filledCount}/{allKeys.length} fields · {pct >= 80 ? 'Complete' : pct >= 40 ? 'In progress' : 'Just started'}
+        </span>
       </div>
 
       {SECTIONS.map((section, idx) => (

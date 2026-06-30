@@ -126,8 +126,10 @@ export default function ClusterPage() {
           if (!payload || payload === '[DONE]') continue;
           try {
             const evt = JSON.parse(payload);
-            if (evt.type === 'content_block_delta' && evt.delta?.text) raw += evt.delta.text;
-            else if (evt.type === 'error') throw new Error(evt.error?.message || 'AI stream error');
+            // OpenAI streaming format: choices[].delta.content
+            const delta = evt.choices?.[0]?.delta?.content;
+            if (delta) raw += delta;
+            else if (evt.error) throw new Error(evt.error?.message || 'AI stream error');
           } catch (e) {
             if (e instanceof SyntaxError) continue;
             throw e;

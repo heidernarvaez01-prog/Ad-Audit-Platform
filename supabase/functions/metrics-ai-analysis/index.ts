@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { openaiChat } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,10 +12,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTROPHIC_API_KEY missing");
 
     // Validate user
     const authHeader = req.headers.get("Authorization");
@@ -105,32 +104,20 @@ Rules:
 
     const userPrompt = `Contexto (JSON):\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\`\n\nPregunta del usuario:\n${question}`;
 
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-5",
-        max_tokens: 1500,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
+    const ai = await openaiChat({
+      system: systemPrompt,
+      user: userPrompt,
+      model: "gpt-4o-mini",
+      maxTokens: 1500,
+      temperature: 0.5,
     });
-
-    if (aiRes.status === 429) {
-      return new Response(JSON.stringify({ error: "Límite de uso alcanzado. Intenta de nuevo en unos segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    if (!aiRes.ok) {
-      const t = await aiRes.text();
-      console.error("Anthropic error", aiRes.status, t);
+    if (ai.error) {
+      if (ai.status === 429) {
+        return new Response(JSON.stringify({ error: "Límite de uso alcanzado. Intenta de nuevo en unos segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       return new Response(JSON.stringify({ error: "Error del servicio de IA" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    const data = await aiRes.json();
-    const answer = data?.content?.[0]?.text ?? "Sin respuesta.";
+    const answer = ai.text || "Sin respuesta.";
 
     return new Response(
       JSON.stringify({ answer, stats: { campaignsAnalyzed: campaignSummary.length, rows: metrics.length } }),

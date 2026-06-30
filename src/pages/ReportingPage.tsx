@@ -59,13 +59,13 @@ export default function ReportingPage() {
     const srcMatch = t.match(/src=["']([^"']+)["']/i);
     if (srcMatch) t = srcMatch[1];
     t = t.trim();
-    if (t.includes('/embed/')) return t;
-    // Drop the account segment (/u/0/) and any trailing /edit
-    t = t.replace('lookerstudio.google.com/u/0/', 'lookerstudio.google.com/')
-         .replace('datastudio.google.com/u/0/', 'datastudio.google.com/')
+    // Always use the current Looker Studio domain (old datastudio embeds often
+    // don't render in an iframe) and drop the account segment / trailing /edit
+    t = t.replace('datastudio.google.com', 'lookerstudio.google.com')
+         .replace('lookerstudio.google.com/u/0/', 'lookerstudio.google.com/')
          .replace(/\/edit(\b|\/|\?|$)/, '$1');
-    return t.replace('lookerstudio.google.com/reporting/', 'lookerstudio.google.com/embed/reporting/')
-            .replace('datastudio.google.com/reporting/', 'datastudio.google.com/embed/reporting/');
+    if (t.includes('/embed/')) return t;
+    return t.replace('lookerstudio.google.com/reporting/', 'lookerstudio.google.com/embed/reporting/');
   };
 
   const save = async () => {

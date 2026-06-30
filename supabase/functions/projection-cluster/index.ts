@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { openaiStream } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -159,10 +160,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTROPHIC_API_KEY missing");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return jsonError("Unauthorized", 401);
@@ -261,26 +260,18 @@ Build the deliverable for this client following the process and the output forma
 
     const system = `${cluster.instructions}\n\n${outputFormat(cluster.sections, HERO_META_GENERIC).replace("<cluster eyebrow>", cluster.eyebrow)}`;
 
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 32000,
-        stream: true,
-        system,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
+    const aiRes = await openaiStream({
+      system,
+      user: userPrompt,
+      model: "gpt-4o",
+      maxTokens: 16000,
+      temperature: 0.7,
     });
 
     if (aiRes.status === 429) return jsonError("AI rate limit reached. Try again in a few seconds.", 429);
     if (!aiRes.ok || !aiRes.body) {
       const t = await aiRes.text();
-      console.error("Anthropic error", aiRes.status, t);
+      console.error("OpenAI error", aiRes.status, t);
       return jsonError("AI service error", 500);
     }
 

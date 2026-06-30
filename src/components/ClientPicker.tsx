@@ -60,9 +60,13 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
     // Per-client badge depending on the section
     const map: Record<string, string> = {};
     if (mode === 'brief') {
-      const { data: briefs } = await supabase.from('brand_briefs').select('client_id, marca').not('client_id', 'is', null);
+      const briefKeys = ['marca','sitio_web','mercado_objetivo','presupuesto_campana','necesidad_principal','descripcion_proyecto','publico_objetivo','fundamentos_marca','palabras_marca','frases_marca','valores_marca','promesa_marca','reasons_why','personalidad_marca','estilo_tono','diferenciador','insights','elementos_marca','benchmark'];
+      const { data: briefs } = await supabase.from('brand_briefs').select('*').not('client_id', 'is', null);
       for (const b of briefs || []) {
-        if (b.client_id) map[b.client_id] = 'Brief started';
+        if (!b.client_id) continue;
+        const filled = briefKeys.filter(k => b[k] !== null && b[k] !== undefined && String(b[k]).trim() !== '').length;
+        const pct = Math.round((filled / briefKeys.length) * 100);
+        map[b.client_id] = pct >= 80 ? 'Complete' : `${pct}% filled`;
       }
     } else if (mode === 'clusters') {
       const { data: runs } = await supabase.from('cluster_runs').select('client_id');

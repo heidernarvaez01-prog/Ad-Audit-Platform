@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { openaiChat } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,9 +11,6 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTROPHIC_API_KEY is not configured");
-
     const { campaignData } = await req.json();
 
     // Fetch brand brief context for the account, if available
@@ -86,34 +84,22 @@ Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CR
 ${briefBlock}
 Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-5",
-        max_tokens: 500,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
+    const ai = await openaiChat({
+      system: systemPrompt,
+      user: userPrompt,
+      model: "gpt-4o-mini",
+      maxTokens: 500,
+      temperature: 0.4,
     });
-
-    if (!response.ok) {
-      if (response.status === 429) {
+    if (ai.error) {
+      if (ai.status === 429) {
         return new Response(JSON.stringify({ error: "Límite de solicitudes excedido, intenta de nuevo en unos segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Anthropic API error:", response.status, t);
-      throw new Error("Anthropic API error");
+      throw new Error("AI service error");
     }
-
-    const data = await response.json();
-    const content = data.content?.[0]?.text || "";
+    const content = ai.text || "";
 
     let riskLevel: "critical" | "moderate" | "none" = "none";
     if (content.includes("[RIESGO_CRITICO]")) riskLevel = "critical";
