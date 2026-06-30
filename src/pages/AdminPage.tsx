@@ -26,6 +26,7 @@ export default function AdminPage() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [selUser, setSelUser] = useState<string>('');
   const [selAccount, setSelAccount] = useState<string>('');
+  const [selRole, setSelRole] = useState<'user' | 'admin'>('user');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
