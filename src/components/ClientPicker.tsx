@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Loader2, FolderOpen, ArrowRight, Briefcase, Search, type LucideIcon } from 'lucide-react';
+import PageHero from '@/components/PageHero';
 import { toast } from 'sonner';
 
 interface ClientRow {
