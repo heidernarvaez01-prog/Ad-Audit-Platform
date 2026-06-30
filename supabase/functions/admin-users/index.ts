@@ -1,200 +1,168 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { sendEmail, sharedCorsHeaders as corsHeaders } from '../_shared/email.ts';
+import { buildInviteEmail, buildPasswordResetEmail } from './_templates.ts';
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const FROM_EMAIL = 'Apache Studio <alertas@apachestudio.mx>';
-const REPLY_TO = 'soporte@apachestudio.mx';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function sendInviteEmail(email: string, link: string, inviterEmail?: string) {
-  if (!RESEND_API_KEY) return { sent: false, reason: 'no_resend_key' };
-  const inviter = inviterEmail ? ` by ${inviterEmail}` : '';
-  // Plain-text version helps a lot with spam scoring
-  const text = `Hi,
+interface Env {
+  url: string;
+  serviceKey: string;
+  anonKey: string;
+}
 
-You have been added${inviter} to the Apache Studio workspace.
+function env(): Env {
+  return {
+    url: Deno.env.get('SUPABASE_URL')!,
+    serviceKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    anonKey: Deno.env.get('SUPABASE_ANON_KEY')!,
+  };
+}
 
-Set your password and access the workspace here:
-${link}
+async function requireAdmin(req: Request): Promise<
+  | { ok: true; admin: SupabaseClient; userId: string; userEmail: string | null }
+  | { ok: false; response: Response }
+> {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) return { ok: false, response: json({ error: 'Missing authorization' }, 401) };
 
-This link expires in 24 hours. If you did not expect this email, you can safely ignore it.
-
-— Apache Studio`;
-
-  const safeLink = String(link).replace(/"/g, '&quot;');
-  const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Apache Studio</title></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;padding:24px 0">
-    <tr><td align="center">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb">
-        <tr><td style="padding:28px 32px">
-          <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#0f172a">Hi,</p>
-          <p style="margin:0 0 22px;font-size:15px;line-height:1.55;color:#0f172a">You have been added${inviter ? ` by <strong>${inviterEmail}</strong>` : ''} to the Apache Studio workspace. Use the button below to set your password and sign in.</p>
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 22px">
-            <tr><td align="center" bgcolor="#1e40af" style="border-radius:6px">
-              <a href="${safeLink}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">Set your password</a>
-            </td></tr>
-          </table>
-          <p style="margin:0 0 8px;font-size:13px;color:#475569">If the button does not work, copy and paste this URL into your browser:</p>
-          <p style="margin:0 0 22px;font-size:13px;color:#1e40af;word-break:break-all"><a href="${safeLink}" target="_blank" rel="noopener" style="color:#1e40af">${safeLink}</a></p>
-          <p style="margin:0;font-size:12px;color:#64748b">This link expires in 24 hours. If you did not expect this email, you can safely ignore it.</p>
-          <p style="margin:18px 0 0;font-size:12px;color:#94a3b8">Apache Studio · ${REPLY_TO}</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: FROM_EMAIL,
-      to: [email],
-      reply_to: REPLY_TO,
-      subject: 'Your Apache Studio account is ready',
-      text,
-      html,
-      headers: {
-        'List-Unsubscribe': `<mailto:${REPLY_TO}?subject=unsubscribe>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-      },
-      tags: [{ name: 'category', value: 'invite' }],
-    }),
+  const { url, serviceKey, anonKey } = env();
+  const userClient = createClient(url, anonKey, {
+    global: { headers: { Authorization: authHeader } },
   });
-  if (!res.ok) {
-    const txt = await res.text();
-    return { sent: false, reason: `resend_${res.status}`, detail: txt };
+  const { data: { user }, error } = await userClient.auth.getUser();
+  if (error || !user) return { ok: false, response: json({ error: 'Unauthorized' }, 401) };
+
+  const admin = createClient(url, serviceKey);
+  const { data: role } = await admin
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .maybeSingle();
+  if (!role) return { ok: false, response: json({ error: 'Forbidden: admin only' }, 403) };
+
+  return { ok: true, admin, userId: user.id, userEmail: user.email ?? null };
+}
+
+async function generateAuthLink(
+  admin: SupabaseClient,
+  type: 'invite' | 'recovery',
+  email: string,
+  redirectTo?: string,
+) {
+  return admin.auth.admin.generateLink({
+    type,
+    email,
+    options: redirectTo ? { redirectTo } : undefined,
+  });
+}
+
+async function handleInvite(admin: SupabaseClient, body: any, inviterEmail: string | null) {
+  const email = String(body?.email ?? '').trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return json({ error: 'Invalid email' }, 400);
+  const redirectTo = body?.redirectTo ? String(body.redirectTo) : undefined;
+
+  const { data, error } = await generateAuthLink(admin, 'invite', email, redirectTo);
+  if (error) {
+    if (String(error.message).toLowerCase().includes('already')) {
+      return json({ ok: true, alreadyMember: true });
+    }
+    return json({ error: error.message }, 400);
   }
-  return { sent: true };
+
+  const actionLink = data?.properties?.action_link;
+  let emailResult: { sent: boolean; reason?: string; id?: string } = { sent: false, reason: 'no_link' };
+
+  if (actionLink) {
+    const tpl = buildInviteEmail(actionLink, inviterEmail ?? undefined);
+    const result = await sendEmail({ to: [email], ...tpl });
+    emailResult = result.ok
+      ? { sent: true, id: result.id }
+      : { sent: false, reason: `resend_${result.status ?? 'error'}` };
+  }
+
+  return json({ ok: true, userId: data?.user?.id, actionLink, email: emailResult });
+}
+
+async function handleDeleteUser(admin: SupabaseClient, body: any, callerId: string) {
+  const targetId = String(body?.userId ?? '').trim();
+  if (!targetId) return json({ error: 'userId required' }, 400);
+  if (targetId === callerId) return json({ error: "You can't delete your own account" }, 400);
+
+  // Clean up app-level rows first; foreign keys may not cascade.
+  await admin.from('account_assignments').delete().eq('user_id', targetId);
+  await admin.from('user_roles').delete().eq('user_id', targetId);
+  const { error } = await admin.auth.admin.deleteUser(targetId);
+  if (error) return json({ error: error.message }, 400);
+  return json({ ok: true });
+}
+
+async function handleResetPassword(admin: SupabaseClient, body: any) {
+  const email = String(body?.email ?? '').trim().toLowerCase();
+  if (!email) return json({ error: 'email required' }, 400);
+  const redirectTo = body?.redirectTo ? String(body.redirectTo) : undefined;
+
+  const { data, error } = await generateAuthLink(admin, 'recovery', email, redirectTo);
+  if (error) return json({ error: error.message }, 400);
+
+  const actionLink = data?.properties?.action_link;
+  let emailResult: { sent: boolean; reason?: string; id?: string } = { sent: false, reason: 'no_link' };
+
+  if (actionLink) {
+    const tpl = buildPasswordResetEmail(actionLink);
+    const result = await sendEmail({ to: [email], ...tpl });
+    emailResult = result.ok
+      ? { sent: true, id: result.id }
+      : { sent: false, reason: `resend_${result.status ?? 'error'}` };
+  }
+
+  return json({ ok: true, actionLink, email: emailResult });
+}
+
+async function handleList(admin: SupabaseClient) {
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (error) throw error;
+  const users = data.users
+    .filter((u) => !!u.email)
+    .map((u) => ({
+      id: u.id,
+      email: u.email,
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at,
+      confirmed: !!u.email_confirmed_at || !!u.confirmed_at,
+    }));
+  return json({ users });
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return json({ error: 'Missing authorization' }, 401);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !user) return json({ error: 'Unauthorized' }, 401);
-
-    const admin = createClient(supabaseUrl, serviceKey);
-    const { data: roleRow } = await admin
-      .from('user_roles').select('role')
-      .eq('user_id', user.id).eq('role', 'admin').maybeSingle();
-    if (!roleRow) return json({ error: 'Forbidden: admin only' }, 403);
+    const auth = await requireAdmin(req);
+    if (!auth.ok) return auth.response;
 
     const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
     const action = (body?.action as string) || 'list';
 
-    if (action === 'invite') {
-      const email = String(body?.email ?? '').trim().toLowerCase();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'Invalid email' }, 400);
-      const redirectTo = body?.redirectTo ? String(body.redirectTo) : undefined;
-
-      // Generate the invite link explicitly so we always have a URL to embed in the email
-      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-        type: 'invite',
-        email,
-        options: redirectTo ? { redirectTo } : undefined,
-      });
-
-      if (linkErr) {
-        if (String(linkErr.message).toLowerCase().includes('already')) {
-          return json({ ok: true, alreadyMember: true });
-        }
-        return json({ error: linkErr.message }, 400);
-      }
-
-      const actionLink = linkData?.properties?.action_link;
-      let emailResult: any = { sent: false, reason: 'no_link' };
-      if (actionLink) emailResult = await sendInviteEmail(email, actionLink, user.email ?? undefined);
-
-      return json({
-        ok: true,
-        userId: linkData?.user?.id,
-        actionLink,
-        email: emailResult,
-      });
+    switch (action) {
+      case 'invite':
+        return await handleInvite(auth.admin, body, auth.userEmail);
+      case 'delete_user':
+        return await handleDeleteUser(auth.admin, body, auth.userId);
+      case 'reset_password':
+        return await handleResetPassword(auth.admin, body);
+      case 'list':
+        return await handleList(auth.admin);
+      default:
+        return json({ error: `Unknown action: ${action}` }, 400);
     }
-
-    if (action === 'delete_user') {
-      const targetId = String(body?.userId ?? '').trim();
-      if (!targetId) return json({ error: 'userId required' }, 400);
-      if (targetId === user.id) return json({ error: "You can't delete your own account" }, 400);
-      // Clean up app-level rows first; foreign keys may not cascade.
-      await admin.from('account_assignments').delete().eq('user_id', targetId);
-      await admin.from('user_roles').delete().eq('user_id', targetId);
-      const { error: delErr } = await admin.auth.admin.deleteUser(targetId);
-      if (delErr) return json({ error: delErr.message }, 400);
-      return json({ ok: true });
-    }
-
-    if (action === 'reset_password') {
-      const email = String(body?.email ?? '').trim().toLowerCase();
-      if (!email) return json({ error: 'email required' }, 400);
-      const redirectTo = body?.redirectTo ? String(body.redirectTo) : undefined;
-      const { data: linkData, error } = await admin.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-        options: redirectTo ? { redirectTo } : undefined,
-      });
-      if (error) return json({ error: error.message }, 400);
-      const actionLink = linkData?.properties?.action_link;
-      let emailResult: any = { sent: false };
-      if (actionLink && RESEND_API_KEY) {
-        const text = `Hi,\n\nA password reset was requested for your Apache Studio account. Open this link to set a new password (expires in 1 hour):\n\n${actionLink}\n\nIf you did not request this, you can ignore this email.\n\n— Apache Studio`;
-        const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a"><div style="max-width:560px;margin:0 auto;padding:24px"><p style="font-size:15px;line-height:1.55">Hi,</p><p style="font-size:15px;line-height:1.55">A password reset was requested for your Apache Studio account.</p><p style="margin:24px 0"><a href="${actionLink}" style="background:#1e40af;color:#fff;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:600;display:inline-block">Reset password</a></p><p style="font-size:13px;color:#475569;word-break:break-all">${actionLink}</p><p style="font-size:12px;color:#64748b;margin-top:20px">This link expires in 1 hour. If you didn't request it, ignore this email.</p></div></body></html>`;
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            from: FROM_EMAIL, to: [email], reply_to: REPLY_TO,
-            subject: 'Reset your Apache Studio password',
-            text, html,
-            headers: { 'List-Unsubscribe': `<mailto:${REPLY_TO}?subject=unsubscribe>` },
-            tags: [{ name: 'category', value: 'password_reset' }],
-          }),
-        });
-        emailResult = { sent: res.ok };
-      }
-      return json({ ok: true, actionLink, email: emailResult });
-    }
-
-    // Default action: list users
-    const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (error) throw error;
-
-    const users = data.users
-      .filter((u) => !!u.email)
-      .map((u) => ({
-        id: u.id,
-        email: u.email,
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at,
-        confirmed: !!u.email_confirmed_at || !!u.confirmed_at,
-      }));
-
-    return json({ users });
   } catch (e) {
     return json({ error: String((e as Error)?.message ?? e) }, 500);
   }
