@@ -358,3 +358,25 @@ export default function AdminPage() {
     </div>
   );
 }
+
+function AdminStat({
+  icon: Icon, label, value, gradient,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  gradient: string;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md
+        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+    >
+      <div aria-hidden className="absolute -right-3 -bottom-3 opacity-20">
+        <Icon className="h-16 w-16" />
+      </div>
+      <p className="relative text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      <p className="relative mt-1 text-3xl font-bold font-mono leading-none">{value}</p>
+    </div>
+  );
+}
