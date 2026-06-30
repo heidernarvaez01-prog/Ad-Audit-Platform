@@ -246,7 +246,7 @@ export default function AdminPage() {
         <p className="text-xs text-muted-foreground -mt-2">
           Each member only sees the ad accounts you assign here. Admins and the owner see everything.
         </p>
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div className="grid sm:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label>Member</Label>
             <Select value={selUser} onValueChange={setSelUser}>
