@@ -16,10 +16,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary — indigo-600 (#4f46e5) */
-    --primary: 239 84% 59%;
+    /* Primary — CoreUI indigo (#5856d6) */
+    --primary: 243 59% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 234 89% 74%;
+    --primary-glow: 243 59% 70%;
 
     --secondary: 262 83% 58%;
     --secondary-foreground: 0 0% 100%;
@@ -36,40 +36,46 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 239 84% 59%;
+    --ring: 243 59% 60%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem;
 
-    /* Light sidebar (operational dashboard) */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 25% 27%;
-    --sidebar-primary: 239 84% 59%;
+    /* CoreUI Dark Sidebar */
+    --sidebar-background: 217 14% 20%;
+    --sidebar-foreground: 210 14% 62%;
+    --sidebar-primary: 243 59% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 226 100% 97%;
-    --sidebar-accent-foreground: 231 56% 41%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 239 84% 59%;
-    --sidebar-glow: 239 84% 59%;
+    --sidebar-accent: 216 14% 24%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 217 14% 22%;
+    --sidebar-ring: 243 59% 60%;
+    --sidebar-glow: 243 59% 60%;
+    --sidebar-hover: 216 14% 26%;
 
-    /* Status tokens — emerald, amber, rose */
-    --success: 158 64% 40%;
+    /* Status tokens — CoreUI colors */
+    --success: 145 63% 49%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 97% 54%;
     --warning-foreground: 0 0% 100%;
-    --danger: 347 77% 50%;
+    --danger: 4 90% 58%;
     --danger-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
+    --info: 204 100% 50%;
     --info-foreground: 0 0% 100%;
 
+    /* Social platform colors */
     --meta: 214 89% 52%;
+    --facebook: 221 44% 41%;
+    --twitter: 203 89% 53%;
     --google: 4 90% 58%;
     --tiktok: 0 0% 0%;
     --linkedin: 201 100% 35%;
+    --instagram: 340 75% 54%;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.04);
-    --shadow-md: 0 4px 12px -2px hsl(222 47% 11% / 0.06), 0 2px 4px -2px hsl(222 47% 11% / 0.04);
-    --shadow-lg: 0 12px 28px -8px hsl(239 84% 59% / 0.12), 0 4px 8px -4px hsl(222 47% 11% / 0.06);
+    /* Shadows — CoreUI style */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 
     --font-mono: 'JetBrains Mono', monospace;
   }
@@ -266,6 +272,30 @@
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* CoreUI social gradients */
+  .bg-facebook-gradient {
+    background: linear-gradient(135deg, #3b5998 0%, #2d4373 100%);
+  }
+  .bg-twitter-gradient {
+    background: linear-gradient(135deg, #1da1f2 0%, #0d8ecf 100%);
+  }
+  .bg-linkedin-gradient {
+    background: linear-gradient(135deg, #0077b5 0%, #005582 100%);
+  }
+  .bg-instagram-gradient {
+    background: linear-gradient(135deg, #e1306c 0%, #833ab4 100%);
+  }
+
+  /* CoreUI transitions */
+  .transition-coreui {
+    transition: all 0.2s ease-in-out;
+  }
+
+  /* Metric card accent border */
+  .border-t-accent {
+    border-top-width: 4px;
   }
 }
 
