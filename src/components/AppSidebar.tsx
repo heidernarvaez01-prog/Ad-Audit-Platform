@@ -101,17 +101,17 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
     <div className="group/side relative shrink-0" style={{ width: open ? FULL : RAIL }}>
       <aside
         className={`absolute inset-y-0 left-0 z-40 min-h-screen flex flex-col
-          bg-sidebar border-r border-sidebar-border/50 shadow-xl shadow-black/5
+          bg-sidebar border-r border-sidebar-border shadow-lg
           transition-[width] duration-200 ease-out
           ${open ? 'w-[240px]' : 'w-[60px] hover:w-[240px]'}`}
         style={{ background: 'hsl(var(--sidebar-background))' }}
       >
         {/* Header */}
-        <div className="h-16 flex items-center gap-2.5 px-3 border-b border-sidebar-border/50 shrink-0">
-          <img src={logo.url} alt="Apache Studio" className="h-9 w-9 object-contain shrink-0" />
+        <div className="h-16 flex items-center gap-3 px-3 border-b border-sidebar-border shrink-0">
+          <img src={logo.url} alt="Apache Studio" className="h-9 w-9 object-contain shrink-0 rounded-lg" />
           <div className={`min-w-0 transition-opacity duration-200 ${labelCls}`}>
-            <h1 className="text-sm font-bold tracking-tight truncate text-sidebar-foreground">Apache Studio</h1>
-            <p className="text-[11px] text-sidebar-foreground/60 truncate">Ad Audit</p>
+            <h1 className="text-sm font-semibold tracking-tight truncate text-sidebar-foreground">Apache Studio</h1>
+            <p className="text-[11px] text-sidebar-foreground/70 truncate">Ad Audit</p>
           </div>
           {!hideToggle && (
             <button
@@ -131,7 +131,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
         </nav>
 
         {/* Settings group (bottom): Dark mode · How it works · Admin · account · Sign out */}
-        <div className="border-t border-sidebar-border/50 p-2 space-y-1 shrink-0">
+        <div className="border-t border-sidebar-border p-2 space-y-1 shrink-0">
           <ActionRow
             icon={theme === 'dark' ? Sun : Moon}
             label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
