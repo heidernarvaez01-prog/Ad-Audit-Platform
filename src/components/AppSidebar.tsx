@@ -102,23 +102,24 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
     <div className="group/side relative shrink-0" style={{ width: open ? FULL : RAIL }}>
       <aside
         className={`absolute inset-y-0 left-0 z-40 min-h-screen flex flex-col
-          bg-sidebar border-r border-sidebar-border shadow-lg
+          bg-sidebar border-r border-sidebar-border shadow-sm
           transition-[width] duration-200 ease-out
           ${open ? 'w-[240px]' : 'w-[60px] hover:w-[240px]'}`}
-        style={{ background: 'hsl(var(--sidebar-background))' }}
       >
         {/* Header */}
         <div className="h-16 flex items-center gap-3 px-3 border-b border-sidebar-border shrink-0">
-          <img src={logo.url} alt="Apache Studio" className="h-9 w-9 object-contain shrink-0 rounded-lg" />
+          <div className="h-9 w-9 shrink-0 rounded-lg bg-sidebar-primary/10 ring-1 ring-sidebar-primary/15 flex items-center justify-center overflow-hidden">
+            <img src={logo.url} alt="Apache Studio" className="h-7 w-7 object-contain" />
+          </div>
           <div className={`min-w-0 transition-opacity duration-200 ${labelCls}`}>
             <h1 className="text-sm font-semibold tracking-tight truncate text-sidebar-foreground">Apache Studio</h1>
-            <p className="text-[11px] text-sidebar-foreground/70 truncate">Ad Audit</p>
+            <p className="text-[11px] text-sidebar-foreground/60 truncate">Ad Audit</p>
           </div>
           {!hideToggle && (
             <button
               onClick={() => setPinned(p => !p)}
               className={`ml-auto p-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground
-                hover:bg-sidebar-accent/40 transition-opacity shrink-0 ${labelCls}`}
+                hover:bg-sidebar-accent transition-opacity shrink-0 ${labelCls}`}
               title={pinned ? 'Unpin menu' : 'Keep menu open'}
             >
               {pinned ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
