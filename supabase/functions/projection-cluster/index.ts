@@ -159,10 +159,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTROPHIC_API_KEY missing");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return jsonError("Unauthorized", 401);
