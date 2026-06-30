@@ -158,6 +158,13 @@ export default function AdminPage() {
   // Owner revoke: strip every account assignment + admin role from a member.
   // Their login still exists but they can no longer see any account.
   const revokeAccess = async (uid: string, email: string | null) => {
+    // If the member never accepted their invite, fully remove them so the
+    // "invited" row disappears instead of lingering with no access.
+    const target = users.find((u) => u.id === uid);
+    if (target?.confirmed === false) {
+      await deleteUser(uid, email);
+      return;
+    }
     const [a, r] = await Promise.all([
       supabase.from('account_assignments').delete().eq('user_id', uid),
       supabase.from('user_roles').delete().eq('user_id', uid),
