@@ -26,6 +26,7 @@ export default function AdminPage() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [selUser, setSelUser] = useState<string>('');
   const [selAccount, setSelAccount] = useState<string>('');
+  const [selRole, setSelRole] = useState<'user' | 'admin'>('user');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -124,11 +125,24 @@ export default function AdminPage() {
     const { data, error } = await supabase.from('account_assignments').insert({
       user_id: selUser, account_id: acc.account_id, account_name: acc.account_name, platform: acc.platform, created_by: user!.id,
     }).select().single();
-    setSaving(false);
-    if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
+    if (error) { setSaving(false); toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
+
+    // Persist role (default 'user'; admin upserts if selected)
+    if (selRole === 'admin' && !adminIds.has(selUser)) {
+      const { error: rErr } = await supabase.from('user_roles').insert({ user_id: selUser, role: 'admin' });
+      if (!rErr) setRoles([...roles, { user_id: selUser, role: 'admin' }]);
+    } else if (selRole === 'user') {
+      // Ensure a baseline 'user' role row exists
+      await supabase.from('user_roles').upsert({ user_id: selUser, role: 'user' }, { onConflict: 'user_id,role' });
+      if (!roles.some(r => r.user_id === selUser && r.role === 'user')) {
+        setRoles([...roles, { user_id: selUser, role: 'user' }]);
+      }
+    }
+
     setAssignments([data as Assignment, ...assignments]);
     setSelAccount('');
-    toast({ title: 'Account assigned' });
+    setSaving(false);
+    toast({ title: 'Account assigned', description: `Role: ${selRole}` });
   };
 
   const remove = async (id: string) => {
@@ -232,7 +246,7 @@ export default function AdminPage() {
         <p className="text-xs text-muted-foreground -mt-2">
           Each member only sees the ad accounts you assign here. Admins and the owner see everything.
         </p>
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div className="grid sm:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label>Member</Label>
             <Select value={selUser} onValueChange={setSelUser}>
@@ -260,10 +274,20 @@ export default function AdminPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-end">
+          <div className="space-y-1.5">
+            <Label>Role</Label>
+            <Select value={selRole} onValueChange={(v) => setSelRole(v as 'user' | 'admin')}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Member (view assigned accounts)</SelectItem>
+                <SelectItem value="admin">Admin (full access)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end sm:col-span-4">
             <Button onClick={assign} disabled={saving} className="w-full">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-              Assign
+              Assign access
             </Button>
           </div>
         </div>
