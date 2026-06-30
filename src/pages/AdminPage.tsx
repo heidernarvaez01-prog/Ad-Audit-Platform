@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban, Building2 } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban, Building2, UserX } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -178,6 +182,21 @@ export default function AdminPage() {
       if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
       setRoles([...roles, { user_id: uid, role: 'admin' }]);
     }
+  };
+
+  // Permanent delete: removes the member's login + all their access.
+  const deleteUser = async (uid: string, email: string | null) => {
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { action: 'delete_user', userId: uid },
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: 'Error deleting member', description: error?.message || (data as any)?.error, variant: 'destructive' });
+      return;
+    }
+    setUsers((prev) => prev.filter((u) => u.id !== uid));
+    setAssignments((prev) => prev.filter((a) => a.user_id !== uid));
+    setRoles((prev) => prev.filter((r) => r.user_id !== uid));
+    toast({ title: `Member deleted`, description: email ?? uid });
   };
 
   if (loading) {
@@ -368,10 +387,41 @@ export default function AdminPage() {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                       onClick={() => revokeAccess(u.id, u.email)}
-                      title="Remove all account access and admin role"
+                      title="Remove all account access and admin role (keeps login)"
                     >
                       <Ban className="h-3.5 w-3.5 mr-1.5" /> Revoke access
                     </Button>
+                  )}
+                  {!isSelf && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          title="Permanently delete this member"
+                        >
+                          <UserX className="h-3.5 w-3.5 mr-1.5" /> Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this member?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This permanently removes <strong>{u.email}</strong>, their login, role and all account assignments. This cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteUser(u.id, u.email)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete permanently
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </div>
