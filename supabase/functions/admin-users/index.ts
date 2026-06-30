@@ -14,27 +14,51 @@ function json(body: unknown, status = 200) {
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const FROM_EMAIL = 'Apache Studio <alertas@apachestudio.mx>';
+const REPLY_TO = 'soporte@apachestudio.mx';
 
-async function sendInviteEmail(email: string, link: string) {
+async function sendInviteEmail(email: string, link: string, inviterEmail?: string) {
   if (!RESEND_API_KEY) return { sent: false, reason: 'no_resend_key' };
-  const html = `
-    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px;background:#ffffff;color:#0f172a">
-      <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:24px;border-radius:14px;color:#fff;margin-bottom:24px">
-        <h1 style="margin:0;font-size:22px">You've been invited to Apache Studio</h1>
-        <p style="margin:8px 0 0;opacity:.9;font-size:14px">Audit & campaign monitoring workspace</p>
-      </div>
-      <p style="font-size:15px;line-height:1.55">An administrator has invited you to join the workspace. Click the button below to set your password and access your assigned ad accounts.</p>
-      <p style="text-align:center;margin:28px 0">
-        <a href="${link}" style="background:#4f46e5;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;display:inline-block">Accept invitation</a>
+  const inviter = inviterEmail ? ` by ${inviterEmail}` : '';
+  // Plain-text version helps a lot with spam scoring
+  const text = `Hi,
+
+You have been added${inviter} to the Apache Studio workspace.
+
+Set your password and access the workspace here:
+${link}
+
+This link expires in 24 hours. If you did not expect this email, you can safely ignore it.
+
+— Apache Studio`;
+
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
+    <div style="max-width:560px;margin:0 auto;padding:24px">
+      <p style="font-size:15px;line-height:1.55">Hi,</p>
+      <p style="font-size:15px;line-height:1.55">You have been added${inviter ? ` by <strong>${inviterEmail}</strong>` : ''} to the Apache Studio workspace. Use the link below to set your password and sign in.</p>
+      <p style="margin:28px 0">
+        <a href="${link}" style="background:#1e40af;color:#fff;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:600;display:inline-block">Set your password</a>
       </p>
-      <p style="font-size:12px;color:#64748b;word-break:break-all">Or open this link in your browser:<br/>${link}</p>
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0"/>
-      <p style="font-size:11px;color:#94a3b8">If you weren't expecting this invitation, you can ignore this email.</p>
-    </div>`;
+      <p style="font-size:13px;color:#475569;word-break:break-all">If the button does not work, copy this URL into your browser:<br/>${link}</p>
+      <p style="font-size:12px;color:#64748b;margin-top:24px">This link expires in 24 hours. If you did not expect this email, you can safely ignore it.</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:20px">Apache Studio · ${REPLY_TO}</p>
+    </div></body></html>`;
+
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM_EMAIL, to: [email], subject: 'You have been invited to Apache Studio', html }),
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: [email],
+      reply_to: REPLY_TO,
+      subject: 'Your Apache Studio account is ready',
+      text,
+      html,
+      headers: {
+        'List-Unsubscribe': `<mailto:${REPLY_TO}?subject=unsubscribe>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+      tags: [{ name: 'category', value: 'invite' }],
+    }),
   });
   if (!res.ok) {
     const txt = await res.text();
