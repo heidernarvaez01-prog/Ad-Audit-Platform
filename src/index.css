@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    /* Surfaces — soft slate canvas, crisp white cards */
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
 
@@ -15,8 +16,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 60%;
+    /* Primary — indigo-600 (#4f46e5) */
+    --primary: 239 84% 59%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 234 89% 74%;
 
     --secondary: 262 83% 58%;
     --secondary-foreground: 0 0% 100%;
@@ -24,39 +27,49 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 217 91% 95%;
-    --accent-foreground: 217 91% 20%;
+    /* Accent — indigo-50/700 */
+    --accent: 226 100% 97%;
+    --accent-foreground: 231 56% 41%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 347 77% 50%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 53%;
+    --ring: 239 84% 59%;
 
-    --radius: 0.375rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 217 91% 53%;
+    /* Light sidebar (operational dashboard) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 239 84% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 53%;
-    --sidebar-glow: 217 91% 53%;
+    --sidebar-accent: 226 100% 97%;
+    --sidebar-accent-foreground: 231 56% 41%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 239 84% 59%;
+    --sidebar-glow: 239 84% 59%;
 
-    --success: 142 76% 36%;
+    /* Status tokens — emerald, amber, rose */
+    --success: 158 64% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 199 89% 48%;
+    --danger: 347 77% 50%;
+    --danger-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
     --meta: 214 89% 52%;
     --google: 4 90% 58%;
     --tiktok: 0 0% 0%;
     --linkedin: 201 100% 35%;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.04);
+    --shadow-md: 0 4px 12px -2px hsl(222 47% 11% / 0.06), 0 2px 4px -2px hsl(222 47% 11% / 0.04);
+    --shadow-lg: 0 12px 28px -8px hsl(239 84% 59% / 0.12), 0 4px 8px -4px hsl(222 47% 11% / 0.06);
 
     --font-mono: 'JetBrains Mono', monospace;
   }
@@ -183,6 +196,30 @@
 
   .animate-slide-in {
     animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .animate-scale-in { animation: scaleIn 0.25s ease-out; }
+
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, hsl(var(--muted) / 0.6), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* Card polish — operational surfaces */
+  .card-elevated {
+    @apply bg-card border border-border rounded-xl shadow-sm transition-all duration-200;
+  }
+  .card-elevated:hover {
+    box-shadow: var(--shadow-md);
   }
 
   /* Pulse Effect */
