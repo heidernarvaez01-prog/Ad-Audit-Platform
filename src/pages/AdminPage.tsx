@@ -274,10 +274,20 @@ export default function AdminPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-end">
+          <div className="space-y-1.5">
+            <Label>Role</Label>
+            <Select value={selRole} onValueChange={(v) => setSelRole(v as 'user' | 'admin')}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Member (view assigned accounts)</SelectItem>
+                <SelectItem value="admin">Admin (full access)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end sm:col-span-4">
             <Button onClick={assign} disabled={saving} className="w-full">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-              Assign
+              Assign access
             </Button>
           </div>
         </div>
