@@ -61,17 +61,17 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
       <NavLink
         to={to}
         className={`group relative flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium
-          transition-colors duration-150 overflow-hidden
+          transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-[0.98]
           ${active
-            ? 'bg-sidebar-accent/80 text-sidebar-accent-foreground'
+            ? 'bg-sidebar-accent/80 text-sidebar-accent-foreground shadow-sm'
             : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/30'}`}
         title={!open ? label : undefined}
       >
-        <Icon className="h-[18px] w-[18px] shrink-0" />
+        <Icon className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110" />
         <span className={`whitespace-nowrap transition-opacity duration-200 ${labelCls}`}>
           {label}
         </span>
-        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-primary" />}
+        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-primary animate-pulse" />}
       </NavLink>
     );
   };
@@ -83,12 +83,12 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
       onClick={onClick}
       title={!open ? label : undefined}
       className={`w-full flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium
-        transition-colors duration-150 overflow-hidden
+        transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-[0.98]
         ${danger
           ? 'text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10'
           : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/30'}`}
     >
-      <Icon className="h-[18px] w-[18px] shrink-0" />
+      <Icon className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 hover:rotate-12" />
       <span className={`whitespace-nowrap transition-opacity duration-200 ${labelCls}`}>
         {label}
       </span>
