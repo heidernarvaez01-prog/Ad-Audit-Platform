@@ -13,7 +13,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, FolderOpen, Briefcase, ArrowRight, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, FolderOpen, Briefcase, ArrowRight, Search, Users, Megaphone, Wallet, TrendingUp, AlertTriangle } from 'lucide-react';
+import PageHero from '@/components/PageHero';
 import type { ApiCampaignRow } from '@/lib/api';
 import type { AuditRowData } from '@/components/AuditTable';
 import { toast } from 'sonner';
@@ -178,31 +179,35 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-5 w-full min-w-0">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-foreground">Clients</h1>
-          <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
-            Each client has its own space. Open one to track its campaigns, budgets and results in real time.
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          New Client
-        </Button>
-      </div>
+      <PageHero
+        icon={Users}
+        title="Clients"
+        subtitle="Each client has its own space. Open one to track its campaigns, budgets and results in real time."
+        gradient="from-indigo-600 via-violet-600 to-fuchsia-600"
+        actions={
+          <Button
+            size="sm"
+            className="bg-white text-indigo-700 hover:bg-white/90 shadow-md"
+            onClick={openCreate}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> New Client
+          </Button>
+        }
+      />
 
       {/* Global summary across all clients */}
       {clients.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <GlobalCard label="Clients" value={clients.length.toString()} />
-          <GlobalCard label="Campaigns" value={totals.campaigns.toString()} />
-          <GlobalCard label="Total Budget" value={fmt(totals.budget)} />
-          <GlobalCard label="Total Spend" value={fmt(totals.spent)} />
-          <GlobalCard
+          <GradientStat icon={Users} label="Clients" value={clients.length.toString()} gradient="from-indigo-500 to-indigo-700" />
+          <GradientStat icon={Megaphone} label="Campaigns" value={totals.campaigns.toString()} gradient="from-sky-500 to-blue-700" />
+          <GradientStat icon={Wallet} label="Total Budget" value={fmt(totals.budget)} gradient="from-violet-500 to-purple-700" />
+          <GradientStat icon={TrendingUp} label="Total Spend" value={fmt(totals.spent)} gradient="from-emerald-500 to-teal-700" />
+          <GradientStat
+            icon={AlertTriangle}
             label="At Risk"
             value={(totals.over + totals.under).toString()}
-            color={totals.over + totals.under > 0 ? 'text-warning' : 'text-success'}
+            gradient={totals.over + totals.under > 0 ? 'from-amber-500 to-rose-600' : 'from-emerald-500 to-emerald-700'}
+            pulse={totals.over + totals.under > 0}
             hint="Campaigns overspending or underspending across all clients."
           />
         </div>
@@ -227,7 +232,7 @@ export default function ClientsPage() {
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </div>
       ) : clients.length === 0 ? (
-        <div className="border border-dashed border-border rounded-lg p-12 text-center text-muted-foreground space-y-2">
+        <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground space-y-2 bg-muted/20">
           <FolderOpen className="h-8 w-8 mx-auto" />
           <p className="text-sm">No clients yet.</p>
           <p className="text-xs">Create your first client to start auditing its campaigns.</p>
@@ -236,25 +241,46 @@ export default function ClientsPage() {
           </Button>
         </div>
       ) : filteredClients.length === 0 ? (
-        <div className="border border-dashed border-border rounded-lg p-10 text-center text-muted-foreground">
+        <div className="border border-dashed border-border rounded-xl p-10 text-center text-muted-foreground bg-muted/20">
           <p className="text-sm">No clients match "{search}".</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredClients.map(c => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredClients.map((c, idx) => {
             const s = summaries.get(c.id) || { campaigns: 0, budget: 0, spent: 0, ok: 0, under: 0, over: 0 };
+            // Rotate accent palette across cards
+            const palettes = [
+              'from-indigo-500 to-violet-600',
+              'from-sky-500 to-blue-700',
+              'from-emerald-500 to-teal-700',
+              'from-fuchsia-500 to-purple-700',
+              'from-amber-500 to-orange-600',
+              'from-rose-500 to-red-700',
+            ];
+            const accent = palettes[idx % palettes.length];
+            const initials = c.name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || '·';
             return (
               <div
                 key={c.id}
                 onClick={() => navigate(`/client/${c.id}`)}
-                className="border border-border rounded-lg bg-card p-4 cursor-pointer group
-                  transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40"
+                className="relative overflow-hidden rounded-xl border border-border bg-card p-5 cursor-pointer group
+                  transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-transparent"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
+                {/* Top gradient accent bar */}
+                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} />
+                {/* Decorative blob */}
+                <div aria-hidden className={`pointer-events-none absolute -right-10 -bottom-10 h-32 w-32 rounded-full bg-gradient-to-br ${accent} opacity-[0.08] group-hover:opacity-[0.18] transition-opacity blur-xl`} />
+
+                <div className="relative flex items-start gap-3">
+                  <div className={`shrink-0 h-11 w-11 rounded-xl bg-gradient-to-br ${accent} text-white flex items-center justify-center font-bold text-sm shadow-sm`}>
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-bold text-foreground truncate">{c.name}</h3>
-                    {c.description && (
+                    {c.description ? (
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{c.description}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground/60 italic mt-0.5">No description</p>
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
@@ -267,19 +293,19 @@ export default function ClientsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border">
+                <div className="relative grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-border">
                   <Mini label="Campaigns" value={s.campaigns.toString()} />
                   <Mini label="Budget" value={fmt(s.budget)} />
                   <Mini label="Spend" value={fmt(s.spent)} />
                 </div>
 
-                <div className="flex items-center justify-between mt-3">
+                <div className="relative flex items-center justify-between mt-3">
                   <div className="flex items-center gap-2 text-[10px]">
-                    <StatusDot count={s.ok} color="bg-success" label="on track" />
-                    <StatusDot count={s.under} color="bg-warning" label="under" />
-                    <StatusDot count={s.over} color="bg-destructive" label="over" />
+                    <StatusDot count={s.ok} color="bg-emerald-500" label="on track" />
+                    <StatusDot count={s.under} color="bg-amber-500" label="under" />
+                    <StatusDot count={s.over} color="bg-rose-500" label="over" />
                   </div>
-                  <span className="text-[11px] text-primary flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[11px] font-medium text-foreground flex items-center gap-1 group-hover:gap-2 transition-all">
                     Open audit <ArrowRight className="h-3 w-3" />
                   </span>
                 </div>
@@ -288,6 +314,7 @@ export default function ClientsPage() {
           })}
         </div>
       )}
+
 
       {/* Create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -372,11 +399,34 @@ function StatusDot({ count, color, label }: { count: number; color: string; labe
   );
 }
 
-function GlobalCard({ label, value, color, hint }: { label: string; value: string; color?: string; hint?: string }) {
+function GradientStat({
+  icon: Icon, label, value, gradient, hint, pulse,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  gradient: string;
+  hint?: string;
+  pulse?: boolean;
+}) {
   const card = (
-    <div className="border border-border rounded-lg bg-card p-3 relative overflow-hidden transition-all duration-200 hover:shadow-md animate-fade-in">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={`text-lg font-bold font-mono leading-tight mt-1 ${color || 'text-foreground'}`}>{value}</p>
+    <div
+      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md cursor-help
+        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+    >
+      <div aria-hidden className="absolute -right-3 -bottom-3 opacity-20">
+        <Icon className="h-16 w-16" />
+      </div>
+      <div className="relative flex items-center gap-1.5">
+        {pulse && (
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+          </span>
+        )}
+        <p className="text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      </div>
+      <p className="relative mt-1 text-2xl font-bold font-mono leading-none">{value}</p>
     </div>
   );
   if (!hint) return card;
@@ -387,3 +437,4 @@ function GlobalCard({ label, value, color, hint }: { label: string; value: strin
     </Tooltip>
   );
 }
+
