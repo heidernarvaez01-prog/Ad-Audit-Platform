@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 interface MetricCardProps {
@@ -9,7 +9,7 @@ interface MetricCardProps {
   unit?: string;
   trend: 'up' | 'down';
   trendValue: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   accentColor: string;
   index: number;
   sparklineData?: number[];
