@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban, Building2 } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban, Building2, UserX } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
