@@ -86,18 +86,19 @@ Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CR
 ${briefBlock}
 Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "gpt-4o-mini",
         max_tokens: 500,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
       }),
     });
 
@@ -108,12 +109,12 @@ Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
         });
       }
       const t = await response.text();
-      console.error("Anthropic API error:", response.status, t);
-      throw new Error("Anthropic API error");
+      console.error("OpenAI API error:", response.status, t);
+      throw new Error("OpenAI API error");
     }
 
     const data = await response.json();
-    const content = data.content?.[0]?.text || "";
+    const content = data.choices?.[0]?.message?.content || "";
 
     let riskLevel: "critical" | "moderate" | "none" = "none";
     if (content.includes("[RIESGO_CRITICO]")) riskLevel = "critical";
