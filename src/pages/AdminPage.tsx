@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import PageHero from '@/components/PageHero';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -182,15 +183,21 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <header className="flex items-center gap-2">
-        <Shield className="h-5 w-5 text-primary" />
-        <div>
-          <h1 className="text-xl font-semibold">Admin</h1>
-          <p className="text-sm text-muted-foreground">
-            Invite your team, give each member access to specific accounts, and manage permissions.
-          </p>
-        </div>
-      </header>
+      <PageHero
+        icon={Shield}
+        title="Admin"
+        subtitle="Invite your team, give each member access to specific accounts, and manage permissions."
+        gradient="from-slate-800 via-indigo-700 to-blue-600"
+      />
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <AdminStat icon={Users} label="Members" value={users.length} gradient="from-indigo-500 to-indigo-700" />
+        <AdminStat icon={ShieldCheck} label="Admins" value={adminIds.size} gradient="from-violet-500 to-purple-700" />
+        <AdminStat icon={Link2} label="Assignments" value={assignments.length} gradient="from-sky-500 to-blue-700" />
+        <AdminStat icon={Building2} label="Accounts" value={accounts.length} gradient="from-emerald-500 to-teal-700" />
+      </div>
+
 
       {/* STEP 1 — Invite member */}
       <Card className="p-5 space-y-3">
@@ -348,6 +355,28 @@ export default function AdminPage() {
           })}
         </div>
       </Card>
+    </div>
+  );
+}
+
+function AdminStat({
+  icon: Icon, label, value, gradient,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  gradient: string;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md
+        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+    >
+      <div aria-hidden className="absolute -right-3 -bottom-3 opacity-20">
+        <Icon className="h-16 w-16" />
+      </div>
+      <p className="relative text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      <p className="relative mt-1 text-3xl font-bold font-mono leading-none">{value}</p>
     </div>
   );
 }
