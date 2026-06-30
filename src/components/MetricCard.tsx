@@ -9,7 +9,7 @@ interface MetricCardProps {
   unit?: string;
   trend: 'up' | 'down';
   trendValue: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   accentColor: string;
   index: number;
   sparklineData?: number[];
