@@ -166,17 +166,38 @@ export default function AuditPage() {
       {/* Summary cards */}
       {auditRows.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <SummaryCard label="Total Budget" value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Sum of the approved budget across all audited campaigns." />
+          <SummaryCard
+            label="Total Budget"
+            value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            hint="Sum of the approved budget across all audited campaigns."
+            gradient="from-indigo-500 to-indigo-700"
+          />
           <SummaryCard
             label="Total Spend"
             value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
             hint="Sum of consolidated actual spend (excludes today and yesterday). The sparkline shows cumulative spend day by day."
             sparkline={summary.cumulativeSpend}
-            sparklineColor="text-primary"
+            gradient="from-sky-500 to-sky-700"
           />
-          <SummaryCard label="On Track" value={summary.ok.toString()} color="text-success" hint="Campaigns within ±10% of ideal pacing." pulse={summary.ok > 0} pulseColor="bg-success" />
-          <SummaryCard label="Underspending" value={summary.under.toString()} color="text-warning" hint="Campaigns spending under 90% of ideal — risk of not using the full budget." />
-          <SummaryCard label="Overspending" value={summary.over.toString()} color="text-destructive" hint="Campaigns spending over 110% of ideal — risk of running out early." />
+          <SummaryCard
+            label="On Track"
+            value={summary.ok.toString()}
+            hint="Campaigns within ±10% of ideal pacing."
+            pulse={summary.ok > 0}
+            gradient="from-emerald-500 to-emerald-700"
+          />
+          <SummaryCard
+            label="Underspending"
+            value={summary.under.toString()}
+            hint="Campaigns spending under 90% of ideal — risk of not using the full budget."
+            gradient="from-amber-500 to-orange-600"
+          />
+          <SummaryCard
+            label="Overspending"
+            value={summary.over.toString()}
+            hint="Campaigns spending over 110% of ideal — risk of running out early."
+            gradient="from-rose-500 to-red-700"
+          />
         </div>
       )}
 
