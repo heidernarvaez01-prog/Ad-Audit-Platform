@@ -1,23 +1,26 @@
 import {
   ClipboardCheck, FileText, Network, CalendarClock, PieChart, Bell, Sparkles,
-  Users, Shield, Gauge, BarChart3,
+  Users, Shield, Gauge, BarChart3, BookOpen,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import PageHero from '@/components/PageHero';
 
 export default function HowItWorksPage() {
   return (
-    <div className="space-y-6 w-full max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">How Apache Studio works</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your command center for paid media: monitor, analyze, strategize and report — one workspace per client.
-        </p>
-      </div>
+    <div className="space-y-6 w-full max-w-5xl mx-auto">
+      <PageHero
+        icon={BookOpen}
+        title="How Apache Studio works"
+        subtitle="Your command center for paid media: monitor, analyze, strategize and report — one workspace per client."
+        gradient="from-violet-600 via-indigo-600 to-sky-500"
+      />
 
       {/* Core idea */}
-      <div className="border border-border rounded-lg bg-muted/30 p-4 sm:p-5">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-indigo-50 to-violet-50 p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <Users className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Users className="h-4 w-4" />
+          </div>
           <div className="text-sm text-muted-foreground">
             <span className="font-semibold text-foreground">Everything is organized by client.</span> Each client (brand)
             has its own isolated space — its audit, brief, strategies and reports never mix with another client's.
@@ -27,27 +30,35 @@ export default function HowItWorksPage() {
       </div>
 
       {/* Sections grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Step icon={ClipboardCheck} title="Monitoring Audit"
-          desc="Track every campaign in real time. The Budget Pacing view shows if a campaign is spending what it should by today; the Performance view shows live results (impressions, reach, conversions, CTR, CPC and more)." />
-        <Step icon={CalendarClock} title="Weekly Performance Report"
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Step n="01" icon={ClipboardCheck} title="Monitoring Audit"
+          gradient="from-indigo-500 to-violet-600"
+          desc="Track every campaign in real time. Budget pacing shows if a campaign is spending what it should by today; performance shows live results (impressions, reach, conversions, CTR, CPC and more)." />
+        <Step n="02" icon={CalendarClock} title="Weekly Performance Report"
+          gradient="from-sky-500 to-blue-700"
           desc="A clean, client-ready summary of the week's results per campaign, with week-over-week changes and an AI summary. Sent automatically every Monday." />
-        <Step icon={PieChart} title="Looker Reporting"
+        <Step n="03" icon={PieChart} title="Looker Reporting"
+          gradient="from-emerald-500 to-teal-700"
           desc="Embed each client's full Looker Studio report. Edit freely in Looker; only the version you mark as approved is shown to the client." />
-        <Step icon={Network} title="Projection Clusters"
+        <Step n="04" icon={Network} title="Projection Clusters"
+          gradient="from-fuchsia-500 to-purple-700"
           desc="One click generates a complete brand strategy (La Fórmula): insights, objectives, audiences, creative concepts, media plan and more — built from the brief and boosted with live data." />
-        <Step icon={Bell} title="Alerts"
+        <Step n="05" icon={Bell} title="Alerts"
+          gradient="from-rose-500 to-red-700"
           desc="Six high-signal rules watch your campaigns: overspend, no delivery, ending soon, cost spikes, early budget depletion and creative fatigue. No noise — only what matters." />
-        <Step icon={FileText} title="Brand Brief"
+        <Step n="06" icon={FileText} title="Brand Brief"
+          gradient="from-amber-500 to-orange-600"
           desc="The strategic foundation of each client: who they are, what they sell, their voice and differentiators. The richer the brief, the sharper the AI strategies." />
-        <Step icon={Sparkles} title="AI Analysis (floating)"
+        <Step n="07" icon={Sparkles} title="AI Analysis"
+          gradient="from-cyan-500 to-sky-700"
           desc="The sparkle bubble at the bottom-right opens a chat. Pick a client and campaign, then ask anything about performance and get instant, data-grounded answers." />
-        <Step icon={Shield} title="Admin"
+        <Step n="08" icon={Shield} title="Admin"
+          gradient="from-slate-700 to-indigo-700"
           desc="Invite your team, give each member access only to their assigned accounts, manage admins and send password-reset links. The owner keeps full control." />
       </div>
 
       {/* FAQ */}
-      <div className="border border-border rounded-lg bg-card p-4 sm:p-5">
+      <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
           <FileText className="h-4 w-4 text-primary" /> Frequently asked questions
         </h2>
@@ -102,9 +113,11 @@ export default function HowItWorksPage() {
         </Accordion>
       </div>
 
-      <div className="border border-border rounded-lg bg-muted/30 p-4 sm:p-5">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-50 to-rose-50 border border-amber-200/60 p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-amber-500 to-rose-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Sparkles className="h-4 w-4" />
+          </div>
           <div className="text-sm text-muted-foreground">
             <span className="font-semibold text-foreground">Tip:</span> click any row in the audit to expand charts, the full
             metric set and a one-click AI insight for that campaign.
@@ -115,15 +128,30 @@ export default function HowItWorksPage() {
   );
 }
 
-function Step({ icon: Icon, title, desc }: { icon: React.ComponentType<{ className?: string }>; title: string; desc: string }) {
+function Step({
+  n, icon: Icon, title, desc, gradient,
+}: {
+  n: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  desc: string;
+  gradient: string;
+}) {
   return (
-    <div className="border border-border rounded-lg bg-card p-4 flex gap-3">
-      <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-        <Icon className="h-4 w-4 text-primary" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc}</p>
+    <div className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      {/* Gradient accent bar */}
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${gradient}`} />
+      <div className="flex items-start gap-3">
+        <div className={`relative h-11 w-11 rounded-xl bg-gradient-to-br ${gradient} text-white flex items-center justify-center shrink-0 shadow-sm`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[10px] font-mono font-semibold text-muted-foreground/70">{n}</span>
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc}</p>
+        </div>
       </div>
     </div>
   );
