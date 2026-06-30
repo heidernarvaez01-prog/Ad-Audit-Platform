@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 
       const actionLink = linkData?.properties?.action_link;
       let emailResult: any = { sent: false, reason: 'no_link' };
-      if (actionLink) emailResult = await sendInviteEmail(email, actionLink);
+      if (actionLink) emailResult = await sendInviteEmail(email, actionLink, user.email ?? undefined);
 
       return json({
         ok: true,
@@ -122,6 +122,18 @@ Deno.serve(async (req) => {
         actionLink,
         email: emailResult,
       });
+    }
+
+    if (action === 'delete_user') {
+      const targetId = String(body?.userId ?? '').trim();
+      if (!targetId) return json({ error: 'userId required' }, 400);
+      if (targetId === user.id) return json({ error: "You can't delete your own account" }, 400);
+      // Clean up app-level rows first; foreign keys may not cascade.
+      await admin.from('account_assignments').delete().eq('user_id', targetId);
+      await admin.from('user_roles').delete().eq('user_id', targetId);
+      const { error: delErr } = await admin.auth.admin.deleteUser(targetId);
+      if (delErr) return json({ error: delErr.message }, 400);
+      return json({ ok: true });
     }
 
     if (action === 'reset_password') {
@@ -137,11 +149,18 @@ Deno.serve(async (req) => {
       const actionLink = linkData?.properties?.action_link;
       let emailResult: any = { sent: false };
       if (actionLink && RESEND_API_KEY) {
-        const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px"><h2>Reset your password</h2><p>Click the button below to set a new password for your Apache Studio account.</p><p style="text-align:center;margin:24px 0"><a href="${actionLink}" style="background:#4f46e5;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600">Reset password</a></p><p style="font-size:12px;color:#64748b;word-break:break-all">${actionLink}</p></div>`;
+        const text = `Hi,\n\nA password reset was requested for your Apache Studio account. Open this link to set a new password (expires in 1 hour):\n\n${actionLink}\n\nIf you did not request this, you can ignore this email.\n\n— Apache Studio`;
+        const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a"><div style="max-width:560px;margin:0 auto;padding:24px"><p style="font-size:15px;line-height:1.55">Hi,</p><p style="font-size:15px;line-height:1.55">A password reset was requested for your Apache Studio account.</p><p style="margin:24px 0"><a href="${actionLink}" style="background:#1e40af;color:#fff;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:600;display:inline-block">Reset password</a></p><p style="font-size:13px;color:#475569;word-break:break-all">${actionLink}</p><p style="font-size:12px;color:#64748b;margin-top:20px">This link expires in 1 hour. If you didn't request it, ignore this email.</p></div></body></html>`;
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: FROM_EMAIL, to: [email], subject: 'Reset your Apache Studio password', html }),
+          body: JSON.stringify({
+            from: FROM_EMAIL, to: [email], reply_to: REPLY_TO,
+            subject: 'Reset your Apache Studio password',
+            text, html,
+            headers: { 'List-Unsubscribe': `<mailto:${REPLY_TO}?subject=unsubscribe>` },
+            tags: [{ name: 'category', value: 'password_reset' }],
+          }),
         });
         emailResult = { sent: res.ok };
       }
