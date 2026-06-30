@@ -11,10 +11,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTROPHIC_API_KEY missing");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
 
     // Validate user
     const authHeader = req.headers.get("Authorization");
@@ -105,18 +105,19 @@ Rules:
 
     const userPrompt = `Contexto (JSON):\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\`\n\nPregunta del usuario:\n${question}`;
 
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-5",
+        model: "gpt-4o-mini",
         max_tokens: 1500,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
       }),
     });
 
@@ -125,12 +126,12 @@ Rules:
     }
     if (!aiRes.ok) {
       const t = await aiRes.text();
-      console.error("Anthropic error", aiRes.status, t);
+      console.error("OpenAI error", aiRes.status, t);
       return new Response(JSON.stringify({ error: "Error del servicio de IA" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const data = await aiRes.json();
-    const answer = data?.content?.[0]?.text ?? "Sin respuesta.";
+    const answer = data?.choices?.[0]?.message?.content ?? "Sin respuesta.";
 
     return new Response(
       JSON.stringify({ answer, stats: { campaignsAnalyzed: campaignSummary.length, rows: metrics.length } }),

@@ -315,27 +315,30 @@ async function generateForClient(
   let aiSummary = "";
   if (anthropicKey && campaigns.length > 0) {
     try {
-      const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+      const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "x-api-key": anthropicKey,
-          "anthropic-version": "2023-06-01",
+          "Authorization": `Bearer ${anthropicKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
+          model: "gpt-4o-mini",
           max_tokens: 700,
-          system:
-            "You are a senior paid media analyst. Write a weekly executive summary in English for the client: 3-5 sentences on the week's performance (spend, results, pacing) + 2 actionable recommendations. Professional, clear tone, no unnecessary jargon. Plain text, no markdown.",
-          messages: [{
-            role: "user",
-            content: `Client: ${client.name}. Week ${start} to ${end}. Per-campaign data (week = this week, prev = previous week):\n${JSON.stringify(campaigns, null, 1)}`,
-          }],
+          messages: [
+            {
+              role: "system",
+              content: "You are a senior paid media analyst. Write a weekly executive summary in English for the client: 3-5 sentences on the week's performance (spend, results, pacing) + 2 actionable recommendations. Professional, clear tone, no unnecessary jargon. Plain text, no markdown.",
+            },
+            {
+              role: "user",
+              content: `Client: ${client.name}. Week ${start} to ${end}. Per-campaign data (week = this week, prev = previous week):\n${JSON.stringify(campaigns, null, 1)}`,
+            },
+          ],
         }),
       });
       if (aiRes.ok) {
         const data = await aiRes.json();
-        aiSummary = data?.content?.[0]?.text ?? "";
+        aiSummary = data?.choices?.[0]?.message?.content ?? "";
       }
     } catch (e) {
       console.error("AI summary failed", e);
@@ -410,7 +413,7 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTROPHIC_API_KEY");
+    const ANTHROPIC_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const CRON_SECRET = Deno.env.get("CRON_SECRET");
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
