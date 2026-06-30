@@ -1,8 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3.23.8';
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0';
-
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend';
+import { sendEmail } from '../_shared/email.ts';
 
 const AlertSchema = z.object({
   campaign: z.string(),
@@ -125,40 +124,17 @@ Deno.serve(async (req) => {
     const criticalCount = parsed.data.criticalCount ?? alerts.filter((a) => a.level === 'critical').length;
     const warningCount = parsed.data.warningCount ?? alerts.filter((a) => a.level === 'warning').length;
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: 'Resend not configured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const html = renderHtml(alerts, criticalCount, warningCount);
-    const finalSubject = subject ?? `Alertas de pacing: ${criticalCount} críticas · ${warningCount} advertencias`;
+    const finalSubject = subject ?? `Pacing alerts: ${criticalCount} critical · ${warningCount} warnings`;
 
-    const res = await fetch(`${GATEWAY_URL}/emails`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'X-Connection-Api-Key': RESEND_API_KEY,
-      },
-      body: JSON.stringify({
-        from: 'Apache Studio Ad Audit <onboarding@resend.dev>',
-        to,
-        subject: finalSubject,
-        html,
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      return new Response(JSON.stringify({ error: 'resend_failed', status: res.status, details: data }), {
+    const sent = await sendEmail({ to, subject: finalSubject, html });
+    if (!sent.ok) {
+      return new Response(JSON.stringify({ error: 'resend_failed', status: sent.status, details: sent.error }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ success: true, id: data.id ?? null }), {
+    return new Response(JSON.stringify({ success: true, id: sent.id ?? null }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {

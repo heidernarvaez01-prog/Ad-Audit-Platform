@@ -58,33 +58,33 @@ serve(async (req) => {
       console.error("brief fetch failed", err);
     }
 
-    const systemPrompt = `Eres un analista experto en publicidad digital y pacing presupuestario. 
-Genera un diagnóstico de EXACTAMENTE 3 líneas enfocado en riesgo presupuestario.
-- Línea 1: Nivel de riesgo (Crítico/Moderado/Bajo) y razón principal.
-- Línea 2: Insight sobre la distribución del gasto o rendimiento (CTR, CPC).
-- Línea 3: Recomendación accionable concreta.
-Cuando exista contexto de marca, incorpóralo (tono, público, diferenciador) en el insight y la recomendación.
-Sé directo, usa datos numéricos del contexto. Responde solo en español.
-Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CRITICO] o [RIESGO_MODERADO] o [SIN_RIESGO]`;
+    const systemPrompt = `You are an expert digital advertising analyst focused on budget pacing.
+Generate a diagnosis of EXACTLY 3 lines centered on budget risk.
+- Line 1: Risk level (Critical/Moderate/Low) and the main reason.
+- Line 2: An insight about spend distribution or performance (CTR, CPC).
+- Line 3: A concrete, actionable recommendation.
+When brand context is available, weave it in (tone, audience, differentiator) into the insight and the recommendation.
+Be direct, use the numeric data from the context. Respond ONLY in English.
+At the end, on a separate line, write ONLY one of these tags: [RIESGO_CRITICO] or [RIESGO_MODERADO] or [SIN_RIESGO]`;
 
-    const userPrompt = `Datos de auditoría de campaña:
-- Campaña: ${campaignData.campaignName}
-- Plataforma: ${campaignData.platform || 'No especificada'}
-- Presupuesto Aprobado: $${campaignData.presupuestoTotal}
-- Gasto Actual: $${campaignData.gastoActual}
-- Presupuesto Restante: $${campaignData.presupuestoRestante}
-- Días Transcurridos: ${campaignData.diasTranscurridos}
-- Días Restantes: ${campaignData.diasRestantes}
+    const userPrompt = `Campaign audit data:
+- Campaign: ${campaignData.campaignName}
+- Platform: ${campaignData.platform || 'Not specified'}
+- Approved Budget: $${campaignData.presupuestoTotal}
+- Actual Spend: $${campaignData.gastoActual}
+- Remaining Budget: $${campaignData.presupuestoRestante}
+- Days Elapsed: ${campaignData.diasTranscurridos}
+- Days Left: ${campaignData.diasRestantes}
 - Pacing: ${campaignData.pacingStatus} (${campaignData.pacingPct > 0 ? '+' : ''}${campaignData.pacingPct}%)
-- Gasto Diario Actual: $${campaignData.gastoDiarioActual}
-- Gasto Diario Ideal: $${campaignData.presupuestoDiarioIdeal}
-- CTR Promedio: ${campaignData.ctr}%
-- CPC Promedio: $${campaignData.cpc}
-- Impressiones: ${campaignData.impressions}
+- Current Daily Spend: $${campaignData.gastoDiarioActual}
+- Ideal Daily Spend: $${campaignData.presupuestoDiarioIdeal}
+- Avg CTR: ${campaignData.ctr}%
+- Avg CPC: $${campaignData.cpc}
+- Impressions: ${campaignData.impressions}
 - Clicks: ${campaignData.clicks}
 - Reach: ${campaignData.reach}
 ${briefBlock}
-Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
+Generate the 3-line diagnosis + risk tag.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

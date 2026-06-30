@@ -1,13 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendEmail } from "../_shared/email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-cron-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
 
 function jsonRes(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -369,30 +368,17 @@ async function generateForClient(
 
   const html = renderHtml(client.name, start, end, campaigns, aiSummary, monthly);
 
-  // Send via Resend (Lovable gateway) when requested and recipients exist
+  // Send via direct Resend API when requested and recipients exist
   let sent = false;
   const recipients = client.report_recipients ?? [];
   if (send && recipients.length > 0) {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (LOVABLE_API_KEY && RESEND_API_KEY) {
-      const res = await fetch(`${GATEWAY_URL}/emails`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "X-Connection-Api-Key": RESEND_API_KEY,
-        },
-        body: JSON.stringify({
-          from: "Apache Studio Reports <onboarding@resend.dev>",
-          to: recipients,
-          subject: `Weekly Performance Report — ${client.name} (${start} → ${end})`,
-          html,
-        }),
-      });
-      sent = res.ok;
-      if (!res.ok) console.error("Resend send failed", res.status, await res.text());
-    }
+    const result = await sendEmail({
+      to: recipients,
+      subject: `Weekly Performance Report — ${client.name} (${start} → ${end})`,
+      html,
+    });
+    sent = result.ok;
+    if (!result.ok) console.error("Resend send failed", result.status, JSON.stringify(result.error));
   }
 
   // Upsert the report for this week (one per client+week)

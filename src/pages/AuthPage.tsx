@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -46,6 +47,18 @@ const adIcons = [
   { id: 16, icon: IconAutomation, className: 'top-[62%] left-[35%]' },
 ];
 
+// An invite / password-recovery link drops the user back here with a hash like
+// #access_token=...&type=invite (or type=recovery). When that's present we show
+// a "set your password" form instead of the normal sign-in.
+function readActionType(): 'invite' | 'recovery' | null {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const params = new URLSearchParams(hash);
+  const t = params.get('type');
+  if (t === 'invite' || t === 'recovery') return t;
+  return null;
+}
+
 export default function AuthPage() {
   const { user, loading: authLoading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -55,9 +68,21 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Set-password mode (invite / recovery)
+  const [actionType, setActionType] = useState<'invite' | 'recovery' | null>(() => readActionType());
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const settingPassword = actionType !== null;
+
   useEffect(() => {
-    if (!authLoading && user) navigate('/', { replace: true });
-  }, [user, authLoading, navigate]);
+    // Re-check once Supabase has processed the URL hash into a session.
+    const t = readActionType();
+    if (t) setActionType(t);
+  }, []);
+
+  useEffect(() => {
+    // Don't bounce invited/recovery users to the dashboard before they set a password.
+    if (!authLoading && user && !settingPassword) navigate('/', { replace: true });
+  }, [user, authLoading, navigate, settingPassword]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +99,88 @@ export default function AuthPage() {
     }
     setLoading(false);
   };
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+    // Clear the hash and head into the app.
+    window.history.replaceState(null, '', window.location.pathname);
+    setActionType(null);
+    navigate('/', { replace: true });
+  };
+
+  if (settingPassword) {
+    return (
+      <FloatingIconsHero icons={adIcons} showContent={false} className="min-h-screen">
+        <div className="w-full max-w-sm px-4">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="text-center mb-8"
+          >
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Apache Studio
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {actionType === 'invite' ? 'Welcome — set your password to join' : 'Set a new password'}
+            </p>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.5 }}>
+            <Card className="relative overflow-hidden backdrop-blur-xl bg-card/50 border-border/50 shadow-2xl">
+              <div className="relative z-10 p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <LogIn className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold text-foreground">Choose your password</h2>
+                </div>
+                <form onSubmit={handleSetPassword} className="space-y-3">
+                  <Input
+                    type="password"
+                    placeholder="New password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="bg-background/50 border-border/50 focus:border-primary/50 transition-all duration-200"
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="bg-background/50 border-border/50 focus:border-primary/50 transition-all duration-200"
+                  />
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Saving...' : 'Set password & continue'}
+                  </Button>
+                </form>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+      </FloatingIconsHero>
+    );
+  }
 
   if (user) return <Navigate to="/" replace />;
 
