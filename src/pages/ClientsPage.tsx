@@ -399,11 +399,34 @@ function StatusDot({ count, color, label }: { count: number; color: string; labe
   );
 }
 
-function GlobalCard({ label, value, color, hint }: { label: string; value: string; color?: string; hint?: string }) {
+function GradientStat({
+  icon: Icon, label, value, gradient, hint, pulse,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  gradient: string;
+  hint?: string;
+  pulse?: boolean;
+}) {
   const card = (
-    <div className="border border-border rounded-lg bg-card p-3 relative overflow-hidden transition-all duration-200 hover:shadow-md animate-fade-in">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={`text-lg font-bold font-mono leading-tight mt-1 ${color || 'text-foreground'}`}>{value}</p>
+    <div
+      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md cursor-help
+        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+    >
+      <div aria-hidden className="absolute -right-3 -bottom-3 opacity-20">
+        <Icon className="h-16 w-16" />
+      </div>
+      <div className="relative flex items-center gap-1.5">
+        {pulse && (
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+          </span>
+        )}
+        <p className="text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      </div>
+      <p className="relative mt-1 text-2xl font-bold font-mono leading-none">{value}</p>
     </div>
   );
   if (!hint) return card;
@@ -414,3 +437,4 @@ function GlobalCard({ label, value, color, hint }: { label: string; value: strin
     </Tooltip>
   );
 }
+
