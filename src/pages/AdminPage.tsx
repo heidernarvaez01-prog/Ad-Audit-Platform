@@ -387,10 +387,41 @@ export default function AdminPage() {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                       onClick={() => revokeAccess(u.id, u.email)}
-                      title="Remove all account access and admin role"
+                      title="Remove all account access and admin role (keeps login)"
                     >
                       <Ban className="h-3.5 w-3.5 mr-1.5" /> Revoke access
                     </Button>
+                  )}
+                  {!isSelf && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          title="Permanently delete this member"
+                        >
+                          <UserX className="h-3.5 w-3.5 mr-1.5" /> Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this member?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This permanently removes <strong>{u.email}</strong>, their login, role and all account assignments. This cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteUser(u.id, u.email)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete permanently
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </div>
