@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { openaiStream } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -160,8 +159,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return jsonError("Unauthorized", 401);
@@ -260,12 +261,21 @@ Build the deliverable for this client following the process and the output forma
 
     const system = `${cluster.instructions}\n\n${outputFormat(cluster.sections, HERO_META_GENERIC).replace("<cluster eyebrow>", cluster.eyebrow)}`;
 
-    const aiRes = await openaiStream({
-      system,
-      user: userPrompt,
-      model: "gpt-4o",
-      maxTokens: 16000,
-      temperature: 0.7,
+    const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        max_tokens: 16000,
+        stream: true,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userPrompt },
+        ],
+      }),
     });
 
     if (aiRes.status === 429) return jsonError("AI rate limit reached. Try again in a few seconds.", 429);
@@ -275,7 +285,44 @@ Build the deliverable for this client following the process and the output forma
       return jsonError("AI service error", 500);
     }
 
-    return new Response(aiRes.body, {
+    // Translate OpenAI SSE deltas into Anthropic-shaped `content_block_delta`
+    // events so the existing client parser keeps working.
+    const reader = aiRes.body.getReader();
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        let buffer = "";
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const payload = line.slice(6).trim();
+              if (!payload || payload === "[DONE]") continue;
+              try {
+                const evt = JSON.parse(payload);
+                const text = evt?.choices?.[0]?.delta?.content;
+                if (typeof text === "string" && text.length) {
+                  const out = { type: "content_block_delta", delta: { text } };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(out)}\n\n`));
+                }
+              } catch { /* ignore */ }
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+    });
+
+    return new Response(stream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
     });
   } catch (e) {

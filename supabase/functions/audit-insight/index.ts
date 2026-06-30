@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { openaiChat } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +10,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+
     const { campaignData } = await req.json();
 
     // Fetch brand brief context for the account, if available
@@ -84,22 +86,35 @@ Al final, en una línea separada escribe SOLO una de estas etiquetas: [RIESGO_CR
 ${briefBlock}
 Genera el diagnóstico de 3 líneas + etiqueta de riesgo.`;
 
-    const ai = await openaiChat({
-      system: systemPrompt,
-      user: userPrompt,
-      model: "gpt-4o-mini",
-      maxTokens: 500,
-      temperature: 0.4,
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        max_tokens: 500,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
     });
-    if (ai.error) {
-      if (ai.status === 429) {
+
+    if (!response.ok) {
+      if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Límite de solicitudes excedido, intenta de nuevo en unos segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error("AI service error");
+      const t = await response.text();
+      console.error("OpenAI API error:", response.status, t);
+      throw new Error("OpenAI API error");
     }
-    const content = ai.text || "";
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
 
     let riskLevel: "critical" | "moderate" | "none" = "none";
     if (content.includes("[RIESGO_CRITICO]")) riskLevel = "critical";
