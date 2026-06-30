@@ -462,3 +462,38 @@ export default function AlertsPage() {
     </div>
   );
 }
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  gradient,
+  pulse,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  gradient: string;
+  pulse?: boolean;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md
+        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+    >
+      <div aria-hidden className="absolute -right-4 -bottom-4 opacity-20">
+        <Icon className="h-20 w-20" />
+      </div>
+      <div className="relative flex items-center gap-2">
+        {pulse && (
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+          </span>
+        )}
+        <p className="text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      </div>
+      <p className="relative mt-1 text-3xl font-bold font-mono leading-none">{value}</p>
+    </div>
+  );
+}
