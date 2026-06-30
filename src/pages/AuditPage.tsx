@@ -7,11 +7,12 @@ import { buildAuditRows } from '@/lib/audit-helpers';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, LayoutGrid, Layers, ArrowLeft } from 'lucide-react';
+import { Plus, LayoutGrid, Layers, ArrowLeft, ClipboardCheck } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
 import { Sparkline } from '@/components/Sparkline';
+import PageHero from '@/components/PageHero';
 import type { ApiCampaignRow } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -140,28 +141,36 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-5 w-full min-w-0">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0 flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Clients
-          </Button>
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">
-              {client ? client.name : 'Audit Matrix'}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {client?.description || 'Track in real time whether each campaign is spending right and performing well.'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => { setEditRecord(null); setShowForm(true); }}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            New Audit
-          </Button>
-        </div>
-      </div>
+      {/* Hero header */}
+      <PageHero
+        icon={ClipboardCheck}
+        title={client ? client.name : 'Monitoring Audit'}
+        subtitle={
+          client?.description ||
+          'Track in real time whether each campaign is spending right and performing well.'
+        }
+        gradient="from-indigo-600 via-violet-600 to-fuchsia-600"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="bg-white/15 hover:bg-white/25 text-white border-white/20"
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Clients
+            </Button>
+            <Button
+              size="sm"
+              className="bg-white text-indigo-700 hover:bg-white/90 shadow-md"
+              onClick={() => { setEditRecord(null); setShowForm(true); }}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> New Audit
+            </Button>
+          </>
+        }
+      />
+
 
       {/* Summary cards */}
       {auditRows.length > 0 && (
