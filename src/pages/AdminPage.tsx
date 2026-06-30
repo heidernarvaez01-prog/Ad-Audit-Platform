@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Loader2, Users, Link2, ShieldCheck, ShieldOff, Mail, KeyRound, Send, Ban, Building2, UserX } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import PageHero from '@/components/PageHero';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -25,6 +30,7 @@ export default function AdminPage() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [selUser, setSelUser] = useState<string>('');
   const [selAccount, setSelAccount] = useState<string>('');
+  const [selRole, setSelRole] = useState<'user' | 'admin'>('user');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -123,11 +129,24 @@ export default function AdminPage() {
     const { data, error } = await supabase.from('account_assignments').insert({
       user_id: selUser, account_id: acc.account_id, account_name: acc.account_name, platform: acc.platform, created_by: user!.id,
     }).select().single();
-    setSaving(false);
-    if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
+    if (error) { setSaving(false); toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
+
+    // Persist role (default 'user'; admin upserts if selected)
+    if (selRole === 'admin' && !adminIds.has(selUser)) {
+      const { error: rErr } = await supabase.from('user_roles').insert({ user_id: selUser, role: 'admin' });
+      if (!rErr) setRoles([...roles, { user_id: selUser, role: 'admin' }]);
+    } else if (selRole === 'user') {
+      // Ensure a baseline 'user' role row exists
+      await supabase.from('user_roles').upsert({ user_id: selUser, role: 'user' }, { onConflict: 'user_id,role' });
+      if (!roles.some(r => r.user_id === selUser && r.role === 'user')) {
+        setRoles([...roles, { user_id: selUser, role: 'user' }]);
+      }
+    }
+
     setAssignments([data as Assignment, ...assignments]);
     setSelAccount('');
-    toast({ title: 'Account assigned' });
+    setSaving(false);
+    toast({ title: 'Account assigned', description: `Role: ${selRole}` });
   };
 
   const remove = async (id: string) => {
@@ -139,6 +158,13 @@ export default function AdminPage() {
   // Owner revoke: strip every account assignment + admin role from a member.
   // Their login still exists but they can no longer see any account.
   const revokeAccess = async (uid: string, email: string | null) => {
+    // If the member never accepted their invite, fully remove them so the
+    // "invited" row disappears instead of lingering with no access.
+    const target = users.find((u) => u.id === uid);
+    if (target?.confirmed === false) {
+      await deleteUser(uid, email);
+      return;
+    }
     const [a, r] = await Promise.all([
       supabase.from('account_assignments').delete().eq('user_id', uid),
       supabase.from('user_roles').delete().eq('user_id', uid),
@@ -165,6 +191,21 @@ export default function AdminPage() {
     }
   };
 
+  // Permanent delete: removes the member's login + all their access.
+  const deleteUser = async (uid: string, email: string | null) => {
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { action: 'delete_user', userId: uid },
+    });
+    if (error || (data as any)?.error) {
+      toast({ title: 'Error deleting member', description: error?.message || (data as any)?.error, variant: 'destructive' });
+      return;
+    }
+    setUsers((prev) => prev.filter((u) => u.id !== uid));
+    setAssignments((prev) => prev.filter((a) => a.user_id !== uid));
+    setRoles((prev) => prev.filter((r) => r.user_id !== uid));
+    toast({ title: `Member deleted`, description: email ?? uid });
+  };
+
   if (loading) {
     return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>;
   }
@@ -182,15 +223,21 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <header className="flex items-center gap-2">
-        <Shield className="h-5 w-5 text-primary" />
-        <div>
-          <h1 className="text-xl font-semibold">Admin</h1>
-          <p className="text-sm text-muted-foreground">
-            Invite your team, give each member access to specific accounts, and manage permissions.
-          </p>
-        </div>
-      </header>
+      <PageHero
+        icon={Shield}
+        title="Admin"
+        subtitle="Invite your team, give each member access to specific accounts, and manage permissions."
+        gradient="from-slate-800 via-indigo-700 to-blue-600"
+      />
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <AdminStat icon={Users} label="Members" value={users.length} gradient="from-indigo-500 to-indigo-700" />
+        <AdminStat icon={ShieldCheck} label="Admins" value={adminIds.size} gradient="from-violet-500 to-purple-700" />
+        <AdminStat icon={Link2} label="Assignments" value={assignments.length} gradient="from-sky-500 to-blue-700" />
+        <AdminStat icon={Building2} label="Accounts" value={accounts.length} gradient="from-emerald-500 to-teal-700" />
+      </div>
+
 
       {/* STEP 1 — Invite member */}
       <Card className="p-5 space-y-3">
@@ -225,7 +272,7 @@ export default function AdminPage() {
         <p className="text-xs text-muted-foreground -mt-2">
           Each member only sees the ad accounts you assign here. Admins and the owner see everything.
         </p>
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div className="grid sm:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label>Member</Label>
             <Select value={selUser} onValueChange={setSelUser}>
@@ -253,10 +300,20 @@ export default function AdminPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-end">
+          <div className="space-y-1.5">
+            <Label>Role</Label>
+            <Select value={selRole} onValueChange={(v) => setSelRole(v as 'user' | 'admin')}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Member (view assigned accounts)</SelectItem>
+                <SelectItem value="admin">Admin (full access)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end sm:col-span-4">
             <Button onClick={assign} disabled={saving} className="w-full">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-              Assign
+              Assign access
             </Button>
           </div>
         </div>
@@ -337,10 +394,41 @@ export default function AdminPage() {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                       onClick={() => revokeAccess(u.id, u.email)}
-                      title="Remove all account access and admin role"
+                      title="Remove all account access and admin role (keeps login)"
                     >
                       <Ban className="h-3.5 w-3.5 mr-1.5" /> Revoke access
                     </Button>
+                  )}
+                  {!isSelf && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          title="Permanently delete this member"
+                        >
+                          <UserX className="h-3.5 w-3.5 mr-1.5" /> Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this member?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This permanently removes <strong>{u.email}</strong>, their login, role and all account assignments. This cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteUser(u.id, u.email)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete permanently
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </div>
@@ -348,6 +436,28 @@ export default function AdminPage() {
           })}
         </div>
       </Card>
+    </div>
+  );
+}
+
+function AdminStat({
+  icon: Icon, label, value, gradient,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  gradient: string;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md
+        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+    >
+      <div aria-hidden className="absolute -right-3 -bottom-3 opacity-20">
+        <Icon className="h-16 w-16" />
+      </div>
+      <p className="relative text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      <p className="relative mt-1 text-3xl font-bold font-mono leading-none">{value}</p>
     </div>
   );
 }

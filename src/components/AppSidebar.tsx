@@ -60,18 +60,19 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
     return (
       <NavLink
         to={to}
-        className={`group relative flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium
-          transition-colors duration-150 overflow-hidden
+        className={`group relative flex items-center gap-3 rounded-md px-3 h-10 text-sm font-normal
+          transition-coreui overflow-hidden
           ${active
-            ? 'bg-sidebar-accent/80 text-sidebar-accent-foreground'
-            : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/30'}`}
+            ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+            : 'text-sidebar-foreground hover:text-white hover:bg-[hsl(var(--sidebar-hover))]'}`}
         title={!open ? label : undefined}
       >
-        <Icon className="h-[18px] w-[18px] shrink-0" />
+        <Icon className={`h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110
+          ${active ? 'text-sidebar-primary' : ''}`} />
         <span className={`whitespace-nowrap transition-opacity duration-200 ${labelCls}`}>
           {label}
         </span>
-        {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-primary" />}
+        {active && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-sidebar-primary" />}
       </NavLink>
     );
   };
@@ -83,12 +84,12 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
       onClick={onClick}
       title={!open ? label : undefined}
       className={`w-full flex items-center gap-3 rounded-lg px-3 h-10 text-sm font-medium
-        transition-colors duration-150 overflow-hidden
+        transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-[0.98]
         ${danger
           ? 'text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10'
           : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/30'}`}
     >
-      <Icon className="h-[18px] w-[18px] shrink-0" />
+      <Icon className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 hover:rotate-12" />
       <span className={`whitespace-nowrap transition-opacity duration-200 ${labelCls}`}>
         {label}
       </span>
@@ -101,23 +102,24 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
     <div className="group/side relative shrink-0" style={{ width: open ? FULL : RAIL }}>
       <aside
         className={`absolute inset-y-0 left-0 z-40 min-h-screen flex flex-col
-          bg-sidebar border-r border-sidebar-border/50 shadow-xl shadow-black/5
+          bg-sidebar border-r border-sidebar-border shadow-sm
           transition-[width] duration-200 ease-out
           ${open ? 'w-[240px]' : 'w-[60px] hover:w-[240px]'}`}
-        style={{ background: 'hsl(var(--sidebar-background))' }}
       >
         {/* Header */}
-        <div className="h-16 flex items-center gap-2.5 px-3 border-b border-sidebar-border/50 shrink-0">
-          <img src={logo.url} alt="Apache Studio" className="h-9 w-9 object-contain shrink-0" />
+        <div className="h-20 flex items-center gap-3 px-3 border-b border-sidebar-border shrink-0 bg-[#23272b]">
+          <div className="h-12 w-12 shrink-0 rounded-xl bg-sidebar-primary/10 ring-1 ring-sidebar-primary/20 flex items-center justify-center overflow-hidden shadow-sm">
+            <img src={logo.url} alt="Apache Studio" className="h-10 w-10 object-contain" />
+          </div>
           <div className={`min-w-0 transition-opacity duration-200 ${labelCls}`}>
-            <h1 className="text-sm font-bold tracking-tight truncate text-sidebar-foreground">Apache Studio</h1>
-            <p className="text-[11px] text-sidebar-foreground/60 truncate">Ad Audit</p>
+            <h1 className="text-sm font-semibold tracking-tight truncate text-white">Apache Studio</h1>
+            <p className="text-[11px] text-sidebar-foreground/70 truncate">Ad Audit</p>
           </div>
           {!hideToggle && (
             <button
               onClick={() => setPinned(p => !p)}
               className={`ml-auto p-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground
-                hover:bg-sidebar-accent/40 transition-opacity shrink-0 ${labelCls}`}
+                hover:bg-sidebar-accent transition-opacity shrink-0 ${labelCls}`}
               title={pinned ? 'Unpin menu' : 'Keep menu open'}
             >
               {pinned ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
@@ -131,7 +133,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
         </nav>
 
         {/* Settings group (bottom): Dark mode · How it works · Admin · account · Sign out */}
-        <div className="border-t border-sidebar-border/50 p-2 space-y-1 shrink-0">
+        <div className="border-t border-sidebar-border p-2 space-y-1 shrink-0">
           <ActionRow
             icon={theme === 'dark' ? Sun : Moon}
             label={theme === 'dark' ? 'Light mode' : 'Dark mode'}

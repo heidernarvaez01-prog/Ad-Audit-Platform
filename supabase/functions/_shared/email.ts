@@ -1,7 +1,7 @@
 // Direct Resend send — no Lovable gateway dependency.
-// from address is taken from RESEND_FROM (use a VERIFIED domain to land in the
-// inbox; an unverified sender always goes to spam). Falls back to the Resend
-// sandbox sender, which works for delivery testing but is flagged as spam.
+// from address comes from RESEND_FROM; we default to the team's VERIFIED domain
+// (apachestudio.mx) so messages land in the inbox instead of spam. Override
+// RESEND_FROM only with another verified sender. A reply-to defaults to support.
 
 export async function sendEmail(opts: {
   to: string[];
@@ -11,7 +11,8 @@ export async function sendEmail(opts: {
 }): Promise<{ ok: boolean; id?: string; status?: number; error?: unknown }> {
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key) return { ok: false, error: "RESEND_API_KEY not configured" };
-  const from = Deno.env.get("RESEND_FROM") || "Apache Studio <onboarding@resend.dev>";
+  const from = Deno.env.get("RESEND_FROM") || "Apache Studio <alertas@apachestudio.mx>";
+  const replyTo = opts.replyTo || Deno.env.get("RESEND_REPLY_TO") || "soporte@apachestudio.mx";
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -21,7 +22,10 @@ export async function sendEmail(opts: {
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
-      ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+      reply_to: replyTo,
+      headers: {
+        "List-Unsubscribe": `<mailto:${replyTo}?subject=unsubscribe>`,
+      },
     }),
   });
   const data = await res.json().catch(() => ({}));

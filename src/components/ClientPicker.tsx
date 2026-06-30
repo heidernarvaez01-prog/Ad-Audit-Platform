@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Loader2, FolderOpen, ArrowRight, Briefcase, Search, type LucideIcon } from 'lucide-react';
+import PageHero from '@/components/PageHero';
 import { toast } from 'sonner';
 
 interface ClientRow {
@@ -123,23 +124,49 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
     );
   }
 
+  // Color theme per section
+  const modeTheme: Record<typeof mode, { gradient: string; accent: string; badge: string }> = {
+    brief: {
+      gradient: 'from-amber-500 via-orange-500 to-rose-500',
+      accent: 'from-amber-500 to-orange-600',
+      badge: 'bg-amber-100 text-amber-800 border-amber-200',
+    },
+    clusters: {
+      gradient: 'from-fuchsia-600 via-purple-600 to-indigo-600',
+      accent: 'from-fuchsia-500 to-purple-700',
+      badge: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+    },
+    weekly: {
+      gradient: 'from-sky-600 via-cyan-500 to-emerald-500',
+      accent: 'from-sky-500 to-blue-700',
+      badge: 'bg-sky-100 text-sky-800 border-sky-200',
+    },
+    reporting: {
+      gradient: 'from-emerald-600 via-teal-500 to-cyan-500',
+      accent: 'from-emerald-500 to-teal-700',
+      badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    },
+  };
+  const theme = modeTheme[mode];
+
   return (
     <div className="space-y-5 w-full min-w-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0 flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-foreground">{title}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
-          </div>
-        </div>
-        <Button size="sm" onClick={() => { setName(''); setDescription(''); setDialogOpen(true); }}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          New Client
-        </Button>
-      </div>
+      <PageHero
+        icon={Icon}
+        title={title}
+        subtitle={subtitle}
+        gradient={theme.gradient}
+        actions={
+          <Button
+            size="sm"
+            className="bg-white text-foreground hover:bg-white/90 shadow-md"
+            onClick={() => { setName(''); setDescription(''); setDialogOpen(true); }}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            New Client
+          </Button>
+        }
+      />
 
       {/* Search */}
       {clients.length > 0 && (
@@ -159,7 +186,7 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </div>
       ) : clients.length === 0 ? (
-        <div className="border border-dashed border-border rounded-lg p-12 text-center text-muted-foreground space-y-2">
+        <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground space-y-2 bg-muted/20">
           <FolderOpen className="h-8 w-8 mx-auto" />
           <p className="text-sm">No clients yet.</p>
           <p className="text-xs">Clients are shared with Monitoring Audit — create one to get started.</p>
@@ -168,38 +195,58 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
           </Button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="border border-dashed border-border rounded-lg p-10 text-center text-muted-foreground">
+        <div className="border border-dashed border-border rounded-xl p-10 text-center text-muted-foreground bg-muted/20">
           <p className="text-sm">No clients match "{search}".</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(c => (
-            <div
+            <button
               key={c.id}
+              type="button"
               onClick={() => navigate(`${basePath}/${c.id}`)}
-              className="border border-border rounded-lg bg-card p-4 cursor-pointer group
-                transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40"
+              className="text-left relative overflow-hidden rounded-xl border border-border bg-card p-5 cursor-pointer group
+                transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-transparent
+                focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
+              {/* Gradient accent bar */}
+              <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${theme.accent}`} />
+              {/* Decorative gradient blob */}
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-gradient-to-br ${theme.accent} opacity-[0.08] group-hover:opacity-[0.18] transition-opacity blur-xl`}
+              />
+
+              <div className="relative flex items-start gap-3">
+                <div className={`shrink-0 h-10 w-10 rounded-lg bg-gradient-to-br ${theme.accent} text-white flex items-center justify-center shadow-sm`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-bold text-foreground truncate">{c.name}</h3>
-                  {c.description && (
+                  {c.description ? (
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{c.description}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground/60 italic mt-0.5">No description</p>
                   )}
                 </div>
                 {badges[c.id] && (
-                  <Badge variant="secondary" className="text-[10px] shrink-0">{badges[c.id]}</Badge>
+                  <span className={`text-[10px] font-medium shrink-0 px-2 py-0.5 rounded-full border ${theme.badge}`}>
+                    {badges[c.id]}
+                  </span>
                 )}
               </div>
-              <div className="flex items-center justify-end mt-3 pt-3 border-t border-border">
-                <span className="text-[11px] text-primary flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+              <div className="relative flex items-center justify-between mt-4 pt-3 border-t border-border">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Workspace</span>
+                <span className="text-[11px] font-medium text-foreground flex items-center gap-1 group-hover:gap-2 transition-all">
                   Open <ArrowRight className="h-3 w-3" />
                 </span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
+
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">

@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PageHero from '@/components/PageHero';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchCampaignData } from '@/lib/api';
@@ -240,47 +241,41 @@ export default function AlertsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <header className="flex items-center gap-2">
-        <Bell className="h-5 w-5 text-primary" />
-        <div>
-          <h1 className="text-xl font-semibold">Alerts</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Only the alerts that matter: we flag a campaign when it overspends, stops delivering,
-            is about to end, gets more expensive, or its creatives wear out. No noise.
-          </p>
-        </div>
-      </header>
+      <PageHero
+        icon={Bell}
+        title="Alerts"
+        subtitle="Only the alerts that matter: we flag a campaign when it overspends, stops delivering, is about to end, gets more expensive, or its creatives wear out. No noise."
+        gradient="from-rose-600 via-orange-500 to-amber-500"
+      />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="p-4 flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-destructive" />
-          <div>
-            <div className="text-2xl font-bold">{stats.danger}</div>
-            <div className="text-xs text-muted-foreground">Critical</div>
-          </div>
-        </Card>
-        <Card className="p-4 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-warning" />
-          <div>
-            <div className="text-2xl font-bold">{stats.warning}</div>
-            <div className="text-xs text-muted-foreground">Warnings</div>
-          </div>
-        </Card>
-        <Card className="p-4 flex items-center gap-3">
-          <Info className="h-5 w-5 text-primary" />
-          <div>
-            <div className="text-2xl font-bold">{stats.info}</div>
-            <div className="text-xs text-muted-foreground">Heads-up</div>
-          </div>
-        </Card>
-        <Card className="p-4 flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 text-success" />
-          <div>
-            <div className="text-2xl font-bold">{healthyCount}</div>
-            <div className="text-xs text-muted-foreground">Healthy campaigns</div>
-          </div>
-        </Card>
+        <StatTile
+          icon={AlertCircle}
+          label="Critical"
+          value={stats.danger}
+          gradient="from-rose-500 to-red-700"
+          pulse={stats.danger > 0}
+        />
+        <StatTile
+          icon={AlertTriangle}
+          label="Warnings"
+          value={stats.warning}
+          gradient="from-amber-500 to-orange-600"
+        />
+        <StatTile
+          icon={Info}
+          label="Heads-up"
+          value={stats.info}
+          gradient="from-sky-500 to-blue-700"
+        />
+        <StatTile
+          icon={CheckCircle2}
+          label="Healthy"
+          value={healthyCount}
+          gradient="from-emerald-500 to-emerald-700"
+        />
       </div>
+
 
       {/* Alert rules — collapsible enable/disable per rule */}
       <Collapsible>
@@ -464,6 +459,41 @@ export default function AlertsPage() {
         </CollapsibleContent>
       </Card>
       </Collapsible>
+    </div>
+  );
+}
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  gradient,
+  pulse,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  gradient: string;
+  pulse?: boolean;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md
+        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+    >
+      <div aria-hidden className="absolute -right-4 -bottom-4 opacity-20">
+        <Icon className="h-20 w-20" />
+      </div>
+      <div className="relative flex items-center gap-2">
+        {pulse && (
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+          </span>
+        )}
+        <p className="text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      </div>
+      <p className="relative mt-1 text-3xl font-bold font-mono leading-none">{value}</p>
     </div>
   );
 }

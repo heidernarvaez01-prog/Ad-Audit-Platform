@@ -7,11 +7,12 @@ import { buildAuditRows } from '@/lib/audit-helpers';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, LayoutGrid, Layers, ArrowLeft } from 'lucide-react';
+import { Plus, LayoutGrid, Layers, ArrowLeft, ClipboardCheck } from 'lucide-react';
 import AuditForm from '@/components/AuditForm';
 import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
 import { Sparkline } from '@/components/Sparkline';
+import PageHero from '@/components/PageHero';
 import type { ApiCampaignRow } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -140,43 +141,72 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-5 w-full min-w-0">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0 flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Clients
-          </Button>
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">
-              {client ? client.name : 'Audit Matrix'}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {client?.description || 'Track in real time whether each campaign is spending right and performing well.'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => { setEditRecord(null); setShowForm(true); }}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            New Audit
-          </Button>
-        </div>
-      </div>
+      {/* Hero header */}
+      <PageHero
+        icon={ClipboardCheck}
+        title={client ? client.name : 'Monitoring Audit'}
+        subtitle={
+          client?.description ||
+          'Track in real time whether each campaign is spending right and performing well.'
+        }
+        gradient="from-indigo-600 via-violet-600 to-fuchsia-600"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="bg-white/15 hover:bg-white/25 text-white border-white/20"
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Clients
+            </Button>
+            <Button
+              size="sm"
+              className="bg-white text-indigo-700 hover:bg-white/90 shadow-md"
+              onClick={() => { setEditRecord(null); setShowForm(true); }}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> New Audit
+            </Button>
+          </>
+        }
+      />
+
 
       {/* Summary cards */}
       {auditRows.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <SummaryCard label="Total Budget" value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`} hint="Sum of the approved budget across all audited campaigns." />
+          <SummaryCard
+            label="Total Budget"
+            value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+            hint="Sum of the approved budget across all audited campaigns."
+            gradient="from-indigo-500 to-indigo-700"
+          />
           <SummaryCard
             label="Total Spend"
             value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
             hint="Sum of consolidated actual spend (excludes today and yesterday). The sparkline shows cumulative spend day by day."
             sparkline={summary.cumulativeSpend}
-            sparklineColor="text-primary"
+            gradient="from-sky-500 to-sky-700"
           />
-          <SummaryCard label="On Track" value={summary.ok.toString()} color="text-success" hint="Campaigns within ±10% of ideal pacing." pulse={summary.ok > 0} pulseColor="bg-success" />
-          <SummaryCard label="Underspending" value={summary.under.toString()} color="text-warning" hint="Campaigns spending under 90% of ideal — risk of not using the full budget." />
-          <SummaryCard label="Overspending" value={summary.over.toString()} color="text-destructive" hint="Campaigns spending over 110% of ideal — risk of running out early." />
+          <SummaryCard
+            label="On Track"
+            value={summary.ok.toString()}
+            hint="Campaigns within ±10% of ideal pacing."
+            pulse={summary.ok > 0}
+            gradient="from-emerald-500 to-emerald-700"
+          />
+          <SummaryCard
+            label="Underspending"
+            value={summary.under.toString()}
+            hint="Campaigns spending under 90% of ideal — risk of not using the full budget."
+            gradient="from-amber-500 to-orange-600"
+          />
+          <SummaryCard
+            label="Overspending"
+            value={summary.over.toString()}
+            hint="Campaigns spending over 110% of ideal — risk of running out early."
+            gradient="from-rose-500 to-red-700"
+          />
         </div>
       )}
 
@@ -248,39 +278,41 @@ export default function AuditPage() {
 function SummaryCard({
   label,
   value,
-  color,
   hint,
   sparkline,
-  sparklineColor,
   pulse,
-  pulseColor,
+  gradient,
 }: {
   label: string;
   value: string;
-  color?: string;
   hint?: string;
   sparkline?: number[];
-  sparklineColor?: string;
   pulse?: boolean;
-  pulseColor?: string;
+  gradient?: string;
 }) {
+  const isGradient = !!gradient;
   const card = (
-    <div className="border border-border rounded-lg bg-card p-3 cursor-help relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-fade-in">
-      <div className="flex items-center gap-1.5">
+    <div
+      className={`rounded-xl p-4 cursor-help relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 animate-fade-in
+        ${isGradient
+          ? `bg-gradient-to-br ${gradient} text-white shadow-md`
+          : 'border border-border bg-card text-foreground'}`}
+    >
+      <div className="flex items-center gap-1.5 relative z-10">
         {pulse && (
           <span className="relative flex h-2 w-2">
-            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${pulseColor || 'bg-success'}`} />
-            <span className={`relative inline-flex h-2 w-2 rounded-full ${pulseColor || 'bg-success'}`} />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
           </span>
         )}
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className={`text-[10px] uppercase tracking-wider ${isGradient ? 'text-white/85' : 'text-muted-foreground'}`}>{label}</p>
       </div>
-      <div className="flex items-end justify-between gap-2 mt-1">
-        <p className={`text-lg font-bold font-mono leading-tight ${color || 'text-foreground'}`}>{value}</p>
-        {sparkline && sparkline.length > 1 && (
-          <Sparkline data={sparkline} width={70} height={24} className={sparklineColor || 'text-primary'} />
-        )}
-      </div>
+      <p className={`text-2xl font-bold font-mono leading-tight mt-1 relative z-10 ${isGradient ? 'text-white' : ''}`}>{value}</p>
+      {sparkline && sparkline.length > 1 && (
+        <div className="absolute inset-x-0 bottom-0 h-10 opacity-80 pointer-events-none">
+          <Sparkline data={sparkline} width={300} height={40} className={isGradient ? 'text-white/70' : 'text-primary'} />
+        </div>
+      )}
     </div>
   );
   if (!hint) return card;
