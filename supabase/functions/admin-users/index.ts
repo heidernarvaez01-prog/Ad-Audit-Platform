@@ -31,17 +31,30 @@ This link expires in 24 hours. If you did not expect this email, you can safely 
 
 — Apache Studio`;
 
-  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
-    <div style="max-width:560px;margin:0 auto;padding:24px">
-      <p style="font-size:15px;line-height:1.55">Hi,</p>
-      <p style="font-size:15px;line-height:1.55">You have been added${inviter ? ` by <strong>${inviterEmail}</strong>` : ''} to the Apache Studio workspace. Use the link below to set your password and sign in.</p>
-      <p style="margin:28px 0">
-        <a href="${link}" style="background:#1e40af;color:#fff;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:600;display:inline-block">Set your password</a>
-      </p>
-      <p style="font-size:13px;color:#475569;word-break:break-all">If the button does not work, copy this URL into your browser:<br/>${link}</p>
-      <p style="font-size:12px;color:#64748b;margin-top:24px">This link expires in 24 hours. If you did not expect this email, you can safely ignore it.</p>
-      <p style="font-size:12px;color:#94a3b8;margin-top:20px">Apache Studio · ${REPLY_TO}</p>
-    </div></body></html>`;
+  const safeLink = String(link).replace(/"/g, '&quot;');
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Apache Studio</title></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;padding:24px 0">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb">
+        <tr><td style="padding:28px 32px">
+          <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#0f172a">Hi,</p>
+          <p style="margin:0 0 22px;font-size:15px;line-height:1.55;color:#0f172a">You have been added${inviter ? ` by <strong>${inviterEmail}</strong>` : ''} to the Apache Studio workspace. Use the button below to set your password and sign in.</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 22px">
+            <tr><td align="center" bgcolor="#1e40af" style="border-radius:6px">
+              <a href="${safeLink}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">Set your password</a>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 8px;font-size:13px;color:#475569">If the button does not work, copy and paste this URL into your browser:</p>
+          <p style="margin:0 0 22px;font-size:13px;color:#1e40af;word-break:break-all"><a href="${safeLink}" target="_blank" rel="noopener" style="color:#1e40af">${safeLink}</a></p>
+          <p style="margin:0;font-size:12px;color:#64748b">This link expires in 24 hours. If you did not expect this email, you can safely ignore it.</p>
+          <p style="margin:18px 0 0;font-size:12px;color:#94a3b8">Apache Studio · ${REPLY_TO}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
