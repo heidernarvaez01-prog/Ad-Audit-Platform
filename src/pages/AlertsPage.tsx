@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import PageHero from '@/components/PageHero';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAlertThresholds, type UserAlertRule } from '@/hooks/useAlertThresholds';
+import { useNotificationChannels } from '@/hooks/useNotificationChannels';
 import { fetchCampaignData } from '@/lib/api';
 import { buildAuditRows } from '@/lib/audit-helpers';
 import { ALERT_TYPE_LABELS, type AuditAlert, type AlertType } from '@/lib/audit-alerts';
@@ -18,19 +20,27 @@ import { toast } from '@/hooks/use-toast';
 
 // What each rule does, for the toggle list
 const ALERT_TYPE_DESC: Record<AlertType, string> = {
-  OVERSPEND_50: 'Spending 50%+ above what was expected by today.',
-  NOT_SPENDING: 'An active campaign stopped delivering (no recent spend).',
-  ENDING_SOON: 'Campaign is 90%+ through its schedule — plan renewal/closing.',
-  COST_SPIKE: 'CPC or CPM jumped more than 65% vs the previous week.',
-  BUDGET_EARLY_DEPLETION: 'At the current pace the budget runs out before the end date.',
-  CREATIVE_FATIGUE: 'High frequency + falling CTR — time to rotate creatives.',
+  OVERSPEND_50: 'Spending N%+ above what was expected by today.',
+  NOT_SPENDING: 'An active campaign stopped delivering (no spend in N consolidated days).',
+  ENDING_SOON: 'Campaign is N%+ through its schedule — plan renewal/closing.',
+  COST_SPIKE: 'CPC or CPM jumped more than N% vs the previous week.',
+  BUDGET_EARLY_DEPLETION: 'At the current pace the budget runs out N+ days before the end date.',
+  CREATIVE_FATIGUE: 'Frequency above N + CTR falling more than M% — time to rotate creatives.',
+};
+// Threshold input(s) shown per rule: label + unit for the primary number,
+// and an optional secondary number (only CREATIVE_FATIGUE has one today).
+const ALERT_TYPE_THRESHOLD_UI: Record<AlertType, { label: string; unit: string; secondaryLabel?: string; secondaryUnit?: string }> = {
+  OVERSPEND_50: { label: 'Overspend threshold', unit: '% above expected' },
+  NOT_SPENDING: { label: 'No-spend window', unit: 'consolidated days' },
+  ENDING_SOON: { label: 'Ending-soon threshold', unit: '% through schedule' },
+  COST_SPIKE: { label: 'Cost spike threshold', unit: '% CPC/CPM increase' },
+  BUDGET_EARLY_DEPLETION: { label: 'Early-depletion threshold', unit: 'days early' },
+  CREATIVE_FATIGUE: { label: 'Min. frequency', unit: 'freq.', secondaryLabel: 'CTR drop threshold', secondaryUnit: '% CTR drop' },
 };
 const ALL_ALERT_TYPES = Object.keys(ALERT_TYPE_LABELS) as AlertType[];
 
 interface AlertSettings {
   enabled: boolean;
-  email_recipients: string[];
-  pacing_threshold_pct: number;
   only_critical: boolean;
   notify_frequency: 'daily' | 'weekly' | 'manual';
 }
@@ -49,8 +59,6 @@ interface CampaignAlert {
 
 const DEFAULT_SETTINGS: AlertSettings = {
   enabled: true,
-  email_recipients: [],
-  pacing_threshold_pct: 10,
   only_critical: false,
   notify_frequency: 'daily',
 };
@@ -58,32 +66,59 @@ const DEFAULT_SETTINGS: AlertSettings = {
 export default function AlertsPage() {
   const { user } = useAuth();
   const [settings, setSettings] = useState<AlertSettings>(DEFAULT_SETTINGS);
-  const [emailInput, setEmailInput] = useState('');
   const [alerts, setAlerts] = useState<CampaignAlert[]>([]);
   const [healthyCount, setHealthyCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Which alert rules are active (persisted per user in the browser)
-  const storageKey = user ? `apache_disabled_alerts_${user.id}` : 'apache_disabled_alerts';
-  const [disabledTypes, setDisabledTypes] = useState<Set<AlertType>>(new Set());
+  // Per-rule enable + editable threshold, synced to Supabase (alert_rules) —
+  // replaces the old localStorage-only on/off toggle.
+  const { rules, thresholds, enabledTypes, loading: rulesLoading, saveRule } = useAlertThresholds();
+  const [savingRule, setSavingRule] = useState<AlertType | null>(null);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setDisabledTypes(new Set(JSON.parse(raw)));
-    } catch { /* ignore */ }
-  }, [storageKey]);
-
-  const toggleType = (t: AlertType) => {
-    setDisabledTypes(prev => {
-      const next = new Set(prev);
-      if (next.has(t)) next.delete(t); else next.add(t);
-      try { localStorage.setItem(storageKey, JSON.stringify([...next])); } catch { /* ignore */ }
-      return next;
-    });
+  const updateRuleField = async (rule: UserAlertRule, patch: Partial<UserAlertRule>) => {
+    setSavingRule(rule.type);
+    const { error } = await saveRule({ ...rule, ...patch });
+    setSavingRule(null);
+    if (error) toast({ title: 'Error saving rule', description: error.message, variant: 'destructive' });
   };
+
+  // Delivery channels — email, Slack, generic webhook (in-app is always on,
+  // it just writes to the notification bell). WhatsApp will join this list
+  // once a provider is chosen; the schema already supports it.
+  const { getChannel, saveChannel } = useNotificationChannels();
+  const [emailInput, setEmailInput] = useState('');
+  const [slackUrlInput, setSlackUrlInput] = useState('');
+  const [webhookUrlInput, setWebhookUrlInput] = useState('');
+  const [savingChannel, setSavingChannel] = useState<string | null>(null);
+  const emailChannel = getChannel('email');
+  const emailRecipients = (emailChannel.config.recipients as string[]) ?? [];
+  const slackChannel = getChannel('slack_webhook');
+  const webhookChannel = getChannel('generic_webhook');
+
+  const persistChannel = async (
+    type: 'email' | 'slack_webhook' | 'generic_webhook' | 'in_app',
+    config: Record<string, unknown>,
+    enabled: boolean,
+  ) => {
+    setSavingChannel(type);
+    const current = getChannel(type);
+    const { error } = await saveChannel({ ...current, channel_type: type, config, enabled });
+    setSavingChannel(null);
+    if (error) toast({ title: 'Error saving channel', description: error.message, variant: 'destructive' });
+  };
+
+  const addEmailRecipient = () => {
+    const e = emailInput.trim();
+    if (!e) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast({ title: 'Invalid email', variant: 'destructive' }); return; }
+    if (emailRecipients.includes(e)) return;
+    persistChannel('email', { recipients: [...emailRecipients, e] }, true);
+    setEmailInput('');
+  };
+  const removeEmailRecipient = (e: string) =>
+    persistChannel('email', { recipients: emailRecipients.filter(x => x !== e) }, emailChannel.enabled);
 
   useEffect(() => {
     if (!user) return;
@@ -95,21 +130,22 @@ export default function AlertsPage() {
       if (cfg) {
         setSettings({
           enabled: cfg.enabled,
-          email_recipients: cfg.email_recipients ?? [],
-          pacing_threshold_pct: Number(cfg.pacing_threshold_pct),
           only_critical: cfg.only_critical,
           notify_frequency: cfg.notify_frequency as AlertSettings['notify_frequency'],
         });
       }
 
-      // Compute alerts with the same engine as the audit matrix — per client
+      // Compute alerts with the same engine as the audit matrix — per client,
+      // using this user's configured thresholds (all 6 rule types are always
+      // computed here; disabled rules are filtered out below so the
+      // "Healthy" count still reflects the campaign's true state).
       const [{ data: clients }, { data: records }, apiData] = await Promise.all([
         supabase.from('audit_clients').select('id, name'),
         supabase.from('audit_records').select('*'),
         fetchCampaignData().catch(() => []),
       ]);
       const clientName = new Map((clients || []).map(c => [c.id, c.name]));
-      const rows = buildAuditRows(records || [], apiData);
+      const rows = buildAuditRows(records || [], apiData, thresholds);
 
       const computed: CampaignAlert[] = [];
       let healthy = 0;
@@ -135,14 +171,14 @@ export default function AlertsPage() {
       setHealthyCount(healthy);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, thresholds]);
 
   const [alertSearch, setAlertSearch] = useState('');
 
   // Only alerts whose rule is currently enabled
   const visibleAlerts = useMemo(
-    () => alerts.filter(a => !disabledTypes.has(a.alert.type)),
-    [alerts, disabledTypes],
+    () => alerts.filter(a => enabledTypes.has(a.alert.type)),
+    [alerts, enabledTypes],
   );
 
   // ...further filtered by the client/campaign search box
@@ -161,21 +197,6 @@ export default function AlertsPage() {
     info: visibleAlerts.filter(a => a.alert.severity === 'info').length,
   }), [visibleAlerts]);
 
-  const addEmail = () => {
-    const e = emailInput.trim();
-    if (!e) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
-      toast({ title: 'Invalid email', variant: 'destructive' });
-      return;
-    }
-    if (settings.email_recipients.includes(e)) return;
-    setSettings({ ...settings, email_recipients: [...settings.email_recipients, e] });
-    setEmailInput('');
-  };
-
-  const removeEmail = (e: string) =>
-    setSettings({ ...settings, email_recipients: settings.email_recipients.filter((x) => x !== e) });
-
   const save = async () => {
     if (!user) return;
     setSaving(true);
@@ -190,10 +211,6 @@ export default function AlertsPage() {
 
   const sendNow = async () => {
     if (!user) return;
-    if (settings.email_recipients.length === 0) {
-      toast({ title: 'Add at least one recipient', variant: 'destructive' });
-      return;
-    }
     const pool = settings.only_critical
       ? visibleAlerts.filter(a => a.alert.severity === 'danger')
       : visibleAlerts.filter(a => a.alert.severity !== 'info');
@@ -201,31 +218,21 @@ export default function AlertsPage() {
       toast({ title: 'Nothing to send — no active critical or warning alerts' });
       return;
     }
-    // Map to the email function schema
-    const payload = pool.map(a => ({
-      campaign: a.campaign,
-      account: `${a.clientName} · ${a.account}`,
-      platform: a.platform,
-      level: a.alert.severity === 'danger' ? 'critical' as const : 'warning' as const,
-      spend: a.spend,
-      budget: a.budget,
-      spendPct: a.spendPct,
-      timePct: a.timePct,
-      deviation: +(a.spendPct - a.timePct).toFixed(1),
-      message: `${ALERT_TYPE_LABELS[a.alert.type]}: ${a.alert.message}`,
-    }));
-    const criticalCount = payload.filter(a => a.level === 'critical').length;
-    const warningCount = payload.filter(a => a.level === 'warning').length;
+    // alert-dispatch recomputes the same alerts server-side and delivers
+    // them through every enabled channel — no payload needed, just that
+    // this is a manual run for the calling user (JWT attached by invoke()).
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-alert-email', {
-        body: { to: settings.email_recipients, alerts: payload, criticalCount, warningCount },
-      });
+      const { data, error } = await supabase.functions.invoke('alert-dispatch', { body: {} });
+      const userResult = data?.results ? (Object.values(data.results)[0] as any) : null;
       if (error || (data && (data as any).error)) {
         const msg = error?.message || (data as any)?.error || 'Unknown error';
         toast({ title: 'Error sending', description: String(msg), variant: 'destructive' });
+      } else if (!userResult?.sent) {
+        toast({ title: 'Nothing sent — check that at least one channel is enabled below' });
       } else {
-        toast({ title: `Alerts sent to ${settings.email_recipients.length} recipient(s)` });
+        const channelList = (userResult.channels || []).map((c: any) => c.channel).join(', ');
+        toast({ title: `Sent ${userResult.sent} alert(s) via ${channelList || 'no channels'}` });
       }
     } catch (e: any) {
       toast({ title: 'Error sending', description: e.message, variant: 'destructive' });
@@ -277,7 +284,7 @@ export default function AlertsPage() {
       </div>
 
 
-      {/* Alert rules — collapsible enable/disable per rule */}
+      {/* Alert rules — enable/disable + editable thresholds, synced per user */}
       <Collapsible>
         <Card className="overflow-hidden">
           <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
@@ -286,7 +293,7 @@ export default function AlertsPage() {
               <div className="text-left">
                 <h2 className="font-semibold text-sm">Alert rules</h2>
                 <p className="text-xs text-muted-foreground">
-                  {ALL_ALERT_TYPES.length - disabledTypes.size} of {ALL_ALERT_TYPES.length} active · turn rules on or off
+                  {enabledTypes.size} of {ALL_ALERT_TYPES.length} active · thresholds sync to your account
                 </p>
               </div>
             </div>
@@ -294,15 +301,51 @@ export default function AlertsPage() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="px-5 pb-4 pt-1 divide-y divide-border">
-              {ALL_ALERT_TYPES.map((t) => {
-                const active = !disabledTypes.has(t);
+              {rulesLoading ? (
+                <div className="py-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading rules...
+                </div>
+              ) : rules.map((rule) => {
+                const ui = ALERT_TYPE_THRESHOLD_UI[rule.type];
                 return (
-                  <div key={t} className="py-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground">{ALERT_TYPE_LABELS[t]}</div>
-                      <div className="text-xs text-muted-foreground">{ALERT_TYPE_DESC[t]}</div>
+                  <div key={rule.type} className="py-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-foreground">{ALERT_TYPE_LABELS[rule.type]}</div>
+                      <div className="text-xs text-muted-foreground">{ALERT_TYPE_DESC[rule.type]}</div>
+                      {rule.enabled && (
+                        <div className="flex flex-wrap items-center gap-3 mt-2">
+                          <div className="flex items-center gap-1.5">
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">{ui.label}</Label>
+                            <Input
+                              type="number"
+                              className="h-7 w-20 text-xs"
+                              value={rule.threshold}
+                              onChange={(e) => updateRuleField(rule, { threshold: Number(e.target.value) })}
+                              disabled={savingRule === rule.type}
+                            />
+                            <span className="text-xs text-muted-foreground">{ui.unit}</span>
+                          </div>
+                          {ui.secondaryLabel && (
+                            <div className="flex items-center gap-1.5">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">{ui.secondaryLabel}</Label>
+                              <Input
+                                type="number"
+                                className="h-7 w-20 text-xs"
+                                value={rule.secondaryThreshold ?? ''}
+                                onChange={(e) => updateRuleField(rule, { secondaryThreshold: Number(e.target.value) })}
+                                disabled={savingRule === rule.type}
+                              />
+                              <span className="text-xs text-muted-foreground">{ui.secondaryUnit}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <Switch checked={active} onCheckedChange={() => toggleType(t)} />
+                    <Switch
+                      checked={rule.enabled}
+                      onCheckedChange={(v) => updateRuleField(rule, { enabled: v })}
+                      disabled={savingRule === rule.type}
+                    />
                   </div>
                 );
               })}
@@ -316,7 +359,7 @@ export default function AlertsPage() {
         <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-sm">Email settings</h2>
+            <h2 className="font-semibold text-sm">Delivery &amp; channels</h2>
           </div>
           <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
         </CollapsibleTrigger>
@@ -325,38 +368,100 @@ export default function AlertsPage() {
         <div className="flex items-center justify-between">
           <div>
             <Label>Alerts enabled</Label>
-            <p className="text-xs text-muted-foreground">Enable/disable notification sending.</p>
+            <p className="text-xs text-muted-foreground">Master switch — turns off every channel below.</p>
           </div>
           <Switch checked={settings.enabled} onCheckedChange={(v) => setSettings({ ...settings, enabled: v })} />
         </div>
 
-        <div className="space-y-2">
-          <Label>Recipients</Label>
+        {/* Email channel */}
+        <div className="space-y-2 rounded-lg border border-border p-3">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Label>
+            <Switch
+              checked={emailChannel.enabled}
+              onCheckedChange={(v) => persistChannel('email', emailChannel.config, v)}
+              disabled={savingChannel === 'email'}
+            />
+          </div>
           <div className="flex gap-2">
             <Input
               type="email"
               placeholder="someone@company.com"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEmail(); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEmailRecipient(); } }}
             />
-            <Button type="button" variant="secondary" onClick={addEmail}>
+            <Button type="button" variant="secondary" onClick={addEmailRecipient}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {settings.email_recipients.map((e) => (
+            {emailRecipients.map((e) => (
               <Badge key={e} variant="secondary" className="gap-1.5 pr-1">
                 {e}
-                <button onClick={() => removeEmail(e)} className="hover:bg-background rounded p-0.5">
+                <button onClick={() => removeEmailRecipient(e)} className="hover:bg-background rounded p-0.5">
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
             ))}
-            {settings.email_recipients.length === 0 && (
+            {emailRecipients.length === 0 && (
               <p className="text-xs text-muted-foreground">Add at least one email to receive alerts.</p>
             )}
           </div>
+        </div>
+
+        {/* Slack channel */}
+        <div className="space-y-2 rounded-lg border border-border p-3">
+          <div className="flex items-center justify-between">
+            <Label>Slack (incoming webhook)</Label>
+            <Switch
+              checked={slackChannel.enabled}
+              onCheckedChange={(v) => persistChannel('slack_webhook', slackChannel.config, v)}
+              disabled={savingChannel === 'slack_webhook'}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://hooks.slack.com/services/..."
+              defaultValue={(slackChannel.config.webhook_url as string) ?? ''}
+              onChange={(e) => setSlackUrlInput(e.target.value)}
+              onBlur={() => slackUrlInput && persistChannel('slack_webhook', { webhook_url: slackUrlInput }, true)}
+            />
+          </div>
+        </div>
+
+        {/* Generic webhook channel */}
+        <div className="space-y-2 rounded-lg border border-border p-3">
+          <div className="flex items-center justify-between">
+            <Label>Generic webhook</Label>
+            <Switch
+              checked={webhookChannel.enabled}
+              onCheckedChange={(v) => persistChannel('generic_webhook', webhookChannel.config, v)}
+              disabled={savingChannel === 'generic_webhook'}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://your-endpoint.example.com/alerts"
+              defaultValue={(webhookChannel.config.webhook_url as string) ?? ''}
+              onChange={(e) => setWebhookUrlInput(e.target.value)}
+              onBlur={() => webhookUrlInput && persistChannel('generic_webhook', { webhook_url: webhookUrlInput }, true)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">POSTs a JSON payload with the active alerts — build your own integration (WhatsApp, SMS, etc.) on top of this.</p>
+        </div>
+
+        {/* In-app is always available via the bell icon — no config needed */}
+        <div className="flex items-center justify-between rounded-lg border border-border p-3">
+          <div>
+            <Label className="flex items-center gap-1.5"><Bell className="h-3.5 w-3.5" /> In-app notifications</Label>
+            <p className="text-xs text-muted-foreground">Shown in the bell icon — no setup required.</p>
+          </div>
+          <Switch
+            checked={getChannel('in_app').enabled}
+            onCheckedChange={(v) => persistChannel('in_app', {}, v)}
+            disabled={savingChannel === 'in_app'}
+          />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
@@ -377,7 +482,7 @@ export default function AlertsPage() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <Label>Critical only</Label>
-              <p className="text-xs text-muted-foreground">Ignore warnings in emails.</p>
+              <p className="text-xs text-muted-foreground">Ignore warnings on every channel.</p>
             </div>
             <Switch checked={settings.only_critical} onCheckedChange={(v) => setSettings({ ...settings, only_critical: v })} />
           </div>

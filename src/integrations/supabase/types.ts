@@ -68,6 +68,39 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_rules: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          rule_type: string
+          secondary_threshold: number | null
+          threshold: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          rule_type: string
+          secondary_threshold?: number | null
+          threshold?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          rule_type?: string
+          secondary_threshold?: number | null
+          threshold?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       alert_settings: {
         Row: {
           created_at: string
@@ -291,51 +324,6 @@ export type Database = {
           },
         ]
       }
-      campaign_tracking: {
-        Row: {
-          account_name: string | null
-          budget_approved: number
-          campaign_name: string
-          created_at: string
-          end_date: string
-          id: string
-          lab_days: Database["public"]["Enums"]["lab_days_type"]
-          platform: Database["public"]["Enums"]["ad_platform"]
-          programmed_budget: number
-          start_date: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          account_name?: string | null
-          budget_approved?: number
-          campaign_name: string
-          created_at?: string
-          end_date: string
-          id?: string
-          lab_days?: Database["public"]["Enums"]["lab_days_type"]
-          platform: Database["public"]["Enums"]["ad_platform"]
-          programmed_budget?: number
-          start_date: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          account_name?: string | null
-          budget_approved?: number
-          campaign_name?: string
-          created_at?: string
-          end_date?: string
-          id?: string
-          lab_days?: Database["public"]["Enums"]["lab_days_type"]
-          platform?: Database["public"]["Enums"]["ad_platform"]
-          programmed_budget?: number
-          start_date?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       cluster_runs: {
         Row: {
           client_id: string
@@ -379,39 +367,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      data_sources: {
-        Row: {
-          created_at: string
-          csv_url: string
-          id: string
-          is_valid: boolean | null
-          last_validated_at: string | null
-          platform: Database["public"]["Enums"]["ad_platform"]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          csv_url: string
-          id?: string
-          is_valid?: boolean | null
-          last_validated_at?: string | null
-          platform: Database["public"]["Enums"]["ad_platform"]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          csv_url?: string
-          id?: string
-          is_valid?: boolean | null
-          last_validated_at?: string | null
-          platform?: Database["public"]["Enums"]["ad_platform"]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       email_send_log: {
         Row: {
@@ -504,6 +459,10 @@ export type Database = {
         Row: {
           account_id: string | null
           account_name: string | null
+          ad_id: string | null
+          ad_name: string | null
+          add_to_cart: number | null
+          adset_budget_remaining: number | null
           adset_daily_budget: number | null
           adset_end_date: string | null
           adset_lifetime_budget: number | null
@@ -511,31 +470,48 @@ export type Database = {
           adset_start_date: string | null
           budget_remaining: number | null
           campaign_end_date: string | null
+          campaign_id: string | null
           campaign_lifetime_budget: number | null
           campaign_name: string | null
           campaign_start_date: string | null
           clicks: number | null
+          conversion_rate_ranking: string | null
           conversions: number | null
           cpc: number | null
           cpm: number | null
           created_at: string
           ctr_all: number | null
           daily_budget: number | null
+          engagement_rate_ranking: string | null
           fecha: string | null
           frequency: number | null
           id: number
           impressions: number | null
+          initiate_checkout: number | null
           interactions: number | null
+          lead_value: number | null
           link_clicks: number | null
           objective: string | null
+          optimization_goal: string | null
           plataforma: string | null
+          purchase_roas: number | null
+          purchase_value: number | null
+          purchases: number | null
+          quality_ranking: string | null
           reach: number | null
           thruplay_actions: number | null
           total_cost: number | null
+          unique_clicks: number | null
+          unique_ctr: number | null
+          website_purchase_roas: number | null
         }
         Insert: {
           account_id?: string | null
           account_name?: string | null
+          ad_id?: string | null
+          ad_name?: string | null
+          add_to_cart?: number | null
+          adset_budget_remaining?: number | null
           adset_daily_budget?: number | null
           adset_end_date?: string | null
           adset_lifetime_budget?: number | null
@@ -543,31 +519,48 @@ export type Database = {
           adset_start_date?: string | null
           budget_remaining?: number | null
           campaign_end_date?: string | null
+          campaign_id?: string | null
           campaign_lifetime_budget?: number | null
           campaign_name?: string | null
           campaign_start_date?: string | null
           clicks?: number | null
+          conversion_rate_ranking?: string | null
           conversions?: number | null
           cpc?: number | null
           cpm?: number | null
           created_at?: string
           ctr_all?: number | null
           daily_budget?: number | null
+          engagement_rate_ranking?: string | null
           fecha?: string | null
           frequency?: number | null
           id?: number
           impressions?: number | null
+          initiate_checkout?: number | null
           interactions?: number | null
+          lead_value?: number | null
           link_clicks?: number | null
           objective?: string | null
+          optimization_goal?: string | null
           plataforma?: string | null
+          purchase_roas?: number | null
+          purchase_value?: number | null
+          purchases?: number | null
+          quality_ranking?: string | null
           reach?: number | null
           thruplay_actions?: number | null
           total_cost?: number | null
+          unique_clicks?: number | null
+          unique_ctr?: number | null
+          website_purchase_roas?: number | null
         }
         Update: {
           account_id?: string | null
           account_name?: string | null
+          ad_id?: string | null
+          ad_name?: string | null
+          add_to_cart?: number | null
+          adset_budget_remaining?: number | null
           adset_daily_budget?: number | null
           adset_end_date?: string | null
           adset_lifetime_budget?: number | null
@@ -575,27 +568,103 @@ export type Database = {
           adset_start_date?: string | null
           budget_remaining?: number | null
           campaign_end_date?: string | null
+          campaign_id?: string | null
           campaign_lifetime_budget?: number | null
           campaign_name?: string | null
           campaign_start_date?: string | null
           clicks?: number | null
+          conversion_rate_ranking?: string | null
           conversions?: number | null
           cpc?: number | null
           cpm?: number | null
           created_at?: string
           ctr_all?: number | null
           daily_budget?: number | null
+          engagement_rate_ranking?: string | null
           fecha?: string | null
           frequency?: number | null
           id?: number
           impressions?: number | null
+          initiate_checkout?: number | null
           interactions?: number | null
+          lead_value?: number | null
           link_clicks?: number | null
           objective?: string | null
+          optimization_goal?: string | null
           plataforma?: string | null
+          purchase_roas?: number | null
+          purchase_value?: number | null
+          purchases?: number | null
+          quality_ranking?: string | null
           reach?: number | null
           thruplay_actions?: number | null
           total_cost?: number | null
+          unique_clicks?: number | null
+          unique_ctr?: number | null
+          website_purchase_roas?: number | null
+        }
+        Relationships: []
+      }
+      notification_channels: {
+        Row: {
+          channel_type: string
+          config: Json
+          created_at: string
+          enabled: boolean
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_type: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_type?: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          alert_type: string
+          campaign_name: string
+          created_at: string
+          id: string
+          message: string
+          read_at: string | null
+          severity: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          campaign_name: string
+          created_at?: string
+          id?: string
+          message: string
+          read_at?: string | null
+          severity: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          campaign_name?: string
+          created_at?: string
+          id?: string
+          message?: string
+          read_at?: string | null
+          severity?: string
+          user_id?: string
         }
         Relationships: []
       }

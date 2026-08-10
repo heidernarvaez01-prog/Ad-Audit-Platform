@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAlertThresholds } from '@/hooks/useAlertThresholds';
 import { fetchCampaignData, getCampaignCost, clearCampaignDataCache } from '@/lib/api';
 import { buildAuditRows } from '@/lib/audit-helpers';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ export default function AuditPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [viewMode, setViewMode] = useState<'campaigns' | 'adsets'>('campaigns');
   const [hasLoaded, setHasLoaded] = useState(false);
+  const { thresholds, enabledTypes } = useAlertThresholds();
 
   // Load the client this audit belongs to — audits are isolated per client
   useEffect(() => {
@@ -97,8 +99,8 @@ export default function AuditPage() {
 
   // Build audit rows with metrics + alerts
   const auditRows: AuditRowData[] = useMemo(
-    () => buildAuditRows(records, apiData),
-    [records, apiData],
+    () => buildAuditRows(records, apiData, thresholds, enabledTypes),
+    [records, apiData, thresholds, enabledTypes],
   );
 
   // Dynamic platform tabs from user's audit records

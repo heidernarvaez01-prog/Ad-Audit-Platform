@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAlertThresholds } from '@/hooks/useAlertThresholds';
 import { fetchCampaignData } from '@/lib/api';
 import { buildAuditRows } from '@/lib/audit-helpers';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ export default function ClientsPage() {
   const [deleteTarget, setDeleteTarget] = useState<ClientRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
+  const { thresholds, enabledTypes } = useAlertThresholds();
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -95,7 +97,7 @@ export default function ClientsPage() {
 
   // Per-client summary, computed with the same pacing logic as the audit matrix
   const summaries = useMemo(() => {
-    const rows: AuditRowData[] = buildAuditRows(records, apiData);
+    const rows: AuditRowData[] = buildAuditRows(records, apiData, thresholds, enabledTypes);
     const map = new Map<string, ClientSummary>();
     for (const c of clients) {
       map.set(c.id, { campaigns: 0, budget: 0, spent: 0, ok: 0, under: 0, over: 0 });
@@ -111,7 +113,7 @@ export default function ClientsPage() {
       else s.over += 1;
     }
     return map;
-  }, [clients, records, apiData]);
+  }, [clients, records, apiData, thresholds, enabledTypes]);
 
   const totals = useMemo(() => {
     let budget = 0, spent = 0, campaigns = 0, over = 0, under = 0, ok = 0;

@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchCampaignData, type ApiCampaignRow } from '@/lib/api';
 import { calculateAuditMetrics, getTipoCalendarioLabel } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
+import { useAlertThresholds } from '@/hooks/useAlertThresholds';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +33,7 @@ export default function AuditDetailPage() {
   const [loading, setLoading] = useState(true);
   const [insight, setInsight] = useState<InsightData | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(false);
+  const { thresholds, enabledTypes } = useAlertThresholds();
 
   useEffect(() => {
     (async () => {
@@ -81,7 +83,7 @@ export default function AuditDetailPage() {
       record.tipo_calendario,
       cost,
     );
-    const alerts = generateAlerts(metrics, campaignApiData, apiData);
+    const alerts = generateAlerts(metrics, campaignApiData, thresholds, enabledTypes);
 
     const clicks = campaignApiData.reduce((s, r) => s + r.metrics.clicks, 0);
     const impressions = campaignApiData.reduce((s, r) => s + r.metrics.impressions, 0);
@@ -91,7 +93,7 @@ export default function AuditDetailPage() {
     const cpm = impressions > 0 ? (totalCost / impressions) * 1000 : 0;
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
     return { metrics, alerts, campaignApiData, perf: { clicks, impressions, reach, cpc, cpm, ctr } };
-  }, [record, apiData]);
+  }, [record, apiData, thresholds, enabledTypes]);
 
   const generateInsight = async () => {
     if (!record || !metrics || !perf) return;

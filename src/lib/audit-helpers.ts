@@ -1,5 +1,6 @@
 import { calculateAuditMetrics } from './audit-calculations';
-import { generateAlerts } from './audit-alerts';
+import { generateAlerts, DEFAULT_ALERT_THRESHOLDS } from './audit-alerts';
+import type { AlertThresholds, AlertType } from './audit-alerts';
 import type { ApiCampaignRow } from './api';
 import type { AuditRowData } from '@/components/AuditTable';
 
@@ -14,7 +15,12 @@ export function getConsolidationCutoff(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export function buildAuditRows(records: any[], apiData: ApiCampaignRow[]): AuditRowData[] {
+export function buildAuditRows(
+  records: any[],
+  apiData: ApiCampaignRow[],
+  thresholds: AlertThresholds = DEFAULT_ALERT_THRESHOLDS,
+  enabledTypes?: ReadonlySet<AlertType>,
+): AuditRowData[] {
   const cutoff = getConsolidationCutoff();
 
   return records.map(rec => {
@@ -32,7 +38,7 @@ export function buildAuditRows(records: any[], apiData: ApiCampaignRow[]): Audit
       rec.tipo_calendario,
       cost,
     );
-    const alerts = generateAlerts(metrics, campaignApiData, apiData);
+    const alerts = generateAlerts(metrics, campaignApiData, thresholds, enabledTypes);
     return {
       ...rec,
       presupuesto_total: Number(rec.presupuesto_total),

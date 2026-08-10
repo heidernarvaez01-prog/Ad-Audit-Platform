@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/email.ts";
+import { chatCompletion } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -314,46 +315,34 @@ async function generateForClient(
   let aiSummary = "";
   const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
   if (OPENAI_KEY && campaigns.length > 0) {
-    try {
-      const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_KEY}`,
-          "Content-Type": "application/json",
+    const result = await chatCompletion({
+      model: "gpt-4o",
+      maxTokens: 900,
+      temperature: 0.6,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a senior paid media strategist writing the weekly executive summary a client actually wants to read. The client can already see raw numbers in Meta/Google Ads — your value is INTERPRETATION, not repetition. " +
+            "Explain WHY performance moved week over week, what it means for the client's goals, and where things are heading if the trend holds (a concrete projection). Be confident and specific, cite a few key numbers only to support the story. " +
+            "Structure as short labeled paragraphs:\n" +
+            "1) Headline — the single most important takeaway of the week.\n" +
+            "2) What's working — and the reason behind it.\n" +
+            "3) What needs attention — the issue, the likely cause, and the risk if ignored.\n" +
+            "4) Projection — where spend/results are trending and what to expect next week if nothing changes.\n" +
+            "5) Recommendations — 2-3 prioritized, specific actions (what to do, on which campaign, expected effect).\n" +
+            "Professional, plain-spoken, client-friendly. No fluff, no generic advice. ~200-260 words. Plain text, no markdown symbols.",
         },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          max_tokens: 900,
-          temperature: 0.6,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a senior paid media strategist writing the weekly executive summary a client actually wants to read. The client can already see raw numbers in Meta/Google Ads — your value is INTERPRETATION, not repetition. " +
-                "Explain WHY performance moved week over week, what it means for the client's goals, and where things are heading if the trend holds (a concrete projection). Be confident and specific, cite a few key numbers only to support the story. " +
-                "Structure as short labeled paragraphs:\n" +
-                "1) Headline — the single most important takeaway of the week.\n" +
-                "2) What's working — and the reason behind it.\n" +
-                "3) What needs attention — the issue, the likely cause, and the risk if ignored.\n" +
-                "4) Projection — where spend/results are trending and what to expect next week if nothing changes.\n" +
-                "5) Recommendations — 2-3 prioritized, specific actions (what to do, on which campaign, expected effect).\n" +
-                "Professional, plain-spoken, client-friendly. No fluff, no generic advice. ~200-260 words. Plain text, no markdown symbols.",
-            },
-            {
-              role: "user",
-              content: `Client: ${client.name}. Week ${start} to ${end}.\nPer-campaign data (week = this week, prev = previous week, budget/spendPct/timePct describe full-campaign pacing):\n${JSON.stringify(campaigns, null, 1)}`,
-            },
-          ],
-        }),
-      });
-      if (aiRes.ok) {
-        const data = await aiRes.json();
-        aiSummary = data?.choices?.[0]?.message?.content ?? "";
-      } else {
-        console.error("OpenAI summary error", aiRes.status, await aiRes.text());
-      }
-    } catch (e) {
-      console.error("AI summary failed", e);
+        {
+          role: "user",
+          content: `Client: ${client.name}. Week ${start} to ${end}.\nPer-campaign data (week = this week, prev = previous week, budget/spendPct/timePct describe full-campaign pacing):\n${JSON.stringify(campaigns, null, 1)}`,
+        },
+      ],
+    });
+    if (result.ok) {
+      aiSummary = result.content;
+    } else {
+      console.error("AI summary failed", result.error);
     }
   }
 

@@ -22,7 +22,7 @@ interface Props {
   subtitle: string;
   basePath: string;          // e.g. '/brief' or '/clusters'
   icon: LucideIcon;
-  mode: 'brief' | 'clusters' | 'weekly' | 'reporting'; // which per-client badge to show
+  mode: 'brief' | 'clusters' | 'weekly'; // which per-client badge to show
 }
 
 /**
@@ -83,12 +83,6 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
       for (const r of reports || []) {
         if (!map[r.client_id]) map[r.client_id] = `Last: ${r.week_end}`;
       }
-    } else if (mode === 'reporting') {
-      const { data: cs } = await supabase.from('audit_clients').select('id, looker_report_url, looker_approved');
-      for (const c of cs || []) {
-        if (c.looker_approved && c.looker_report_url) map[c.id] = 'Approved';
-        else if (c.looker_report_url) map[c.id] = 'Pending approval';
-      }
     }
     setBadges(map);
     setLoading(false);
@@ -140,11 +134,6 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
       gradient: 'from-sky-600 via-cyan-500 to-emerald-500',
       accent: 'from-sky-500 to-blue-700',
       badge: 'bg-sky-100 text-sky-800 border-sky-200',
-    },
-    reporting: {
-      gradient: 'from-emerald-600 via-teal-500 to-cyan-500',
-      accent: 'from-emerald-500 to-teal-700',
-      badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     },
   };
   const theme = modeTheme[mode];

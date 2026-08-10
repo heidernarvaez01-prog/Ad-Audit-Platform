@@ -1,5 +1,5 @@
 import {
-  ClipboardCheck, FileText, Network, CalendarClock, PieChart, Bell, Sparkles,
+  ClipboardCheck, FileText, Network, CalendarClock, Bell, Sparkles,
   Users, Shield, Gauge, BarChart3, BookOpen,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -37,22 +37,19 @@ export default function HowItWorksPage() {
         <Step n="02" icon={CalendarClock} title="Weekly Performance Report"
           gradient="from-sky-500 to-blue-700"
           desc="A clean, client-ready summary of the week's results per campaign, with week-over-week changes and an AI summary. Sent automatically every Monday." />
-        <Step n="03" icon={PieChart} title="Looker Reporting"
-          gradient="from-emerald-500 to-teal-700"
-          desc="Embed each client's full Looker Studio report. Edit freely in Looker; only the version you mark as approved is shown to the client." />
-        <Step n="04" icon={Network} title="Projection Clusters"
+        <Step n="03" icon={Network} title="Projection Clusters"
           gradient="from-fuchsia-500 to-purple-700"
           desc="One click generates a complete brand strategy (La Fórmula): insights, objectives, audiences, creative concepts, media plan and more — built from the brief and boosted with live data." />
-        <Step n="05" icon={Bell} title="Alerts"
+        <Step n="04" icon={Bell} title="Alerts"
           gradient="from-rose-500 to-red-700"
-          desc="Six high-signal rules watch your campaigns: overspend, no delivery, ending soon, cost spikes, early budget depletion and creative fatigue. No noise — only what matters." />
-        <Step n="06" icon={FileText} title="Brand Brief"
+          desc="Six high-signal rules watch your campaigns: overspend, no delivery, ending soon, cost spikes, early budget depletion and creative fatigue — each with an editable threshold. Delivered by email, Slack, webhook or the in-app bell." />
+        <Step n="05" icon={FileText} title="Brand Brief"
           gradient="from-amber-500 to-orange-600"
           desc="The strategic foundation of each client: who they are, what they sell, their voice and differentiators. The richer the brief, the sharper the AI strategies." />
-        <Step n="07" icon={Sparkles} title="AI Analysis"
+        <Step n="06" icon={Sparkles} title="Ask AI"
           gradient="from-cyan-500 to-sky-700"
-          desc="The sparkle bubble at the bottom-right opens a chat. Pick a client and campaign, then ask anything about performance and get instant, data-grounded answers." />
-        <Step n="08" icon={Shield} title="Admin"
+          desc="A dedicated chat to ask anything about your campaigns. Scope it to a client and campaign for a sharp answer, or leave it open to compare across accounts." />
+        <Step n="07" icon={Shield} title="Admin"
           gradient="from-slate-700 to-indigo-700"
           desc="Invite your team, give each member access only to their assigned accounts, manage admins and send password-reset links. The owner keeps full control." />
       </div>

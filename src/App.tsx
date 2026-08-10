@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Menu, FileText, Network, CalendarClock, PieChart } from "lucide-react";
+import { Menu, FileText, Network, CalendarClock } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,23 +9,19 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import AppSidebar from "@/components/AppSidebar";
-import AIChatWidget from "@/components/AIChatWidget";
+import NotificationCenter from "@/components/NotificationCenter";
 import ClientPicker from "@/components/ClientPicker";
 import WeeklyReportPage from "@/pages/WeeklyReportPage";
-import ReportingPage from "@/pages/ReportingPage";
 import ClientsPage from "@/pages/ClientsPage";
 import AuditPage from "@/pages/AuditPage";
 import AuditDetailPage from "@/pages/AuditDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import BriefPage from "@/pages/BriefPage";
 import ClusterPage from "@/pages/ClusterPage";
-import MyTasksPage from "@/pages/MyTasksPage";
-import MetricsAIPage from "@/pages/MetricsAIPage";
+import AskAIPage from "@/pages/AskAIPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AdminPage from "@/pages/AdminPage";
 import HowItWorksPage from "@/pages/HowItWorksPage";
-import HeroDemo from "@/pages/HeroDemo";
-import FloatingIconsDemo from "@/pages/FloatingIconsDemo";
 import NotFound from "@/pages/NotFound";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 import logo from "@/assets/apache-studio-logo.png.asset.json";
@@ -61,7 +57,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto min-w-0">{children}</main>
       </div>
-      <AIChatWidget />
+      <NotificationCenter />
     </div>
   );
 }
@@ -84,8 +80,6 @@ function AppLayout() {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/hero-demo" element={<HeroDemo />} />
-        <Route path="/floating-icons-demo" element={<FloatingIconsDemo />} />
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
         <Route path="/" element={<RequireAuth><AppShell><ClientsPage /></AppShell></RequireAuth>} />
         <Route path="/client/:clientId" element={<RequireAuth><AppShell><AuditPage /></AppShell></RequireAuth>} />
@@ -120,18 +114,7 @@ function AppLayout() {
           />
         </AppShell></RequireAuth>} />
         <Route path="/weekly-report/:clientId" element={<RequireAuth><AppShell><WeeklyReportPage /></AppShell></RequireAuth>} />
-        <Route path="/reporting" element={<RequireAuth><AppShell>
-          <ClientPicker
-            title="Looker Reporting"
-            subtitle="The full visual report for each client, in one place. Only the version you approve is shown here."
-            basePath="/reporting"
-            icon={PieChart}
-            mode="reporting"
-          />
-        </AppShell></RequireAuth>} />
-        <Route path="/reporting/:clientId" element={<RequireAuth><AppShell><ReportingPage /></AppShell></RequireAuth>} />
-        <Route path="/my-tasks" element={<RequireAuth><AppShell><MyTasksPage /></AppShell></RequireAuth>} />
-        <Route path="/metrics-ai" element={<RequireAuth><AppShell><MetricsAIPage /></AppShell></RequireAuth>} />
+        <Route path="/ask" element={<RequireAuth><AppShell><AskAIPage /></AppShell></RequireAuth>} />
         <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AppShell><AdminPage /></AppShell></RequireAuth>} />
         <Route path="/how-it-works" element={<RequireAuth><AppShell><HowItWorksPage /></AppShell></RequireAuth>} />

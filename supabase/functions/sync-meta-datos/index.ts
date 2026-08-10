@@ -5,12 +5,65 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const WINDSOR_URL =
-  "https://connectors.windsor.ai/facebook?api_key=3b97127322bd6bc821bf2cbe12046b84c3a1&date_preset=last_30d&fields=account_id,date,account_name,campaign,adset_name,campaign_objective,spend,clicks,impressions,reach,ctr,link_clicks,frequency,cpm,actions_post_engagement,video_thruplay_watched_actions_video_view,conversions&select_accounts=204109401";
+// Field list verified against https://windsor.ai/data-field/all/ (facebook
+// connector) on 2026-08-10 — every field below is confirmed available for
+// the "facebook" datasource. Grouped by what they unlock:
+const WINDSOR_FIELDS = [
+  // Identity — was name-only before; IDs make the campaign_name join robust
+  // and unlock ad/creative-level drill-down (fixes CLAUDE.md P2 "match robusto").
+  "account_id", "date", "account_name", "campaign", "campaign_id",
+  "adset_name", "adset_id", "ad_id", "ad_name",
+  "campaign_objective", "adsset_optimization_goal",
+  // Core delivery + pacing (unchanged)
+  "spend", "clicks", "impressions", "reach", "ctr", "link_clicks",
+  "frequency", "cpm", "actions_post_engagement",
+  "video_thruplay_watched_actions_video_view",
+  // Budget signal — always null before because these fields were never
+  // requested. Lets the app compare "approved" vs "what Meta actually has
+  // programmed" instead of only tracking spend.
+  "campaign_daily_budget", "campaign_lifetime_budget", "campaign_budget_remaining",
+  "adset_daily_budget", "adset_lifetime_budget", "adset_budget_remaining",
+  // Real campaign/adset schedule (UNIX timestamps) — replaces the
+  // always-null campaign_start_date/end_date columns.
+  "campaign_start_time", "campaign_stop_time", "adset_start_time", "adset_end_time",
+  // Conversion depth — generic "conversions" doesn't say what kind. These
+  // give purchase/lead/checkout counts + values, and real ROAS.
+  "conversions", "actions_omni_purchase", "actions_omni_add_to_cart",
+  "actions_omni_initiated_checkout", "action_values_omni_purchase", "action_values_lead",
+  "purchase_roas_omni_purchase", "website_purchase_roas_offsite_conversion_fb_pixel_purchase",
+  // Ad quality diagnostics — Meta's own relevance signals, a much better
+  // creative-fatigue indicator than the frequency+CTR heuristic alone.
+  "quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking",
+  "unique_clicks", "unique_ctr",
+].join(",");
+const WINDSOR_ACCOUNTS = "204109401";
+
+function buildWindsorUrl(apiKey: string): string {
+  const params = new URLSearchParams({
+    api_key: apiKey,
+    date_preset: "last_30d",
+    fields: WINDSOR_FIELDS,
+    select_accounts: WINDSOR_ACCOUNTS,
+  });
+  return `https://connectors.windsor.ai/facebook?${params.toString()}`;
+}
 
 function toDate(v: unknown): string | null {
   if (!v || typeof v !== "string") return null;
   const d = new Date(v);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+// campaign_start_time / campaign_stop_time / adset_start_time / adset_end_time
+// come back as UTC UNIX timestamps (seconds) per Windsor's field docs, but
+// some connectors return them pre-formatted as date strings — handle both.
+function toUnixDate(v: unknown): string | null {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "string" && isNaN(Number(v))) return toDate(v);
+  const seconds = Number(v);
+  if (isNaN(seconds)) return null;
+  const d = new Date(seconds * 1000);
   if (isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
 }
@@ -35,12 +88,17 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    const windsorApiKey = Deno.env.get("WINDSOR_API_KEY");
+    if (!windsorApiKey) {
+      throw new Error("WINDSOR_API_KEY is not configured (set it with `supabase secrets set`)");
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const res = await fetch(WINDSOR_URL);
+    const res = await fetch(buildWindsorUrl(windsorApiKey));
     if (!res.ok) throw new Error(`Windsor fetch failed: ${res.status}`);
     const json = await res.json();
     const rows: any[] = json?.data ?? [];
@@ -53,19 +111,25 @@ Deno.serve(async (req) => {
         account_id: toStr(r["account_id"]),
         account_name: toStr(r["account_name"]),
         campaign_name: toStr(r["campaign"]),
+        campaign_id: toStr(r["campaign_id"]),
         objective: toStr(r["campaign_objective"]),
         adset_name: toStr(r["adset_name"]),
+        adset_id: toStr(r["adset_id"]),
+        ad_id: toStr(r["ad_id"]),
+        ad_name: toStr(r["ad_name"]),
+        optimization_goal: toStr(r["adsset_optimization_goal"]),
         plataforma: "META",
         fecha: toDate(r["date"]),
-        campaign_start_date: null,
-        campaign_end_date: null,
-        adset_start_date: null,
-        adset_end_date: null,
-        campaign_lifetime_budget: null,
-        daily_budget: null,
-        budget_remaining: null,
-        adset_lifetime_budget: null,
-        adset_daily_budget: null,
+        campaign_start_date: toUnixDate(r["campaign_start_time"]),
+        campaign_end_date: toUnixDate(r["campaign_stop_time"]),
+        adset_start_date: toUnixDate(r["adset_start_time"]),
+        adset_end_date: toUnixDate(r["adset_end_time"]),
+        campaign_lifetime_budget: toNum(r["campaign_lifetime_budget"]),
+        daily_budget: toNum(r["campaign_daily_budget"]),
+        budget_remaining: toNum(r["campaign_budget_remaining"]),
+        adset_lifetime_budget: toNum(r["adset_lifetime_budget"]),
+        adset_daily_budget: toNum(r["adset_daily_budget"]),
+        adset_budget_remaining: toNum(r["adset_budget_remaining"]),
         total_cost: spend,
         cpc,
         cpm: toNum(r["cpm"]),
@@ -78,6 +142,18 @@ Deno.serve(async (req) => {
         link_clicks: toInt(r["link_clicks"]),
         interactions: toInt(r["actions_post_engagement"]),
         conversions: toNum(r["conversions"]),
+        purchases: toNum(r["actions_omni_purchase"]),
+        add_to_cart: toNum(r["actions_omni_add_to_cart"]),
+        initiate_checkout: toNum(r["actions_omni_initiated_checkout"]),
+        purchase_value: toNum(r["action_values_omni_purchase"]),
+        lead_value: toNum(r["action_values_lead"]),
+        purchase_roas: toNum(r["purchase_roas_omni_purchase"]),
+        website_purchase_roas: toNum(r["website_purchase_roas_offsite_conversion_fb_pixel_purchase"]),
+        quality_ranking: toStr(r["quality_ranking"]),
+        engagement_rate_ranking: toStr(r["engagement_rate_ranking"]),
+        conversion_rate_ranking: toStr(r["conversion_rate_ranking"]),
+        unique_clicks: toInt(r["unique_clicks"]),
+        unique_ctr: toNum(r["unique_ctr"]),
       };
     });
 

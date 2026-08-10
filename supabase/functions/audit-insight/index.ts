@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { chatCompletion } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,9 +11,6 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
-
     const { campaignData } = await req.json();
 
     // Fetch brand brief context for the account, if available
@@ -86,35 +84,25 @@ At the end, on a separate line, write ONLY one of these tags: [RIESGO_CRITICO] o
 ${briefBlock}
 Generate the 3-line diagnosis + risk tag.`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        max_tokens: 500,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
+    const result = await chatCompletion({
+      model: "gpt-4o-mini",
+      maxTokens: 500,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
+    if (!result.ok) {
+      if (result.rateLimited) {
         return new Response(JSON.stringify({ error: "Límite de solicitudes excedido, intenta de nuevo en unos segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("OpenAI API error:", response.status, t);
-      throw new Error("OpenAI API error");
+      throw new Error(result.error || "OpenAI API error");
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    const content = result.content;
 
     let riskLevel: "critical" | "moderate" | "none" = "none";
     if (content.includes("[RIESGO_CRITICO]")) riskLevel = "critical";

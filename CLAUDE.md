@@ -48,7 +48,7 @@ publicitario**, no un dashboard de reporting. Su pregunta central es:
                 ▼                                            ▼
 ┌──────────────────────────── Lovable Cloud (Supabase) ────────────────────────────────────────┐
 │  Postgres + RLS      Auth (email/password, invite, recovery)     Storage (sin buckets)        │
-│  14 Edge Functions (Deno)     pg_cron + pg_net     pgmq (cola de correo)     Vault            │
+│  12 Edge Functions (Deno)     pg_cron + pg_net     pgmq (cola de correo)     Vault            │
 └───────────────┬──────────────────────────────┬───────────────────────────┬───────────────────┘
                 │                              │                           │
                 ▼                              ▼                           ▼
@@ -69,7 +69,7 @@ publicitario**, no un dashboard de reporting. Su pregunta central es:
 ```text
 src/
   App.tsx                 Router + AppShell + RequireAuth
-  pages/                  Una página por ruta (18 archivos)
+  pages/                  Una página por ruta (14 archivos)
   components/             UI de dominio (AuditTable, AuditForm, PacingBar, MetricCard, …)
     ui/                   shadcn/ui, sin lógica de negocio
     backgrounds/ hero/ icons/   Elementos visuales
@@ -78,7 +78,7 @@ src/
   integrations/supabase/  client.ts + types.ts (AUTO-GENERADOS)
   index.css               Tokens semánticos de color HSL + animaciones
 supabase/
-  functions/              14 Edge Functions Deno
+  functions/              12 Edge Functions Deno
     _shared/              email.ts (Resend), plantillas transaccionales
   config.toml             verify_jwt por función (AUTO-GENERADO, no tocar project-level)
 ```
@@ -88,23 +88,26 @@ supabase/
 ## 3. Mapa de la aplicación (rutas)
 
 Todas las rutas salvo las marcadas como públicas están envueltas en `RequireAuth` + `AppShell`
-(sidebar colapsable en desktop, drawer en móvil, widget de chat IA flotante).
+(sidebar colapsable en desktop, drawer en móvil).
+
+**Auditoría de contenido (2026-08-10)**: se eliminaron `/reporting` (Looker Studio embed — pura
+fricción externa, duplicaba el resumen IA de Weekly Report), `/my-tasks` (ClickUp, no relacionado con
+auditoría de ads), `/hero-demo` y `/floating-icons-demo` (playgrounds públicos sin auth). `/metrics-ai`
+y el widget flotante `AIChatWidget` se fusionaron en `/ask` (`AskAIPage`) — antes eran dos UIs para la
+misma función (`metrics-ai-analysis`), y `/metrics-ai` ni siquiera estaba en el menú.
 
 | Ruta | Página | Qué hace |
 |---|---|---|
 | `/auth` | `AuthPage` | **Pública.** Login/signup y pantalla de "elige tu contraseña" para invitaciones y recuperación. |
 | `/unsubscribe` | `UnsubscribePage` | **Pública.** Baja de correos por token. |
-| `/hero-demo`, `/floating-icons-demo` | demos | **Públicas.** Playgrounds visuales (candidatas a borrar). |
 | `/` | `ClientsPage` | Home. Grid de clientes con KPIs globales, `PageHero` con gradiente. |
 | `/client/:clientId` | `AuditPage` | **Núcleo.** "Auditoría Meta": tabla de auditorías con pacing, métricas recalculadas, alertas y formulario de alta/edición. |
 | `/audit/:id` | `AuditDetailPage` | Detalle de una auditoría: barras de pacing, métricas, gráficos y diagnóstico IA. |
 | `/brief` → `/brief/:clientId` | `ClientPicker` → `BriefPage` | Brand brief editable (insumo para la IA). |
 | `/clusters` → `/clusters/:clientId` | `ClientPicker` → `ClusterPage` | Estrategias de marketing generadas por IA a partir del brief + resultados reales. |
 | `/weekly-report` → `/weekly-report/:clientId` | `ClientPicker` → `WeeklyReportPage` | Reporte semanal HTML, previsualizable y enviable por correo. |
-| `/reporting` → `/reporting/:clientId` | `ClientPicker` → `ReportingPage` | Embed del reporte de Looker Studio aprobado. |
-| `/my-tasks` | `MyTasksPage` | Tareas desde ClickUp. |
-| `/metrics-ai` | `MetricsAIPage` | Chat de análisis de métricas con IA. |
-| `/alerts` | `AlertsPage` | Alertas activas + configuración de destinatarios y umbrales. |
+| `/ask` | `AskAIPage` | Chat de análisis de métricas con IA, con scope opcional de cliente/campaña. |
+| `/alerts` | `AlertsPage` | Alertas activas + umbrales editables por regla + canales de entrega. |
 | `/admin` | `AdminPage` | Invitar usuarios, roles, asignación de cuentas, revocar/eliminar. |
 | `/how-it-works` | `HowItWorksPage` | Documentación in-app. |
 | `*` | `NotFound` | 404 (ojo: se renderiza **dentro** del AppShell sin `RequireAuth`). |
@@ -155,8 +158,11 @@ presupuesto de campaña/adset hoy **siempre null** (Windsor no los envía en el 
 
 | Tabla | Propósito |
 |---|---|
-| `alert_settings` | Por usuario: `enabled`, `email_recipients[]`, `pacing_threshold_pct`, `only_critical`, `notify_frequency`, `last_sent_at`. |
-| `alert_events` | Deduplicación: `campaign_name` + `alert_type` + `last_triggered_at`. |
+| `alert_settings` | Por usuario: `enabled`, `only_critical`, `notify_frequency`, `last_sent_at`. (`email_recipients`/`pacing_threshold_pct` quedan como columnas legacy sin uso — superadas por `notification_channels`/`alert_rules`.) |
+| `alert_rules` | Umbral editable + enable/disable por regla y por usuario (`rule_type`, `enabled`, `threshold`, `secondary_threshold`). Reemplaza los umbrales hardcodeados que antes vivían en `src/lib/audit-alerts.ts`. |
+| `alert_events` | Deduplicación/cooldown: `campaign_name` + `alert_type` + `last_triggered_at`, usado por `alert-dispatch` (antes existía pero no se leía/escribía). |
+| `notification_channels` | Canales de entrega por usuario: `channel_type` (`email` \| `slack_webhook` \| `generic_webhook` \| `in_app`; `whatsapp` planeado), `config` jsonb, `enabled`. |
+| `notifications` | Feed del centro de notificaciones in-app (campana en `AppShell`): `severity`, `campaign_name`, `alert_type`, `message`, `read_at`. |
 
 ### Infraestructura de correo
 
@@ -256,8 +262,7 @@ columnas (`42703`) para tolerar migraciones pendientes.
 | `metrics-ai-analysis` | (default) | Chat de análisis de métricas (`gpt-4o-mini`). | OpenAI |
 | `projection-cluster` | true | Genera la estrategia de marketing completa (`gpt-4o`). | OpenAI |
 | `weekly-report` | false | Arma y envía el reporte semanal HTML (`gpt-4o` para el resumen). | OpenAI, Resend |
-| `send-alert-email` | (default) | Envía las alertas activas por correo. | Resend |
-| `clickup-tasks` | true | Lee tareas de ClickUp. | `CLICKUP_API_TOKEN` |
+| `alert-dispatch` | false (auth manual) | Calcula y envía las alertas activas — manual ("Send now") o vía cron diario. Dedup/cooldown con `alert_events`, entrega multi-canal vía `notify.ts`, resumen narrativo con IA. Reemplaza a `send-alert-email`. | `_shared/alert-engine.ts`, `_shared/notify.ts`, `_shared/openai.ts` |
 | `send-transactional-email` | true | Encola un correo transaccional. | pgmq |
 | `process-email-queue` | true | Consume la cola pgmq y envía por Resend, con reintentos y DLQ. | Resend |
 | `preview-transactional-email` | false | Previsualiza plantillas React Email. | — |
@@ -268,20 +273,34 @@ columnas (`42703`) para tolerar migraciones pendientes.
 de los secretos, añade `List-Unsubscribe` y soporta `text`, `tags` y `headers`. **Ninguna función
 debe hardcodear el remitente ni llamar a Resend directamente.**
 
+`supabase/functions/_shared/openai.ts` centraliza el fetch a la API de Chat Completions de OpenAI
+(usado por `audit-insight`, `metrics-ai-analysis`, `weekly-report` y `alert-dispatch`;
+`projection-cluster` sigue con su propio fetch porque usa `stream: true`, un caso distinto).
+
+`supabase/functions/_shared/alert-engine.ts` es la única implementación de las 6 reglas de alerta
+(antes vivían por separado en `src/lib/audit-alerts.ts` y estaban reimplementadas en `weekly-report`).
+El frontend importa este mismo archivo (`src/lib/audit-alerts.ts` es un re-export); `_shared/audit-calculations.ts`
+y `_shared/business-days.ts` son copias Deno de `src/lib/audit-calculations.ts`/`business-days.ts`
+(no se pudieron unificar en un solo archivo porque Deno requiere el prefijo `npm:` para `date-fns`,
+incompatible con el import de Vite — mantener ambas en sync si cambia la fórmula de pacing).
+
 ### Cron jobs activos
 
 | Job | Schedule (UTC) | Estado |
 |---|---|---|
-| `sync-windsor-meta-daily-3am` | `0 3 * * *` | Activo — ingesta de Windsor. |
-| `sync-meta-datos-daily` | `0 4 * * *` | **Duplicado** del anterior. Debe eliminarse. |
-| `weekly-report-monday-7am` | `0 7 * * 1` | Activo. |
-| `sync-sheet-hourly` | `0 * * * *` | **Huérfano** — la función `sync-sheet-data` ya no existe. Debe eliminarse. |
+| `sync-windsor-meta-daily-3am` | `0 3 * * *` | Activo — ingesta de Windsor. Token leído desde Vault (`project_anon_key`), ya no hardcodeado en la migración. |
+| `weekly-report-monday-7am` | `0 7 * * 1` | Activo. Ahora versionado en migración (antes solo existía en el Dashboard). |
+| `alert-dispatch-daily` | `0 8 * * *` | Activo — dispara `alert-dispatch`; cada usuario decide internamente si hoy le toca envío según `notify_frequency`. |
 | `process-email-queue` | cada 5 s | Se auto-programa al encolar y se auto-desprograma al vaciarse. |
+
+Los jobs `sync-meta-datos-daily` (duplicado) y `sync-sheet-hourly` (huérfano) fueron eliminados en
+`20260810120000_security_cleanup.sql`.
 
 ### Secretos configurados
 `OPENAI_API_KEY`, `RESEND_API_KEY` (gestionado por conector), `RESEND_FROM`, `RESEND_REPLY_TO`,
-`CLICKUP_API_TOKEN`, `LOVABLE_API_KEY`, y los `SUPABASE_*` del entorno.
-La API key de Windsor está **hardcodeada** en `sync-meta-datos/index.ts` (ver §10).
+`CLICKUP_API_TOKEN`, `LOVABLE_API_KEY`, `WINDSOR_API_KEY`, `CRON_SECRET`, y los `SUPABASE_*` del entorno.
+`WINDSOR_API_KEY` y el token usado por pg_cron ya no están hardcodeados en el código/migraciones — ver
+`20260810120000_security_cleanup.sql` y `20260810124500_alert_dispatch_cron.sql`.
 
 ---
 
@@ -418,9 +437,9 @@ account_assignments (user_id, account_id, account_name, platform)
 
 | # | Problema | Acción | Esfuerzo |
 |---|---|---|---|
-| 1 | La API key de Windsor está hardcodeada en `sync-meta-datos`. | Moverla al secreto `WINDSOR_API_KEY` y rotarla en Windsor. | S |
+| 1 | ~~La API key de Windsor está hardcodeada en `sync-meta-datos`.~~ **Resuelto** en `20260810120000_security_cleanup.sql` — ahora lee `WINDSOR_API_KEY` de los secretos. Sigue pendiente **rotar la key real en Windsor.ai**, ya que la anterior quedó expuesta en el historial de git del repo público. | — | — |
 | 2 | `DELETE` + `INSERT` sin transacción: un fallo deja `meta_datos` vacía. | Cambiar a `upsert` con clave natural única `(account_id, campaign_name, adset_name, fecha)` y no borrar nada. | M |
-| 3 | Cron `sync-sheet-hourly` huérfano y `sync-meta-datos-daily` duplicado. | `cron.unschedule` de ambos. | S |
+| 3 | ~~Cron `sync-sheet-hourly` huérfano y `sync-meta-datos-daily` duplicado.~~ **Resuelto** en `20260810120000_security_cleanup.sql`. | — | — |
 | 4 | `meta_datos` legible por cualquier usuario autenticado, sin filtrar por cuenta asignada. | Política RLS que cruce `account_id` con `account_assignments` (con bypass para `has_role(uid,'admin')`). | M |
 | 5 | Sin observabilidad de la ingesta. | Tabla `sync_runs` (fuente, inicio, fin, filas, estado, error) + alerta por correo si falla. | M |
 
@@ -480,11 +499,11 @@ Mejoras asociadas:
 | # | Punto |
 |---|---|
 | 13 | `tipo_calendario` es texto libre en `audit_records` mientras existe el enum `lab_days_type`. Unificar. |
-| 14 | Todo el cálculo de pacing vive en el cliente; `weekly-report` y `send-alert-email` reimplementan lógica parecida en Deno. Extraer a `supabase/functions/_shared/pacing.ts` y compartirla, o exponerla como RPC. |
-| 15 | Cobertura de tests casi nula (`src/test/example.test.ts`). `business-days.ts`, `audit-calculations.ts` y `audit-alerts.ts` son funciones puras: son el mejor punto de partida para vitest. |
+| 14 | ~~Todo el cálculo de pacing vive en el cliente...~~ **Resuelto**: las 6 reglas de alerta ahora viven en un único `supabase/functions/_shared/alert-engine.ts` importado tanto por el frontend como por `alert-dispatch`. `audit-calculations.ts`/`business-days.ts` siguen duplicados entre `src/lib/` y `supabase/functions/_shared/` (Deno necesita `npm:date-fns`, incompatible con el import de Vite) — mantener en sync si cambia la fórmula. |
+| 15 | Cobertura de tests casi nula (`src/test/example.test.ts`). `business-days.ts`, `audit-calculations.ts` y `alert-engine.ts` (antes `audit-alerts.ts`) son funciones puras: son el mejor punto de partida para vitest — `alert-engine.ts` ahora además acepta `thresholds` por parámetro, lo que lo hace trivial de testear con casos tabulares. |
 | 16 | La caché de 5 min de `api.ts` es un singleton de módulo; migrarla a react-query daría invalidación, reintentos y estados de carga gratis. |
 | 17 | `AlertsPage` (499 líneas), `weekly-report` (466) y `ClientsPage` (440) piden extracción de componentes/handlers. |
-| 18 | `data_sources`, `campaign_tracking` y `formula-template.ts` son restos del flujo Google Sheets. Confirmar y eliminar. |
+| 18 | ~~`data_sources`, `campaign_tracking`...~~ **Resuelto**: ambas tablas confirmadas sin uso y eliminadas (`20260810130000_drop_legacy_sheets_tables.sql`), junto con `src/lib/platforms.ts` y `src/lib/csv.ts` (huérfanos, cero imports). `formula-template.ts` **sí está en uso** (por `ClusterPage.tsx`, plantilla de "La Fórmula") — se queda. |
 | 19 | Mezcla de español e inglés en UI, nombres de columnas y copys. Fijar un idioma por capa (datos en español, UI en español) y ser consistente. |
 | 20 | El corte de consolidación (hoy − 2 días) está hardcodeado y es igual para todas las plataformas; debería ser configurable por fuente. |
 
