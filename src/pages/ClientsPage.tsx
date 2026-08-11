@@ -14,7 +14,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Loader2, FolderOpen, Briefcase, ArrowRight, Search, Users, Megaphone, Wallet, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, FolderOpen, Briefcase, ArrowRight, Search, Users, Megaphone, Wallet, TrendingUp, AlertTriangle, AlertCircle, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import PageHero from '@/components/PageHero';
 import type { ApiCampaignRow } from '@/lib/api';
 import type { AuditRowData } from '@/components/AuditTable';
@@ -61,6 +62,16 @@ export default function ClientsPage() {
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const { thresholds, enabledTypes } = useAlertThresholds();
+  const [aiInsightsToday, setAiInsightsToday] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    supabase.from('campaign_ai_insights').select('id', { count: 'exact', head: true })
+      .gte('created_at', startOfToday.toISOString())
+      .then(({ count }) => setAiInsightsToday(count ?? 0));
+  }, [user]);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -95,14 +106,19 @@ export default function ClientsPage() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Per-client summary, computed with the same pacing logic as the audit matrix
+  // Same pacing + alert computation as the audit matrix, shared by the
+  // per-client summary cards and the attention banner below.
+  const auditRows = useMemo(
+    () => buildAuditRows(records, apiData, thresholds, enabledTypes),
+    [records, apiData, thresholds, enabledTypes],
+  );
+
   const summaries = useMemo(() => {
-    const rows: AuditRowData[] = buildAuditRows(records, apiData, thresholds, enabledTypes);
     const map = new Map<string, ClientSummary>();
     for (const c of clients) {
       map.set(c.id, { campaigns: 0, budget: 0, spent: 0, ok: 0, under: 0, over: 0 });
     }
-    for (const row of rows) {
+    for (const row of auditRows) {
       const s = map.get((row as any).client_id);
       if (!s) continue;
       s.campaigns += 1;
@@ -113,7 +129,12 @@ export default function ClientsPage() {
       else s.over += 1;
     }
     return map;
-  }, [clients, records, apiData, thresholds, enabledTypes]);
+  }, [clients, auditRows]);
+
+  const criticalAlertCount = useMemo(
+    () => auditRows.reduce((n, row) => n + row.alerts.filter(a => a.severity === 'danger').length, 0),
+    [auditRows],
+  );
 
   const totals = useMemo(() => {
     let budget = 0, spent = 0, campaigns = 0, over = 0, under = 0, ok = 0;
@@ -196,6 +217,31 @@ export default function ClientsPage() {
           </Button>
         }
       />
+
+      {/* Attention banner — critical alerts + new AI findings, one click away */}
+      {(criticalAlertCount > 0 || aiInsightsToday > 0) && (
+        <Link
+          to="/alerts"
+          className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-destructive/30 bg-destructive/5
+            px-4 py-3 text-sm hover:bg-destructive/10 transition-colors group"
+        >
+          {criticalAlertCount > 0 && (
+            <span className="flex items-center gap-1.5 font-medium text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              {criticalAlertCount} critical alert{criticalAlertCount === 1 ? '' : 's'}
+            </span>
+          )}
+          {aiInsightsToday > 0 && (
+            <span className="flex items-center gap-1.5 font-medium text-foreground">
+              <Sparkles className="h-4 w-4 text-primary" />
+              {aiInsightsToday} new AI insight{aiInsightsToday === 1 ? '' : 's'} today
+            </span>
+          )}
+          <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+            View alerts <ArrowRight className="h-3 w-3" />
+          </span>
+        </Link>
+      )}
 
       {/* Global summary across all clients */}
       {clients.length > 0 && (

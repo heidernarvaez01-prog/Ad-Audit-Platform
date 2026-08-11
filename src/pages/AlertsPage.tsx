@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2, ChevronDown, SlidersHorizontal, Search, Sparkles } from 'lucide-react';
+import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2, SlidersHorizontal, Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PageHero from '@/components/PageHero';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +26,7 @@ const ALERT_TYPE_DESC: Record<AlertType, string> = {
   COST_SPIKE: 'CPC or CPM jumped more than N% vs the previous week.',
   BUDGET_EARLY_DEPLETION: 'At the current pace the budget runs out N+ days before the end date.',
   CREATIVE_FATIGUE: 'Frequency above N + CTR falling more than M% — time to rotate creatives.',
+  BUDGET_MISMATCH: "Meta's programmed daily budget diverges more than N% from the approved daily rate.",
 };
 // Threshold input(s) shown per rule: label + unit for the primary number,
 // and an optional secondary number (only CREATIVE_FATIGUE has one today).
@@ -36,6 +37,7 @@ const ALERT_TYPE_THRESHOLD_UI: Record<AlertType, { label: string; unit: string; 
   COST_SPIKE: { label: 'Cost spike threshold', unit: '% CPC/CPM increase' },
   BUDGET_EARLY_DEPLETION: { label: 'Early-depletion threshold', unit: 'days early' },
   CREATIVE_FATIGUE: { label: 'Min. frequency', unit: 'freq.', secondaryLabel: 'CTR drop threshold', secondaryUnit: '% CTR drop' },
+  BUDGET_MISMATCH: { label: 'Mismatch threshold', unit: '% diverging from approved' },
 };
 const ALL_ALERT_TYPES = Object.keys(ALERT_TYPE_LABELS) as AlertType[];
 
@@ -310,22 +312,32 @@ export default function AlertsPage() {
         />
       </div>
 
-      {/* AI deep-scan — findings beyond the 6 fixed rules, generated daily */}
-      <Collapsible defaultOpen>
+      <Tabs defaultValue="activity">
+        <TabsList>
+          <TabsTrigger value="activity" className="text-xs gap-1.5">
+            <Bell className="h-3.5 w-3.5" /> Activity
+          </TabsTrigger>
+          <TabsTrigger value="rules" className="text-xs gap-1.5">
+            <SlidersHorizontal className="h-3.5 w-3.5" /> Rules
+          </TabsTrigger>
+          <TabsTrigger value="channels" className="text-xs gap-1.5">
+            <Mail className="h-3.5 w-3.5" /> Channels
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="activity" className="space-y-4 mt-4">
+        {/* AI deep-scan — findings beyond the fixed rules, generated daily */}
         <Card className="overflow-hidden">
-          <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
-            <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className="h-4 w-4 text-primary shrink-0" />
-              <div className="text-left">
-                <h2 className="font-semibold text-sm">AI insights</h2>
-                <p className="text-xs text-muted-foreground">
-                  Campaigns whose numbers moved beyond their own baseline — checked daily, no fixed rule required
-                </p>
-              </div>
+          <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
+            <Sparkles className="h-4 w-4 text-primary shrink-0" />
+            <div>
+              <h2 className="font-semibold text-sm">AI insights</h2>
+              <p className="text-xs text-muted-foreground">
+                Campaigns whose numbers moved beyond their own baseline — checked daily, no fixed rule required
+              </p>
             </div>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
+          </div>
+          <div>
             <div className="px-5 pb-4 pt-1">
               {aiInsightsLoading ? (
                 <div className="py-4 flex items-center gap-2 text-sm text-muted-foreground">
@@ -353,26 +365,79 @@ export default function AlertsPage() {
                 </div>
               )}
             </div>
-          </CollapsibleContent>
+          </div>
         </Card>
-      </Collapsible>
 
-      {/* Alert rules — enable/disable + editable thresholds, synced per user */}
-      <Collapsible>
+        {/* Active alerts — the 6 fixed rules, live */}
         <Card className="overflow-hidden">
-          <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
-            <div className="flex items-center gap-2 min-w-0">
-              <SlidersHorizontal className="h-4 w-4 text-primary shrink-0" />
-              <div className="text-left">
-                <h2 className="font-semibold text-sm">Alert rules</h2>
+          <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
+            <Bell className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-sm">Active alerts ({searchedAlerts.length})</h2>
+          </div>
+          <div className="px-5 pb-5 pt-4">
+            {/* Client search */}
+            {visibleAlerts.length > 0 && (
+              <div className="relative max-w-sm mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input value={alertSearch} onChange={e => setAlertSearch(e.target.value)} placeholder="Search by client or campaign..." className="pl-9 h-9" />
+              </div>
+            )}
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
+              </div>
+            ) : searchedAlerts.length === 0 ? (
+              <div className="text-center py-6 space-y-1">
+                <CheckCircle2 className="h-7 w-7 text-success mx-auto" />
+                <p className="text-sm text-foreground font-medium">
+                  {alertSearch ? `No alerts match "${alertSearch}"` : alerts.length > 0 ? 'No active alerts from enabled rules' : 'All campaigns are healthy'}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {enabledTypes.size} of {ALL_ALERT_TYPES.length} active · thresholds sync to your account
+                  {alertSearch ? 'Try another client or campaign.' : alerts.length > 0 ? 'Some alerts are hidden by disabled rules above.' : 'No alert rule is currently triggered. That is the goal.'}
                 </p>
               </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {searchedAlerts.map((a, i) => (
+                  <div key={i} className="py-3 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      {severityIcon(a.alert.severity)}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm truncate">{a.campaign}</span>
+                          <Badge variant="outline" className="text-[10px]">{ALERT_TYPE_LABELS[a.alert.type]}</Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">
+                          {a.clientName} · {a.account}{a.platform ? ` · ${a.platform.toUpperCase()}` : ''}
+                        </div>
+                        <div className="text-xs mt-1">{a.alert.icon} {a.alert.message}</div>
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground shrink-0">
+                      <div>${a.spend.toLocaleString()} / ${a.budget.toLocaleString()}</div>
+                      <div>{a.spendPct}% spend · {a.timePct}% time</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="rules" className="mt-4">
+        {/* Alert rules — enable/disable + editable thresholds, synced per user */}
+        <Card className="overflow-hidden">
+          <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
+            <SlidersHorizontal className="h-4 w-4 text-primary shrink-0" />
+            <div>
+              <h2 className="font-semibold text-sm">Alert rules</h2>
+              <p className="text-xs text-muted-foreground">
+                {enabledTypes.size} of {ALL_ALERT_TYPES.length} active · thresholds sync to your account
+              </p>
             </div>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
+          </div>
+          <div>
             <div className="px-5 pb-4 pt-1 divide-y divide-border">
               {rulesLoading ? (
                 <div className="py-4 flex items-center gap-2 text-sm text-muted-foreground">
@@ -423,21 +488,17 @@ export default function AlertsPage() {
                 );
               })}
             </div>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      <Collapsible>
-      <Card className="overflow-hidden">
-        <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-sm">Delivery &amp; channels</h2>
           </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-        <div className="px-5 pb-5 space-y-5">
+        </Card>
+        </TabsContent>
+
+        <TabsContent value="channels" className="mt-4">
+        <Card className="overflow-hidden">
+        <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
+          <Mail className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-sm">Delivery &amp; channels</h2>
+        </div>
+        <div className="px-5 pb-5 pt-4 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <Label>Alerts enabled</Label>
@@ -572,71 +633,9 @@ export default function AlertsPage() {
           </Button>
         </div>
         </div>
-        </CollapsibleContent>
-      </Card>
-      </Collapsible>
-
-      <Collapsible defaultOpen>
-      <Card className="overflow-hidden">
-        <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
-          <div className="flex items-center gap-2">
-            <Bell className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-sm">Active alerts ({searchedAlerts.length})</h2>
-          </div>
-          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-        <div className="px-5 pb-5">
-        {/* Client search */}
-        {visibleAlerts.length > 0 && (
-          <div className="relative max-w-sm mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input value={alertSearch} onChange={e => setAlertSearch(e.target.value)} placeholder="Search by client or campaign..." className="pl-9 h-9" />
-          </div>
-        )}
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
-          </div>
-        ) : searchedAlerts.length === 0 ? (
-          <div className="text-center py-6 space-y-1">
-            <CheckCircle2 className="h-7 w-7 text-success mx-auto" />
-            <p className="text-sm text-foreground font-medium">
-              {alertSearch ? `No alerts match "${alertSearch}"` : alerts.length > 0 ? 'No active alerts from enabled rules' : 'All campaigns are healthy'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {alertSearch ? 'Try another client or campaign.' : alerts.length > 0 ? 'Some alerts are hidden by disabled rules above.' : 'No alert rule is currently triggered. That is the goal.'}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {searchedAlerts.map((a, i) => (
-              <div key={i} className="py-3 flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  {severityIcon(a.alert.severity)}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm truncate">{a.campaign}</span>
-                      <Badge variant="outline" className="text-[10px]">{ALERT_TYPE_LABELS[a.alert.type]}</Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">
-                      {a.clientName} · {a.account}{a.platform ? ` · ${a.platform.toUpperCase()}` : ''}
-                    </div>
-                    <div className="text-xs mt-1">{a.alert.icon} {a.alert.message}</div>
-                  </div>
-                </div>
-                <div className="text-right text-xs text-muted-foreground shrink-0">
-                  <div>${a.spend.toLocaleString()} / ${a.budget.toLocaleString()}</div>
-                  <div>{a.spendPct}% spend · {a.timePct}% time</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        </div>
-        </CollapsibleContent>
-      </Card>
-      </Collapsible>
+        </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

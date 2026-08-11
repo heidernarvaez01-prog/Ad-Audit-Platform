@@ -20,6 +20,20 @@ function fmtNum(n: number) {
   return n.toLocaleString('en-US');
 }
 
+// Meta's ranking values look like "ABOVE_AVERAGE", "AVERAGE",
+// "BELOW_AVERAGE_10/20/35/50", or "UNKNOWN" — collapse to 3 buckets.
+type RankingBucket = 'above' | 'average' | 'below' | 'unknown';
+function bucketRanking(v: string | null): RankingBucket {
+  if (!v || v === 'UNKNOWN') return 'unknown';
+  if (v.startsWith('ABOVE')) return 'above';
+  if (v.startsWith('BELOW')) return 'below';
+  return 'average';
+}
+function prettyRanking(v: string | null): string {
+  if (!v || v === 'UNKNOWN') return 'Unknown';
+  return v.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
+}
+
 interface InsightData {
   insight: string;
   riskLevel: 'critical' | 'moderate' | 'none';
@@ -59,8 +73,8 @@ export default function AuditDetailPage() {
     })();
   }, [id, navigate]);
 
-  const { metrics, alerts, campaignApiData, perf } = useMemo(() => {
-    if (!record) return { metrics: null, alerts: [], campaignApiData: [], perf: null };
+  const { metrics, alerts, campaignApiData, perf, placements, rankings, adLeaderboard, funnel } = useMemo(() => {
+    if (!record) return { metrics: null, alerts: [], campaignApiData: [], perf: null, placements: [], rankings: null, adLeaderboard: [], funnel: [] };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const cutoffDate = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
@@ -92,7 +106,65 @@ export default function AuditDetailPage() {
     const cpc = clicks > 0 ? totalCost / clicks : 0;
     const cpm = impressions > 0 ? (totalCost / impressions) * 1000 : 0;
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-    return { metrics, alerts, campaignApiData, perf: { clicks, impressions, reach, cpc, cpm, ctr } };
+
+    // Spend/CTR split by placement (Facebook Feed, Instagram, Audience
+    // Network, ...) — which of Meta's delivery surfaces is actually working.
+    const byPlacement = new Map<string, { cost: number; clicks: number; impressions: number }>();
+    for (const r of campaignApiData) {
+      const key = r.publisherPlatform || 'Unknown';
+      const acc = byPlacement.get(key) ?? { cost: 0, clicks: 0, impressions: 0 };
+      acc.cost += r.metrics.cost;
+      acc.clicks += r.metrics.clicks;
+      acc.impressions += r.metrics.impressions;
+      byPlacement.set(key, acc);
+    }
+    const placements = Array.from(byPlacement.entries())
+      .map(([name, v]) => ({ name, ...v, ctr: v.impressions > 0 ? (v.clicks / v.impressions) * 100 : 0 }))
+      .sort((a, b) => b.cost - a.cost);
+
+    // Ad health = Meta's own 3 quality diagnostics from the most recent row.
+    const latestWithRankings = [...campaignApiData].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    const rankings = {
+      quality: latestWithRankings?.qualityRanking ?? null,
+      engagement: latestWithRankings?.engagementRanking ?? null,
+      conversion: latestWithRankings?.conversionRanking ?? null,
+    };
+
+    // Ad-level leaderboard — which individual creative to keep/rotate, not
+    // just "the campaign" in aggregate. Requires ad_id from Windsor; rows
+    // without it (older syncs) are grouped under "Unknown ad".
+    const byAd = new Map<string, { name: string; cost: number; clicks: number; impressions: number; purchaseValue: number; quality: string | null }>();
+    for (const r of campaignApiData) {
+      const key = r.adId || r.adName || 'unknown';
+      const acc = byAd.get(key) ?? { name: r.adName || 'Unknown ad', cost: 0, clicks: 0, impressions: 0, purchaseValue: 0, quality: null };
+      acc.cost += r.metrics.cost;
+      acc.clicks += r.metrics.clicks;
+      acc.impressions += r.metrics.impressions;
+      acc.purchaseValue += r.metrics.purchaseValue;
+      if (r.qualityRanking) acc.quality = r.qualityRanking;
+      byAd.set(key, acc);
+    }
+    const adLeaderboard = Array.from(byAd.values())
+      .map(a => ({
+        ...a,
+        ctr: a.impressions > 0 ? (a.clicks / a.impressions) * 100 : 0,
+        roas: a.cost > 0 ? a.purchaseValue / a.cost : null,
+      }))
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, 10);
+
+    // Funnel: where the drop-off actually happens between an impression and
+    // a completed purchase — the diagnosis a flat CTR/ROAS number can't give.
+    const funnel = [
+      { label: 'Impressions', value: impressions },
+      { label: 'Clicks', value: clicks },
+      { label: 'Landing page views', value: campaignApiData.reduce((s, r) => s + r.metrics.landingPageViews, 0) },
+      { label: 'Add to cart', value: campaignApiData.reduce((s, r) => s + r.metrics.addToCart, 0) },
+      { label: 'Checkout started', value: campaignApiData.reduce((s, r) => s + r.metrics.initiateCheckout, 0) },
+      { label: 'Purchases', value: campaignApiData.reduce((s, r) => s + r.metrics.purchases, 0) },
+    ];
+
+    return { metrics, alerts, campaignApiData, perf: { clicks, impressions, reach, cpc, cpm, ctr }, placements, rankings, adLeaderboard, funnel };
   }, [record, apiData, thresholds, enabledTypes]);
 
   const generateInsight = async () => {
@@ -229,6 +301,89 @@ export default function AuditDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Ad quality + placement breakdown */}
+      {rankings && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Ad Quality &amp; Placement</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <RankingBadge label="Quality" value={rankings.quality} />
+              <RankingBadge label="Engagement rate" value={rankings.engagement} />
+              <RankingBadge label="Conversion rate" value={rankings.conversion} />
+            </div>
+            {placements.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Spend by placement</p>
+                <div className="space-y-1.5">
+                  {placements.map((p) => (
+                    <div key={p.name} className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-md bg-muted/40">
+                      <span className="font-medium text-foreground">{p.name}</span>
+                      <span className="text-muted-foreground">{fmt(p.cost)} · {p.ctr.toFixed(2)}% CTR</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ad-level leaderboard — which specific creative to keep or rotate */}
+      {adLeaderboard.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Top Ads</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1.5">
+              {adLeaderboard.map((ad, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 text-xs px-2.5 py-1.5 rounded-md bg-muted/40">
+                  <span className="font-medium text-foreground truncate min-w-0 flex-1">{ad.name}</span>
+                  <span className="text-muted-foreground shrink-0">{fmt(ad.cost)}</span>
+                  <span className="text-muted-foreground shrink-0">{ad.ctr.toFixed(2)}% CTR</span>
+                  <span className="text-muted-foreground shrink-0">{ad.roas != null ? `${ad.roas.toFixed(2)}x ROAS` : '—'}</span>
+                  <span className="shrink-0"><RankingBadge label="" value={ad.quality} /></span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Conversion funnel — where the drop-off actually happens */}
+      {funnel.length > 0 && funnel[0].value > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Conversion Funnel</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {funnel.map((step, i) => {
+              const pctOfTop = (step.value / funnel[0].value) * 100;
+              const prev = i > 0 ? funnel[i - 1].value : null;
+              const pctOfPrev = prev && prev > 0 ? (step.value / prev) * 100 : null;
+              return (
+                <div key={step.label} className="space-y-1">
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="font-medium text-foreground">{step.label}</span>
+                    <span className="text-muted-foreground">
+                      {fmtNum(step.value)}{pctOfPrev != null && ` · ${pctOfPrev.toFixed(0)}% of previous step`}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.max(pctOfTop, step.value > 0 ? 1.5 : 0)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts */}
       <Card>
         <CardHeader className="pb-3">
@@ -306,6 +461,21 @@ export default function AuditDetailPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function RankingBadge({ label, value }: { label: string; value: string | null }) {
+  const bucket = bucketRanking(value);
+  const style = {
+    above: 'bg-success/10 text-success border-success/30',
+    average: 'bg-muted text-muted-foreground border-border',
+    below: 'bg-destructive/10 text-destructive border-destructive/30',
+    unknown: 'bg-muted text-muted-foreground border-border',
+  }[bucket];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${style}`}>
+      {label ? `${label}: ` : ''}{prettyRanking(value)}
+    </span>
   );
 }
 

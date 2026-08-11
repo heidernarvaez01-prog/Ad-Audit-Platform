@@ -7,6 +7,15 @@ export interface ApiCampaignRow {
   adset_name: string;
   platform: string;
   date: string;
+  /** Ad-level identity — populated once Windsor sends ad_id/ad_name (see sync-meta-datos). */
+  adId: string | null;
+  adName: string | null;
+  /** Placement this row's spend ran on (Facebook Feed, Instagram, Audience Network, ...). */
+  publisherPlatform: string | null;
+  /** Meta's own ad-quality diagnostics — categorical, e.g. "ABOVE_AVERAGE" / "BELOW_AVERAGE_20". */
+  qualityRanking: string | null;
+  engagementRanking: string | null;
+  conversionRanking: string | null;
   metrics: {
     cost: number;
     clicks: number;
@@ -20,6 +29,15 @@ export interface ApiCampaignRow {
     link_clicks: number;
     interactions: number;
     conversions: number;
+    /** Meta's currently active daily budget for this campaign (null if unset). */
+    dailyBudget: number | null;
+    /** Funnel steps between a click and a completed purchase. */
+    landingPageViews: number;
+    addToCart: number;
+    initiateCheckout: number;
+    purchases: number;
+    purchaseValue: number;
+    purchaseRoas: number | null;
   };
 }
 
@@ -31,7 +49,9 @@ export function clearCampaignDataCache() {
 }
 
 const FULL_COLUMNS =
-  "account_id,account_name,campaign_name,adset_name,plataforma,fecha,total_cost,clicks,impressions,reach,cpc,cpm,ctr_all,frequency,thruplay_actions,link_clicks,interactions,conversions";
+  "account_id,account_name,campaign_name,adset_name,plataforma,fecha,total_cost,clicks,impressions,reach,cpc,cpm,ctr_all,frequency,thruplay_actions,link_clicks,interactions,conversions,daily_budget," +
+  "ad_id,ad_name,publisher_platform,quality_ranking,engagement_rate_ranking,conversion_rate_ranking," +
+  "landing_page_views,add_to_cart,initiate_checkout,purchases,purchase_value,purchase_roas";
 // Fallback while the DB migration adding link_clicks/interactions/conversions is pending
 const LEGACY_COLUMNS =
   "account_id,account_name,campaign_name,adset_name,plataforma,fecha,total_cost,clicks,impressions,reach,cpc,cpm,ctr_all,frequency,thruplay_actions";
@@ -74,6 +94,12 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
         adset_name: String(r.adset_name ?? ""),
         platform: String(r.plataforma ?? "META"),
         date: String(r.fecha ?? "").slice(0, 10),
+        adId: (r as any).ad_id ?? null,
+        adName: (r as any).ad_name ?? null,
+        publisherPlatform: (r as any).publisher_platform ?? null,
+        qualityRanking: (r as any).quality_ranking ?? null,
+        engagementRanking: (r as any).engagement_rate_ranking ?? null,
+        conversionRanking: (r as any).conversion_rate_ranking ?? null,
         metrics: {
           cost: Number(r.total_cost ?? 0),
           clicks: Number(r.clicks ?? 0),
@@ -87,6 +113,13 @@ export async function fetchCampaignData(): Promise<ApiCampaignRow[]> {
           link_clicks: Number((r as any).link_clicks ?? 0),
           interactions: Number((r as any).interactions ?? 0),
           conversions: Number((r as any).conversions ?? 0),
+          dailyBudget: (r as any).daily_budget != null ? Number((r as any).daily_budget) : null,
+          landingPageViews: Number((r as any).landing_page_views ?? 0),
+          addToCart: Number((r as any).add_to_cart ?? 0),
+          initiateCheckout: Number((r as any).initiate_checkout ?? 0),
+          purchases: Number((r as any).purchases ?? 0),
+          purchaseValue: Number((r as any).purchase_value ?? 0),
+          purchaseRoas: (r as any).purchase_roas != null ? Number((r as any).purchase_roas) : null,
         },
       });
     }

@@ -153,7 +153,7 @@ async function computeUserAlerts(
       r.campaign_name === rec.campaign_name && r.fecha >= rec.fecha_inicio && r.fecha <= effectiveEnd);
     const campaignApiData: AlertCampaignRow[] = campaignRows.map((r: any) => ({
       date: r.fecha,
-      metrics: { cost: Number(r.total_cost) || 0, clicks: Number(r.clicks) || 0, impressions: Number(r.impressions) || 0, frequency: r.frequency },
+      metrics: { cost: Number(r.total_cost) || 0, clicks: Number(r.clicks) || 0, impressions: Number(r.impressions) || 0, frequency: r.frequency, dailyBudget: r.daily_budget != null ? Number(r.daily_budget) : null },
     }));
     const cost = campaignApiData.reduce((s, r) => s + (isNaN(r.metrics.cost) ? 0 : r.metrics.cost), 0);
     const metrics = calculateAuditMetrics(Number(rec.presupuesto_total), rec.fecha_inicio, rec.fecha_fin, rec.tipo_calendario, cost);

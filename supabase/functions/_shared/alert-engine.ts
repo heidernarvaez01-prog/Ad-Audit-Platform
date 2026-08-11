@@ -7,14 +7,15 @@
 
 export type AlertSeverity = 'info' | 'warning' | 'danger';
 
-// Six high-signal alerts only — no noise, no generic blocks.
+// High-signal alerts only — no noise, no generic blocks.
 export type AlertType =
   | 'OVERSPEND_50'            // spend >= expected * (1 + overspendPct/100)
   | 'NOT_SPENDING'            // active campaign with zero recent spend
   | 'ENDING_SOON'             // campaign within endingSoonPctThreshold% of finishing
   | 'COST_SPIKE'              // CPC/CPM up more than costSpikePct% vs previous period
   | 'BUDGET_EARLY_DEPLETION'  // budget projected to run out earlyDepletionDays+ before end date
-  | 'CREATIVE_FATIGUE';       // frequency above threshold + CTR down more than fatigueCtrDropPct%
+  | 'CREATIVE_FATIGUE'        // frequency above threshold + CTR down more than fatigueCtrDropPct%
+  | 'BUDGET_MISMATCH';        // Meta's programmed daily budget diverges from the approved daily rate
 
 export interface AuditAlert {
   type: AlertType;
@@ -30,6 +31,7 @@ export interface AlertMetricsInput {
   gastoActual: number;
   diasRestantes: number;
   diasTranscurridos: number;
+  diasTotales: number;
   porcentajeTiempo: number;
   gastoDiarioActual: number;
   presupuestoRestante: number;
@@ -43,6 +45,8 @@ export interface AlertCampaignRow {
     clicks: number;
     impressions: number;
     frequency?: number | null;
+    /** Meta's currently active daily budget for this campaign, if known. */
+    dailyBudget?: number | null;
   };
 }
 
@@ -58,6 +62,7 @@ export interface AlertThresholds {
   earlyDepletionDays: number;      // default 2
   fatigueMinFrequency: number;     // default 4
   fatigueCtrDropPct: number;       // default 20
+  budgetMismatchPct: number;       // default 10
 }
 
 export const DEFAULT_ALERT_THRESHOLDS: AlertThresholds = {
@@ -68,6 +73,7 @@ export const DEFAULT_ALERT_THRESHOLDS: AlertThresholds = {
   earlyDepletionDays: 2,
   fatigueMinFrequency: 4,
   fatigueCtrDropPct: 20,
+  budgetMismatchPct: 10,
 };
 
 // rule_type -> which threshold field(s) it reads, used by callers that
@@ -80,6 +86,7 @@ export const ALERT_THRESHOLD_FIELDS: Record<AlertType, { primary: keyof AlertThr
   COST_SPIKE: { primary: 'costSpikePct' },
   BUDGET_EARLY_DEPLETION: { primary: 'earlyDepletionDays' },
   CREATIVE_FATIGUE: { primary: 'fatigueMinFrequency', secondary: 'fatigueCtrDropPct' },
+  BUDGET_MISMATCH: { primary: 'budgetMismatchPct' },
 };
 
 // Sum a metric over rows within [from, to] (date strings YYYY-MM-DD inclusive)
@@ -227,6 +234,34 @@ export function generateAlerts(
     }
   }
 
+  // ── 7. Programmed budget diverges from the approved rate ────────────────
+  // Compares Meta's currently active daily_budget (what's actually
+  // programmed on the platform) against the flat approved daily rate
+  // (total approved budget / total scheduled days) — independent of
+  // today's pacing, this catches "someone changed the budget in Meta and
+  // it no longer matches what was approved" even if spend still looks OK.
+  if (isEnabled('BUDGET_MISMATCH') && metrics.diasTotales > 0) {
+    const approvedTotal = metrics.gastoActual + metrics.presupuestoRestante;
+    const approvedDaily = approvedTotal / metrics.diasTotales;
+    const latestWithBudget = [...campaignApiData]
+      .filter(r => r.metrics.dailyBudget != null && r.metrics.dailyBudget > 0)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    const programmedDaily = latestWithBudget?.metrics.dailyBudget ?? null;
+
+    if (programmedDaily != null && approvedDaily > 0) {
+      const diffPct = ((programmedDaily - approvedDaily) / approvedDaily) * 100;
+      if (Math.abs(diffPct) >= t.budgetMismatchPct) {
+        const direction = diffPct > 0 ? 'above' : 'below';
+        alerts.push({
+          type: 'BUDGET_MISMATCH',
+          severity: 'warning',
+          message: `Meta's programmed daily budget ($${programmedDaily.toFixed(2)}) is ${Math.abs(diffPct).toFixed(0)}% ${direction} the approved daily rate ($${approvedDaily.toFixed(2)}). Confirm the budget change was authorized.`,
+          icon: '⚖️',
+        });
+      }
+    }
+  }
+
   return alerts;
 }
 
@@ -237,4 +272,5 @@ export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
   COST_SPIKE: 'Cost spike >65%',
   BUDGET_EARLY_DEPLETION: 'Budget running out early',
   CREATIVE_FATIGUE: 'Creative fatigue',
+  BUDGET_MISMATCH: 'Programmed budget mismatch',
 };
