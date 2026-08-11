@@ -98,7 +98,7 @@ function InsightPanel({ insight }: { insight: InsightData }) {
     <div className={`p-3 rounded-md border ${borderColor}`}>
       <div className="flex items-center gap-2 mb-1.5">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">AI Insight</p>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Insight de IA</p>
       </div>
       <p className="text-xs text-foreground leading-relaxed whitespace-pre-line">{insight.insight}</p>
     </div>
@@ -123,18 +123,18 @@ function ExpandedAdSetDetails({
       {/* Performance Charts */}
       <PerformanceCharts apiRows={row.rawRows} level="adset" />
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 p-3 rounded-md bg-muted/50 border border-border">
-        <MetricMini label="Clicks" value={fmtNum(row.clicks)} />
-        <MetricMini label="Impressions" value={fmtNum(row.impressions)} />
-        <MetricMini label="Reach" value={fmtNum(row.reach)} />
+        <MetricMini label="Clics" value={fmtNum(row.clicks)} />
+        <MetricMini label="Impresiones" value={fmtNum(row.impressions)} />
+        <MetricMini label="Alcance" value={fmtNum(row.reach)} />
         <MetricMini label="CTR" value={`${row.ctr.toFixed(2)}%`} />
         <MetricMini label="CPC" value={fmt(row.cpc)} />
         <MetricMini label="CPM" value={fmt(row.cpm)} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 rounded-md bg-muted/50 border border-border">
-        <MetricMini label="Ad Set Spend" value={fmt(row.cost)} />
-        <MetricMini label="Campaign Budget" value={fmt(campaignBudget)} />
-        <MetricMini label="% of Spend" value={`${row.shareOfSpend.toFixed(1)}%`} />
+        <MetricMini label="Gasto del conjunto" value={fmt(row.cost)} />
+        <MetricMini label="Presupuesto de campaña" value={fmt(campaignBudget)} />
+        <MetricMini label="% del gasto" value={`${row.shareOfSpend.toFixed(1)}%`} />
       </div>
 
       <div className="flex items-center gap-2">
@@ -150,7 +150,7 @@ function ExpandedAdSetDetails({
           ) : (
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
           )}
-          {loadingInsight ? 'Analyzing...' : 'Generate AI Insight'}
+          {loadingInsight ? 'Analizando...' : 'Generar insight de IA'}
         </Button>
       </div>
 
@@ -179,7 +179,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
 
       const adsetMap = new Map<string, ApiCampaignRow[]>();
       for (const row of campaignApiData) {
-        const name = row.adset_name || '(Unnamed)';
+        const name = row.adset_name || '(Sin nombre)';
         if (!adsetMap.has(name)) adsetMap.set(name, []);
         adsetMap.get(name)!.push(row);
       }
@@ -268,7 +268,7 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
       if (data?.error) { toast.error(data.error); return; }
       setInsights(prev => ({ ...prev, [row.key]: data as InsightData }));
     } catch {
-      toast.error('Error generating AI insight');
+      toast.error('Error al generar el insight de IA');
     } finally {
       setLoadingInsights(prev => ({ ...prev, [row.key]: false }));
     }
@@ -277,8 +277,8 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
   if (campaignGroups.length === 0 || campaignGroups.every(g => g.adsets.length === 0)) {
     return (
       <div className="border border-border rounded-lg p-12 text-center text-muted-foreground">
-        <p className="text-sm">No ad sets available.</p>
-        <p className="text-xs mt-1">Add campaigns in the Campaigns tab to see their ad sets.</p>
+        <p className="text-sm">No hay conjuntos de anuncios disponibles.</p>
+        <p className="text-xs mt-1">Agrega campañas en la pestaña Campañas para ver sus conjuntos de anuncios.</p>
       </div>
     );
   }
@@ -311,10 +311,10 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
                       </div>
                       <div className="flex items-center gap-2 text-[10px]">
                         <span className={`font-semibold ${statusClass}`}>
-                          {m.pacingStatus === 'OK' ? '● On Track' : m.pacingStatus === 'SOBREGASTANDO' ? '● Overspending' : '● Underspending'}
+                          {m.pacingStatus === 'OK' ? '● En ritmo' : m.pacingStatus === 'SOBREGASTANDO' ? '● Sobregastando' : '● Subgastando'}
                         </span>
                         <span className="text-muted-foreground">·</span>
-                        <span className="text-muted-foreground">{group.adsets.length} ad sets</span>
+                        <span className="text-muted-foreground">{group.adsets.length} conjuntos de anuncios</span>
                         <span className="text-muted-foreground">·</span>
                         <span className="font-mono text-foreground">{fmt(group.totalCost)}</span>
                       </div>
@@ -384,30 +384,30 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
 
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
-            <TableHead className="text-xs">Platform</TableHead>
-            <TableHead className="text-xs">Name</TableHead>
+            <TableHead className="text-xs">Plataforma</TableHead>
+            <TableHead className="text-xs">Nombre</TableHead>
             <TableHead className="text-xs w-36">
-              % of Spend
-              <MetricInfo label="Share of spend">
-                Percentage of the campaign's total spend consumed by this ad set. Useful for spotting budget concentration.
+              % del gasto
+              <MetricInfo label="Participación del gasto">
+                Porcentaje del gasto total de la campaña consumido por este conjunto de anuncios. Útil para detectar concentración de presupuesto.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs text-right">
-              Spend
-              <MetricInfo label="Ad set spend">
-                Sum of platform-reported spend for this ad set during the audited period.
+              Gasto
+              <MetricInfo label="Gasto del conjunto de anuncios">
+                Suma del gasto reportado por la plataforma para este conjunto durante el período auditado.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs text-right">
               CPC
-              <MetricInfo label="Cost per click">
-                Total spend / clicks. Measures efficiency: the lower the CPC, the more clicks for the same budget.
+              <MetricInfo label="Costo por clic">
+                Gasto total / clics. Mide la eficiencia: entre más bajo el CPC, más clics por el mismo presupuesto.
               </MetricInfo>
             </TableHead>
             <TableHead className="text-xs text-right">
               CTR
-              <MetricInfo label="Click-through rate">
-                Clicks / impressions × 100. Measures how engaging the creative is. Benchmarks vary by platform and industry.
+              <MetricInfo label="Tasa de clics">
+                Clics / impresiones × 100. Mide qué tan atractivo es el creativo. Los benchmarks varían por plataforma e industria.
               </MetricInfo>
             </TableHead>
           </TableRow>
@@ -452,10 +452,10 @@ export default function AdSetTable({ auditRows, apiData }: Props) {
                     {fmt(group.totalCost)}
                   </TableCell>
                   <TableCell className="text-right font-mono text-[10px] text-muted-foreground">
-                    Budget: {fmt(group.campaign.presupuesto_total)}
+                    Presupuesto: {fmt(group.campaign.presupuesto_total)}
                   </TableCell>
                   <TableCell className="text-right text-[10px] text-muted-foreground">
-                    {group.adsets.length} adsets
+                    {group.adsets.length} conjuntos
                   </TableCell>
                 </TableRow>
 
