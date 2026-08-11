@@ -30,7 +30,7 @@ function bucketRanking(v: string | null): RankingBucket {
   return 'average';
 }
 function prettyRanking(v: string | null): string {
-  if (!v || v === 'UNKNOWN') return 'Unknown';
+  if (!v || v === 'UNKNOWN') return 'Desconocido';
   return v.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
 }
 
@@ -58,7 +58,7 @@ export default function AuditDetailPage() {
         ]);
         if (error) throw error;
         if (!rec) {
-          toast.error('Audit not found');
+          toast.error('Auditoría no encontrada');
           navigate('/');
           return;
         }
@@ -66,7 +66,7 @@ export default function AuditDetailPage() {
         setApiData(api);
       } catch (e) {
         console.error(e);
-        toast.error('Error loading the audit');
+        toast.error('Error al cargar la auditoría');
       } finally {
         setLoading(false);
       }
@@ -111,7 +111,7 @@ export default function AuditDetailPage() {
     // Network, ...) — which of Meta's delivery surfaces is actually working.
     const byPlacement = new Map<string, { cost: number; clicks: number; impressions: number }>();
     for (const r of campaignApiData) {
-      const key = r.publisherPlatform || 'Unknown';
+      const key = r.publisherPlatform || 'Desconocido';
       const acc = byPlacement.get(key) ?? { cost: 0, clicks: 0, impressions: 0 };
       acc.cost += r.metrics.cost;
       acc.clicks += r.metrics.clicks;
@@ -136,7 +136,7 @@ export default function AuditDetailPage() {
     const byAd = new Map<string, { name: string; cost: number; clicks: number; impressions: number; purchaseValue: number; quality: string | null }>();
     for (const r of campaignApiData) {
       const key = r.adId || r.adName || 'unknown';
-      const acc = byAd.get(key) ?? { name: r.adName || 'Unknown ad', cost: 0, clicks: 0, impressions: 0, purchaseValue: 0, quality: null };
+      const acc = byAd.get(key) ?? { name: r.adName || 'Anuncio desconocido', cost: 0, clicks: 0, impressions: 0, purchaseValue: 0, quality: null };
       acc.cost += r.metrics.cost;
       acc.clicks += r.metrics.clicks;
       acc.impressions += r.metrics.impressions;
@@ -156,12 +156,12 @@ export default function AuditDetailPage() {
     // Funnel: where the drop-off actually happens between an impression and
     // a completed purchase — the diagnosis a flat CTR/ROAS number can't give.
     const funnel = [
-      { label: 'Impressions', value: impressions },
-      { label: 'Clicks', value: clicks },
-      { label: 'Landing page views', value: campaignApiData.reduce((s, r) => s + r.metrics.landingPageViews, 0) },
-      { label: 'Add to cart', value: campaignApiData.reduce((s, r) => s + r.metrics.addToCart, 0) },
-      { label: 'Checkout started', value: campaignApiData.reduce((s, r) => s + r.metrics.initiateCheckout, 0) },
-      { label: 'Purchases', value: campaignApiData.reduce((s, r) => s + r.metrics.purchases, 0) },
+      { label: 'Impresiones', value: impressions },
+      { label: 'Clics', value: clicks },
+      { label: 'Vistas de landing page', value: campaignApiData.reduce((s, r) => s + r.metrics.landingPageViews, 0) },
+      { label: 'Agregar al carrito', value: campaignApiData.reduce((s, r) => s + r.metrics.addToCart, 0) },
+      { label: 'Checkout iniciado', value: campaignApiData.reduce((s, r) => s + r.metrics.initiateCheckout, 0) },
+      { label: 'Compras', value: campaignApiData.reduce((s, r) => s + r.metrics.purchases, 0) },
     ];
 
     return { metrics, alerts, campaignApiData, perf: { clicks, impressions, reach, cpc, cpm, ctr }, placements, rankings, adLeaderboard, funnel };
@@ -201,7 +201,7 @@ export default function AuditDetailPage() {
       setInsight(data as InsightData);
     } catch (e) {
       console.error(e);
-      toast.error('Error generating AI insight');
+      toast.error('Error al generar el diagnóstico de IA');
     } finally {
       setLoadingInsight(false);
     }
@@ -224,10 +224,10 @@ export default function AuditDetailPage() {
         : 'default';
   const statusLabel =
     metrics.pacingStatus === 'SOBREGASTANDO'
-      ? 'Overspending'
+      ? 'Sobregastando'
       : metrics.pacingStatus === 'SUBGASTANDO'
-        ? 'Underspending'
-        : 'On Track';
+        ? 'Subgastando'
+        : 'En ritmo';
 
   const accountName = campaignApiData[0]?.account_name || record.account_id;
 
@@ -236,7 +236,7 @@ export default function AuditDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate(record.client_id ? `/client/${record.client_id}` : '/')}>
-            <ArrowLeft className="h-4 w-4 mr-1.5" /> Back
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Volver
           </Button>
           <div>
             <h1 className="text-xl font-bold text-foreground">{record.campaign_name}</h1>
@@ -251,7 +251,7 @@ export default function AuditDetailPage() {
       {/* Pacing card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Spend Pacing</CardTitle>
+          <CardTitle className="text-sm">Ritmo de gasto</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <PacingBar
@@ -260,26 +260,26 @@ export default function AuditDetailPage() {
             status={metrics.pacingStatus}
           />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat label="Budget" value={fmt(record.presupuesto_total)} />
+            <Stat label="Presupuesto" value={fmt(record.presupuesto_total)} />
             <Stat
-              label="Current Spend"
+              label="Gasto actual"
               value={fmt(metrics.gastoActual)}
               color={metrics.pacingStatus === 'SOBREGASTANDO' ? 'text-destructive' : undefined}
             />
-            <Stat label="Remaining" value={fmt(metrics.presupuestoRestante)} />
-            <Stat label="Pacing" value={`${metrics.pacingPct >= 0 ? '+' : ''}${metrics.pacingPct.toFixed(1)}%`} />
+            <Stat label="Restante" value={fmt(metrics.presupuestoRestante)} />
+            <Stat label="Ritmo" value={`${metrics.pacingPct >= 0 ? '+' : ''}${metrics.pacingPct.toFixed(1)}%`} />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat label="Total Days" value={String(metrics.diasTotales)} />
-            <Stat label="Days Elapsed" value={String(metrics.diasTranscurridos)} />
-            <Stat label="Days Left" value={String(metrics.diasRestantes)} />
-            <Stat label="Ideal Daily" value={fmt(metrics.presupuestoDiarioIdeal)} />
+            <Stat label="Días totales" value={String(metrics.diasTotales)} />
+            <Stat label="Días transcurridos" value={String(metrics.diasTranscurridos)} />
+            <Stat label="Días restantes" value={String(metrics.diasRestantes)} />
+            <Stat label="Ideal diario" value={fmt(metrics.presupuestoDiarioIdeal)} />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat label="Current Daily Spend" value={fmt(metrics.gastoDiarioActual)} />
-            <Stat label="Expected Spend" value={fmt(metrics.gastoEsperado)} />
-            <Stat label="Start Date" value={record.fecha_inicio} />
-            <Stat label="End Date" value={record.fecha_fin} />
+            <Stat label="Gasto diario actual" value={fmt(metrics.gastoDiarioActual)} />
+            <Stat label="Gasto esperado" value={fmt(metrics.gastoEsperado)} />
+            <Stat label="Fecha de inicio" value={record.fecha_inicio} />
+            <Stat label="Fecha de fin" value={record.fecha_fin} />
           </div>
         </CardContent>
       </Card>
@@ -287,13 +287,13 @@ export default function AuditDetailPage() {
       {/* API metrics */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Performance Metrics</CardTitle>
+          <CardTitle className="text-sm">Métricas de rendimiento</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            <Stat label="Clicks" value={fmtNum(perf.clicks)} />
-            <Stat label="Impressions" value={fmtNum(perf.impressions)} />
-            <Stat label="Reach" value={fmtNum(perf.reach)} />
+            <Stat label="Clics" value={fmtNum(perf.clicks)} />
+            <Stat label="Impresiones" value={fmtNum(perf.impressions)} />
+            <Stat label="Alcance" value={fmtNum(perf.reach)} />
             <Stat label="CTR" value={`${perf.ctr.toFixed(2)}%`} />
             <Stat label="CPC" value={fmt(perf.cpc)} />
             <Stat label="CPM" value={fmt(perf.cpm)} />
@@ -305,20 +305,20 @@ export default function AuditDetailPage() {
       {rankings && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Ad Quality &amp; Placement</CardTitle>
+            <CardTitle className="text-sm">Calidad del anuncio y placement</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
-              <RankingBadge label="Quality" value={rankings.quality} />
-              <RankingBadge label="Engagement rate" value={rankings.engagement} />
-              <RankingBadge label="Conversion rate" value={rankings.conversion} />
+              <RankingBadge label="Calidad" value={rankings.quality} />
+              <RankingBadge label="Tasa de interacción" value={rankings.engagement} />
+              <RankingBadge label="Tasa de conversión" value={rankings.conversion} />
             </div>
             {/* publisher_platform can't be requested together with the omni/ranking
                 fields above (Windsor API constraint — see sync-meta-datos), so this
                 is only ever real when a future dedicated placement sync exists. */}
-            {(placements.length > 1 || (placements.length === 1 && placements[0].name !== 'Unknown')) && (
+            {(placements.length > 1 || (placements.length === 1 && placements[0].name !== 'Desconocido')) && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Spend by placement</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Gasto por placement</p>
                 <div className="space-y-1.5">
                   {placements.map((p) => (
                     <div key={p.name} className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-md bg-muted/40">
@@ -337,7 +337,7 @@ export default function AuditDetailPage() {
       {adLeaderboard.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Top Ads</CardTitle>
+            <CardTitle className="text-sm">Mejores anuncios</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1.5">
@@ -359,7 +359,7 @@ export default function AuditDetailPage() {
       {funnel.length > 0 && funnel[0].value > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Conversion Funnel</CardTitle>
+            <CardTitle className="text-sm">Funnel de conversión</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {funnel.map((step, i) => {
@@ -371,7 +371,7 @@ export default function AuditDetailPage() {
                   <div className="flex items-baseline justify-between text-xs">
                     <span className="font-medium text-foreground">{step.label}</span>
                     <span className="text-muted-foreground">
-                      {fmtNum(step.value)}{pctOfPrev != null && ` · ${pctOfPrev.toFixed(0)}% of previous step`}
+                      {fmtNum(step.value)}{pctOfPrev != null && ` · ${pctOfPrev.toFixed(0)}% del paso anterior`}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -390,7 +390,7 @@ export default function AuditDetailPage() {
       {/* Charts */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Trends</CardTitle>
+          <CardTitle className="text-sm">Tendencias</CardTitle>
         </CardHeader>
         <CardContent>
           <PerformanceCharts
@@ -404,11 +404,11 @@ export default function AuditDetailPage() {
       {/* Alerts */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Alerts</CardTitle>
+          <CardTitle className="text-sm">Alertas</CardTitle>
         </CardHeader>
         <CardContent>
           {alerts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No active alerts.</p>
+            <p className="text-xs text-muted-foreground">Sin alertas activas.</p>
           ) : (
             <div className="space-y-2">
               {alerts.map((alert, i) => (
@@ -433,14 +433,14 @@ export default function AuditDetailPage() {
       {/* AI Insight */}
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm">AI Diagnosis</CardTitle>
+          <CardTitle className="text-sm">Diagnóstico de IA</CardTitle>
           <Button variant="outline" size="sm" onClick={generateInsight} disabled={loadingInsight}>
             {loadingInsight ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
             ) : (
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
             )}
-            {loadingInsight ? 'Analyzing...' : 'Generate Insight'}
+            {loadingInsight ? 'Analizando...' : 'Generar diagnóstico'}
           </Button>
         </CardHeader>
         <CardContent>
@@ -458,7 +458,7 @@ export default function AuditDetailPage() {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Generate an AI diagnosis based on the current state of this audit.
+              Genera un diagnóstico de IA basado en el estado actual de esta auditoría.
             </p>
           )}
         </CardContent>
