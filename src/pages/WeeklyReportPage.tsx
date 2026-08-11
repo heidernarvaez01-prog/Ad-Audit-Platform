@@ -42,7 +42,7 @@ export default function WeeklyReportPage() {
       .eq('id', clientId)
       .maybeSingle();
     if (error || !c) {
-      toast.error('Client not found');
+      toast.error('Cliente no encontrado');
       navigate('/weekly-report', { replace: true });
       return;
     }
@@ -62,7 +62,7 @@ export default function WeeklyReportPage() {
   const addEmail = () => {
     const e = emailInput.trim();
     if (!e) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast.error('Invalid email'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast.error('Correo inválido'); return; }
     if (recipients.includes(e)) return;
     setRecipients([...recipients, e]);
     setEmailInput('');
@@ -73,14 +73,14 @@ export default function WeeklyReportPage() {
     setSavingRecipients(true);
     const { error } = await supabase.from('audit_clients').update({ report_recipients: recipients }).eq('id', clientId);
     setSavingRecipients(false);
-    if (error) { toast.error('Error saving recipients'); return; }
-    toast.success('Recipients saved');
+    if (error) { toast.error('Error al guardar los destinatarios'); return; }
+    toast.success('Destinatarios guardados');
   };
 
   const generate = async (send: boolean) => {
     if (!clientId || generating) return;
     if (send && recipients.length === 0) {
-      toast.error('Add recipients before sending');
+      toast.error('Agrega destinatarios antes de enviar');
       return;
     }
     setGenerating(send ? 'send' : 'preview');
@@ -90,14 +90,14 @@ export default function WeeklyReportPage() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(send ? `Report sent to ${recipients.length} recipient(s)` : 'Report generated');
+      toast.success(send ? `Reporte enviado a ${recipients.length} destinatario(s)` : 'Reporte generado');
       if (data?.html) {
         setViewerHtml(data.html);
-        setViewerTitle(`Weekly Report — ${client?.name} (${data.week_start} → ${data.week_end})`);
+        setViewerTitle(`Reporte semanal — ${client?.name} (${data.week_start} → ${data.week_end})`);
       }
       loadAll();
     } catch (e: any) {
-      toast.error(e.message || 'Report generation failed');
+      toast.error(e.message || 'Falló la generación del reporte');
     } finally {
       setGenerating(null);
     }
@@ -105,15 +105,15 @@ export default function WeeklyReportPage() {
 
   const viewReport = async (r: ReportRow) => {
     const { data } = await supabase.from('weekly_reports').select('html').eq('id', r.id).maybeSingle();
-    if (!data?.html) { toast.error('This report has no content'); return; }
+    if (!data?.html) { toast.error('Este reporte no tiene contenido'); return; }
     setViewerHtml(data.html);
-    setViewerTitle(`Weekly Report — ${client?.name} (${r.week_start} → ${r.week_end})`);
+    setViewerTitle(`Reporte semanal — ${client?.name} (${r.week_start} → ${r.week_end})`);
   };
 
   const deleteReport = async (r: ReportRow) => {
     const { error } = await supabase.from('weekly_reports').delete().eq('id', r.id);
-    if (error) { toast.error('Error deleting report'); return; }
-    toast.success('Report deleted');
+    if (error) { toast.error('Error al eliminar el reporte'); return; }
+    toast.success('Reporte eliminado');
     loadAll();
   };
 
@@ -135,7 +135,7 @@ export default function WeeklyReportPage() {
           <span className="text-sm font-semibold text-foreground truncate">{viewerTitle}</span>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={downloadHtml}>
-              <Download className="h-3.5 w-3.5 mr-1.5" /> Download
+              <Download className="h-3.5 w-3.5 mr-1.5" /> Descargar
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setViewerHtml(null)}>
               <X className="h-4 w-4" />
@@ -153,29 +153,29 @@ export default function WeeklyReportPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0 flex items-center gap-2">
           <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/weekly-report')}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Clients
+            <ArrowLeft className="h-4 w-4 mr-1" /> Clientes
           </Button>
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-foreground truncate">
-              {client ? `${client.name} — Weekly Report` : 'Weekly Report'}
+              {client ? `${client.name} — Reporte semanal` : 'Reporte semanal'}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              This week's results for each campaign, ready to share with the client every Monday.
+              Los resultados de esta semana por campaña, listos para compartir con el cliente cada lunes.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0 flex-wrap">
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
             <Switch checked={includeMonthly} onCheckedChange={setIncludeMonthly} />
-            Monthly comparison
+            Comparación mensual
           </label>
           <Button variant="outline" size="sm" onClick={() => generate(false)} disabled={!!generating}>
             {generating === 'preview' ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Eye className="h-3.5 w-3.5 mr-1.5" />}
-            Generate preview
+            Generar vista previa
           </Button>
           <Button size="sm" onClick={() => generate(true)} disabled={!!generating}>
             {generating === 'send' ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-            Generate & send
+            Generar y enviar
           </Button>
         </div>
       </div>
@@ -184,15 +184,15 @@ export default function WeeklyReportPage() {
       <Card className="p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Mail className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">Recipients for this client</h2>
+          <h2 className="font-semibold">Destinatarios de este cliente</h2>
         </div>
         <p className="text-xs text-muted-foreground -mt-1">
-          These addresses receive the automatic Monday report and any manual send.
+          Estas direcciones reciben el reporte automático de los lunes y cualquier envío manual.
         </p>
         <div className="flex gap-2">
           <Input
             type="email"
-            placeholder="client@company.com"
+            placeholder="cliente@empresa.com"
             value={emailInput}
             onChange={e => setEmailInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEmail(); } }}
@@ -211,13 +211,13 @@ export default function WeeklyReportPage() {
             </Badge>
           ))}
           {recipients.length === 0 && (
-            <p className="text-xs text-muted-foreground">No recipients yet — the Monday email is skipped for this client.</p>
+            <p className="text-xs text-muted-foreground">Aún no hay destinatarios — el correo de los lunes se omite para este cliente.</p>
           )}
         </div>
         <div className="flex justify-end">
           <Button size="sm" variant="outline" onClick={saveRecipients} disabled={savingRecipients}>
             {savingRecipients && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-            Save recipients
+            Guardar destinatarios
           </Button>
         </div>
       </Card>
@@ -226,11 +226,11 @@ export default function WeeklyReportPage() {
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3">
           <CalendarClock className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold">Reports ({reports.length})</h2>
+          <h2 className="font-semibold">Reportes ({reports.length})</h2>
         </div>
         {reports.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            No reports yet. Generate a preview to see this week's performance.
+            Aún no hay reportes. Genera una vista previa para ver el rendimiento de esta semana.
           </p>
         ) : (
           <div className="divide-y divide-border">
@@ -242,16 +242,16 @@ export default function WeeklyReportPage() {
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {r.sent_at
-                      ? `Sent ${new Date(r.sent_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} to ${r.sent_to.length} recipient(s)`
-                      : 'Not sent'}
+                      ? `Enviado ${new Date(r.sent_at).toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} a ${r.sent_to.length} destinatario(s)`
+                      : 'No enviado'}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {r.sent_at && <Badge variant="secondary" className="text-[10px] mr-1">Sent</Badge>}
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => viewReport(r)} title="View">
+                  {r.sent_at && <Badge variant="secondary" className="text-[10px] mr-1">Enviado</Badge>}
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => viewReport(r)} title="Ver">
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteReport(r)} title="Delete">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteReport(r)} title="Eliminar">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
