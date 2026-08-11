@@ -39,7 +39,7 @@ export default function AuditPage() {
     (async () => {
       const { data, error } = await supabase.from('audit_clients').select('id, name, description').eq('id', clientId).maybeSingle();
       if (error || !data) {
-        toast.error('Client not found');
+        toast.error('Cliente no encontrado');
         navigate('/', { replace: true });
         return;
       }
@@ -62,7 +62,7 @@ export default function AuditPage() {
       const data = await fetchCampaignData();
       setApiData(data);
     } catch {
-      toast.error('Error connecting to the campaigns API');
+      toast.error('Error al conectar con la API de campañas');
     }
   }, []);
 
@@ -85,7 +85,7 @@ export default function AuditPage() {
       setRecords(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r)));
       const { error } = await supabase.from('audit_records').update(patch).eq('id', id);
       if (error) {
-        toast.error('Error saving changes');
+        toast.error('Error al guardar los cambios');
         loadRecords();
       }
     },
@@ -94,7 +94,7 @@ export default function AuditPage() {
   const handleDelete = async (id: string) => {
     await supabase.from('audit_records').delete().eq('id', id);
     loadRecords();
-    toast.success('Record deleted');
+    toast.success('Registro eliminado');
   };
 
   // Build audit rows with metrics + alerts
@@ -146,10 +146,10 @@ export default function AuditPage() {
       {/* Hero header */}
       <PageHero
         icon={ClipboardCheck}
-        title={client ? client.name : 'Monitoring Audit'}
+        title={client ? client.name : 'Auditoría de monitoreo'}
         subtitle={
           client?.description ||
-          'Track in real time whether each campaign is spending right and performing well.'
+          'Da seguimiento en tiempo real a si cada campaña gasta bien y rinde bien.'
         }
         gradient="from-indigo-600 via-violet-600 to-fuchsia-600"
         actions={
@@ -160,14 +160,14 @@ export default function AuditPage() {
               className="bg-white/15 hover:bg-white/25 text-white border-white/20"
               onClick={() => navigate('/')}
             >
-              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Clients
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Clientes
             </Button>
             <Button
               size="sm"
               className="bg-white text-indigo-700 hover:bg-white/90 shadow-md"
               onClick={() => { setEditRecord(null); setShowForm(true); }}
             >
-              <Plus className="h-3.5 w-3.5 mr-1.5" /> New Audit
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Nueva auditoría
             </Button>
           </>
         }
@@ -178,35 +178,35 @@ export default function AuditPage() {
       {auditRows.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <SummaryCard
-            label="Total Budget"
+            label="Presupuesto total"
             value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            hint="Sum of the approved budget across all audited campaigns."
+            hint="Suma del presupuesto aprobado en todas las campañas auditadas."
             gradient="from-indigo-500 to-indigo-700"
           />
           <SummaryCard
-            label="Total Spend"
+            label="Gasto total"
             value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-            hint="Sum of consolidated actual spend (excludes today and yesterday). The sparkline shows cumulative spend day by day."
+            hint="Suma del gasto real consolidado (excluye hoy y ayer). El sparkline muestra el gasto acumulado día a día."
             sparkline={summary.cumulativeSpend}
             gradient="from-sky-500 to-sky-700"
           />
           <SummaryCard
-            label="On Track"
+            label="En ritmo"
             value={summary.ok.toString()}
-            hint="Campaigns within ±10% of ideal pacing."
+            hint="Campañas dentro de ±10% del ritmo ideal."
             pulse={summary.ok > 0}
             gradient="from-emerald-500 to-emerald-700"
           />
           <SummaryCard
-            label="Underspending"
+            label="Subgastando"
             value={summary.under.toString()}
-            hint="Campaigns spending under 90% of ideal — risk of not using the full budget."
+            hint="Campañas gastando menos del 90% de lo ideal — riesgo de no usar todo el presupuesto."
             gradient="from-amber-500 to-orange-600"
           />
           <SummaryCard
-            label="Overspending"
+            label="Sobregastando"
             value={summary.over.toString()}
-            hint="Campaigns spending over 110% of ideal — risk of running out early."
+            hint="Campañas gastando más del 110% de lo ideal — riesgo de agotar el presupuesto antes de tiempo."
             gradient="from-rose-500 to-red-700"
           />
         </div>
@@ -219,11 +219,11 @@ export default function AuditPage() {
           <TabsList className="w-full sm:w-auto flex">
             <TabsTrigger value="campaigns" className="text-xs gap-1.5 flex-1 sm:flex-none">
               <LayoutGrid className="h-3.5 w-3.5" />
-              Campaigns
+              Campañas
             </TabsTrigger>
             <TabsTrigger value="adsets" className="text-xs gap-1.5 flex-1 sm:flex-none">
               <Layers className="h-3.5 w-3.5" />
-              Ad Sets
+              Conjuntos de anuncios
             </TabsTrigger>
           </TabsList>
 
@@ -251,7 +251,7 @@ export default function AuditPage() {
                   onClick={() => { setEditRecord(null); setShowForm(true); }}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Add campaign
+                  Agregar campaña
                 </Button>
               </TabsContent>
             </Tabs>
