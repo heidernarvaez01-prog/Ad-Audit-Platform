@@ -489,11 +489,13 @@ export type Database = {
           impressions: number | null
           initiate_checkout: number | null
           interactions: number | null
+          landing_page_views: number | null
           lead_value: number | null
           link_clicks: number | null
           objective: string | null
           optimization_goal: string | null
           plataforma: string | null
+          publisher_platform: string | null
           purchase_roas: number | null
           purchase_value: number | null
           purchases: number | null
@@ -538,11 +540,13 @@ export type Database = {
           impressions?: number | null
           initiate_checkout?: number | null
           interactions?: number | null
+          landing_page_views?: number | null
           lead_value?: number | null
           link_clicks?: number | null
           objective?: string | null
           optimization_goal?: string | null
           plataforma?: string | null
+          publisher_platform?: string | null
           purchase_roas?: number | null
           purchase_value?: number | null
           purchases?: number | null
@@ -587,11 +591,13 @@ export type Database = {
           impressions?: number | null
           initiate_checkout?: number | null
           interactions?: number | null
+          landing_page_views?: number | null
           lead_value?: number | null
           link_clicks?: number | null
           objective?: string | null
           optimization_goal?: string | null
           plataforma?: string | null
+          publisher_platform?: string | null
           purchase_roas?: number | null
           purchase_value?: number | null
           purchases?: number | null

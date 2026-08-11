@@ -35,6 +35,8 @@ const WINDSOR_FIELDS = [
   // creative-fatigue indicator than the frequency+CTR heuristic alone.
   "quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking",
   "unique_clicks", "unique_ctr",
+  // Placement + funnel step between click and conversion.
+  "publisher_platform", "actions_landing_page_view",
 ].join(",");
 const WINDSOR_ACCOUNTS = "204109401";
 
@@ -154,6 +156,8 @@ Deno.serve(async (req) => {
         conversion_rate_ranking: toStr(r["conversion_rate_ranking"]),
         unique_clicks: toInt(r["unique_clicks"]),
         unique_ctr: toNum(r["unique_ctr"]),
+        publisher_platform: toStr(r["publisher_platform"]),
+        landing_page_views: toInt(r["actions_landing_page_view"]),
       };
     });
 
