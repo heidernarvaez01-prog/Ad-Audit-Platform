@@ -129,7 +129,7 @@ export function generateAlerts(
     alerts.push({
       type: 'OVERSPEND_50',
       severity: 'danger',
-      message: `Spending ${pctAbove}% above expected to date ($${metrics.gastoActual.toFixed(2)} vs $${metrics.gastoEsperado.toFixed(2)} expected). Cap daily spend at $${metrics.presupuestoDiarioIdeal.toFixed(2)} to recover pacing.`,
+      message: `Gasto ${pctAbove}% por encima de lo esperado a la fecha ($${metrics.gastoActual.toFixed(2)} vs $${metrics.gastoEsperado.toFixed(2)} esperado). Limita el gasto diario a $${metrics.presupuestoDiarioIdeal.toFixed(2)} para recuperar el ritmo.`,
       icon: '🔴',
     });
   }
@@ -141,7 +141,7 @@ export function generateAlerts(
       alerts.push({
         type: 'NOT_SPENDING',
         severity: 'danger',
-        message: `No spend registered in the last ${t.notSpendingWindowDays} consolidated days. The campaign may be paused, rejected, or budget-capped — check delivery now.`,
+        message: `Sin gasto registrado en los últimos ${t.notSpendingWindowDays} días consolidados. La campaña puede estar pausada, rechazada o topada por presupuesto — revisa la entrega ahora.`,
         icon: '⛔',
       });
     }
@@ -152,7 +152,7 @@ export function generateAlerts(
     alerts.push({
       type: 'ENDING_SOON',
       severity: 'info',
-      message: `Campaign is ${metrics.porcentajeTiempo.toFixed(0)}% through its schedule (${metrics.diasRestantes} day${metrics.diasRestantes === 1 ? '' : 's'} left). Remaining balance: $${metrics.presupuestoRestante.toFixed(2)} — plan renewal or closing actions.`,
+      message: `La campaña va en ${metrics.porcentajeTiempo.toFixed(0)}% de su cronograma (quedan ${metrics.diasRestantes} día${metrics.diasRestantes === 1 ? '' : 's'}). Saldo restante: $${metrics.presupuestoRestante.toFixed(2)} — planea la renovación o el cierre.`,
       icon: '🏁',
     });
   }
@@ -181,7 +181,7 @@ export function generateAlerts(
       alerts.push({
         type: 'COST_SPIKE',
         severity: 'danger',
-        message: `CPC jumped ${pct}% vs the previous week ($${rCpc.toFixed(2)} vs $${pCpc.toFixed(2)}). Review targeting, creatives, or auction changes.`,
+        message: `El CPC subió ${pct}% vs. la semana anterior ($${rCpc.toFixed(2)} vs $${pCpc.toFixed(2)}). Revisa segmentación, creativos o cambios de subasta.`,
         icon: '📈',
       });
     } else if (pCpm > 0 && rCpm > pCpm * spikeMultiplier) {
@@ -189,7 +189,7 @@ export function generateAlerts(
       alerts.push({
         type: 'COST_SPIKE',
         severity: 'danger',
-        message: `CPM jumped ${pct}% vs the previous week ($${rCpm.toFixed(2)} vs $${pCpm.toFixed(2)}). Review targeting, creatives, or auction changes.`,
+        message: `El CPM subió ${pct}% vs. la semana anterior ($${rCpm.toFixed(2)} vs $${pCpm.toFixed(2)}). Revisa segmentación, creativos o cambios de subasta.`,
         icon: '📈',
       });
     }
@@ -203,7 +203,7 @@ export function generateAlerts(
       alerts.push({
         type: 'BUDGET_EARLY_DEPLETION',
         severity: 'warning',
-        message: `At the current pace ($${metrics.gastoDiarioActual.toFixed(2)}/day), the budget runs out ~${Math.round(daysEarly)} days before the end date. Reduce daily spend to $${metrics.presupuestoDiarioIdeal.toFixed(2)} to last the full period.`,
+        message: `Al ritmo actual ($${metrics.gastoDiarioActual.toFixed(2)}/día), el presupuesto se agota ~${Math.round(daysEarly)} días antes de la fecha de fin. Reduce el gasto diario a $${metrics.presupuestoDiarioIdeal.toFixed(2)} para que alcance todo el período.`,
         icon: '⏳',
       });
     }
@@ -228,7 +228,7 @@ export function generateAlerts(
       alerts.push({
         type: 'CREATIVE_FATIGUE',
         severity: 'warning',
-        message: `Creative fatigue: frequency at ${avgFreq.toFixed(1)} and CTR down ${(100 - (rCtr / pCtr) * 100).toFixed(0)}% vs last week (${rCtr.toFixed(2)}% vs ${pCtr.toFixed(2)}%). Time to rotate creatives or refresh audiences.`,
+        message: `Fatiga creativa: frecuencia en ${avgFreq.toFixed(1)} y CTR bajó ${(100 - (rCtr / pCtr) * 100).toFixed(0)}% vs. la semana pasada (${rCtr.toFixed(2)}% vs ${pCtr.toFixed(2)}%). Es momento de rotar creativos o refrescar audiencias.`,
         icon: '🎨',
       });
     }
@@ -255,7 +255,7 @@ export function generateAlerts(
         alerts.push({
           type: 'BUDGET_MISMATCH',
           severity: 'warning',
-          message: `Meta's programmed daily budget ($${programmedDaily.toFixed(2)}) is ${Math.abs(diffPct).toFixed(0)}% ${direction} the approved daily rate ($${approvedDaily.toFixed(2)}). Confirm the budget change was authorized.`,
+          message: `El presupuesto diario programado en Meta ($${programmedDaily.toFixed(2)}) está ${Math.abs(diffPct).toFixed(0)}% ${direction === 'above' ? 'por encima' : 'por debajo'} de la tasa diaria aprobada ($${approvedDaily.toFixed(2)}). Confirma que el cambio de presupuesto fue autorizado.`,
           icon: '⚖️',
         });
       }
@@ -266,11 +266,11 @@ export function generateAlerts(
 }
 
 export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
-  OVERSPEND_50: '50%+ over expected spend',
-  NOT_SPENDING: 'Campaign not spending',
-  ENDING_SOON: 'Campaign about to end',
-  COST_SPIKE: 'Cost spike >65%',
-  BUDGET_EARLY_DEPLETION: 'Budget running out early',
-  CREATIVE_FATIGUE: 'Creative fatigue',
-  BUDGET_MISMATCH: 'Programmed budget mismatch',
+  OVERSPEND_50: '50%+ sobre el gasto esperado',
+  NOT_SPENDING: 'Campaña sin gasto',
+  ENDING_SOON: 'Campaña por finalizar',
+  COST_SPIKE: 'Pico de costo >65%',
+  BUDGET_EARLY_DEPLETION: 'Presupuesto se agota antes de tiempo',
+  CREATIVE_FATIGUE: 'Fatiga creativa',
+  BUDGET_MISMATCH: 'Presupuesto programado no coincide',
 };

@@ -100,7 +100,7 @@ export default function ClientsPage() {
       const data = await fetchCampaignData();
       setApiData(data);
     } catch {
-      toast.error('Error connecting to the campaigns API');
+      toast.error('Error al conectar con la API de campañas');
     }
   }, []);
 
@@ -151,15 +151,15 @@ export default function ClientsPage() {
   const handleSave = async () => {
     if (!user) return;
     const trimmed = name.trim();
-    if (!trimmed) { toast.error('Client name is required'); return; }
+    if (!trimmed) { toast.error('El nombre del cliente es obligatorio'); return; }
     setSaving(true);
     if (editClient) {
       const { error } = await supabase.from('audit_clients')
         .update({ name: trimmed, description: description.trim() || null })
         .eq('id', editClient.id);
       setSaving(false);
-      if (error) { toast.error('Error saving client'); return; }
-      toast.success('Client updated');
+      if (error) { toast.error('Error al guardar el cliente'); return; }
+      toast.success('Cliente actualizado');
       setDialogOpen(false);
       loadAll();
     } else {
@@ -167,8 +167,8 @@ export default function ClientsPage() {
         .insert({ user_id: user.id, name: trimmed, description: description.trim() || null })
         .select().single();
       setSaving(false);
-      if (error || !data) { toast.error('Error creating client'); return; }
-      toast.success('Client created');
+      if (error || !data) { toast.error('Error al crear el cliente'); return; }
+      toast.success('Cliente creado');
       setDialogOpen(false);
       navigate(`/client/${data.id}`);
     }
@@ -180,8 +180,8 @@ export default function ClientsPage() {
     const { error } = await supabase.from('audit_clients').delete().eq('id', deleteTarget.id);
     setDeleting(false);
     setDeleteTarget(null);
-    if (error) { toast.error('Error deleting client'); return; }
-    toast.success('Client deleted');
+    if (error) { toast.error('Error al eliminar el cliente'); return; }
+    toast.success('Cliente eliminado');
     loadAll();
   };
 
@@ -189,13 +189,13 @@ export default function ClientsPage() {
     return (
       <div className="max-w-2xl mx-auto mt-16 border border-dashed border-border rounded-lg p-8 text-center space-y-3">
         <Briefcase className="h-8 w-8 text-muted-foreground mx-auto" />
-        <h2 className="font-semibold text-foreground">Database update required</h2>
+        <h2 className="font-semibold text-foreground">Se requiere actualizar la base de datos</h2>
         <p className="text-sm text-muted-foreground">
-          The clients table does not exist yet. Run the SQL migration
+          La tabla de clientes aún no existe. Corre la migración SQL
           <span className="font-mono text-xs"> supabase/migrations/20260611000000_audit_clients.sql </span>
-          in the Supabase SQL Editor, then reload this page.
+          en el editor SQL de Supabase, luego recarga esta página.
         </p>
-        <Button variant="outline" size="sm" onClick={loadAll}>Retry</Button>
+        <Button variant="outline" size="sm" onClick={loadAll}>Reintentar</Button>
       </div>
     );
   }
@@ -204,8 +204,8 @@ export default function ClientsPage() {
     <div className="space-y-5 w-full min-w-0">
       <PageHero
         icon={Users}
-        title="Clients"
-        subtitle="Each client has its own space. Open one to track its campaigns, budgets and results in real time."
+        title="Clientes"
+        subtitle="Cada cliente tiene su propio espacio. Abre uno para dar seguimiento a sus campañas, presupuestos y resultados en tiempo real."
         gradient="from-indigo-600 via-violet-600 to-fuchsia-600"
         actions={
           <Button
@@ -213,7 +213,7 @@ export default function ClientsPage() {
             className="bg-white text-indigo-700 hover:bg-white/90 shadow-md"
             onClick={openCreate}
           >
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> New Client
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Nuevo cliente
           </Button>
         }
       />
@@ -228,17 +228,17 @@ export default function ClientsPage() {
           {criticalAlertCount > 0 && (
             <span className="flex items-center gap-1.5 font-medium text-destructive">
               <AlertCircle className="h-4 w-4" />
-              {criticalAlertCount} critical alert{criticalAlertCount === 1 ? '' : 's'}
+              {criticalAlertCount} alerta{criticalAlertCount === 1 ? '' : 's'} crítica{criticalAlertCount === 1 ? '' : 's'}
             </span>
           )}
           {aiInsightsToday > 0 && (
             <span className="flex items-center gap-1.5 font-medium text-foreground">
               <Sparkles className="h-4 w-4 text-primary" />
-              {aiInsightsToday} new AI insight{aiInsightsToday === 1 ? '' : 's'} today
+              {aiInsightsToday} insight{aiInsightsToday === 1 ? '' : 's'} nuevo{aiInsightsToday === 1 ? '' : 's'} de IA hoy
             </span>
           )}
           <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-            View alerts <ArrowRight className="h-3 w-3" />
+            Ver alertas <ArrowRight className="h-3 w-3" />
           </span>
         </Link>
       )}
@@ -246,17 +246,17 @@ export default function ClientsPage() {
       {/* Global summary across all clients */}
       {clients.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <GradientStat icon={Users} label="Clients" value={clients.length.toString()} gradient="from-indigo-500 to-indigo-700" />
-          <GradientStat icon={Megaphone} label="Campaigns" value={totals.campaigns.toString()} gradient="from-sky-500 to-blue-700" />
-          <GradientStat icon={Wallet} label="Total Budget" value={fmt(totals.budget)} gradient="from-violet-500 to-purple-700" />
-          <GradientStat icon={TrendingUp} label="Total Spend" value={fmt(totals.spent)} gradient="from-emerald-500 to-teal-700" />
+          <GradientStat icon={Users} label="Clientes" value={clients.length.toString()} gradient="from-indigo-500 to-indigo-700" />
+          <GradientStat icon={Megaphone} label="Campañas" value={totals.campaigns.toString()} gradient="from-sky-500 to-blue-700" />
+          <GradientStat icon={Wallet} label="Presupuesto total" value={fmt(totals.budget)} gradient="from-violet-500 to-purple-700" />
+          <GradientStat icon={TrendingUp} label="Gasto total" value={fmt(totals.spent)} gradient="from-emerald-500 to-teal-700" />
           <GradientStat
             icon={AlertTriangle}
-            label="At Risk"
+            label="En riesgo"
             value={(totals.over + totals.under).toString()}
             gradient={totals.over + totals.under > 0 ? 'from-amber-500 to-rose-600' : 'from-emerald-500 to-emerald-700'}
             pulse={totals.over + totals.under > 0}
-            hint="Campaigns overspending or underspending across all clients."
+            hint="Campañas sobregastando o subgastando entre todos los clientes."
           />
         </div>
       )}
@@ -268,7 +268,7 @@ export default function ClientsPage() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search clients..."
+            placeholder="Buscar clientes..."
             className="pl-9 h-9"
           />
         </div>
@@ -282,15 +282,15 @@ export default function ClientsPage() {
       ) : clients.length === 0 ? (
         <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground space-y-2 bg-muted/20">
           <FolderOpen className="h-8 w-8 mx-auto" />
-          <p className="text-sm">No clients yet.</p>
-          <p className="text-xs">Create your first client to start auditing its campaigns.</p>
+          <p className="text-sm">Aún no hay clientes.</p>
+          <p className="text-xs">Crea tu primer cliente para empezar a auditar sus campañas.</p>
           <Button size="sm" variant="outline" className="mt-2" onClick={openCreate}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> New Client
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Nuevo cliente
           </Button>
         </div>
       ) : filteredClients.length === 0 ? (
         <div className="border border-dashed border-border rounded-xl p-10 text-center text-muted-foreground bg-muted/20">
-          <p className="text-sm">No clients match "{search}".</p>
+          <p className="text-sm">Ningún cliente coincide con "{search}".</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -328,7 +328,7 @@ export default function ClientsPage() {
                     {c.description ? (
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{c.description}</p>
                     ) : (
-                      <p className="text-xs text-muted-foreground/60 italic mt-0.5">No description</p>
+                      <p className="text-xs text-muted-foreground/60 italic mt-0.5">Sin descripción</p>
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
@@ -342,19 +342,19 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="relative grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-border">
-                  <Mini label="Campaigns" value={s.campaigns.toString()} />
-                  <Mini label="Budget" value={fmt(s.budget)} />
-                  <Mini label="Spend" value={fmt(s.spent)} />
+                  <Mini label="Campañas" value={s.campaigns.toString()} />
+                  <Mini label="Presupuesto" value={fmt(s.budget)} />
+                  <Mini label="Gasto" value={fmt(s.spent)} />
                 </div>
 
                 <div className="relative flex items-center justify-between mt-3">
                   <div className="flex items-center gap-2 text-[10px]">
-                    <StatusDot count={s.ok} color="bg-emerald-500" label="on track" />
-                    <StatusDot count={s.under} color="bg-amber-500" label="under" />
-                    <StatusDot count={s.over} color="bg-rose-500" label="over" />
+                    <StatusDot count={s.ok} color="bg-emerald-500" label="en ritmo" />
+                    <StatusDot count={s.under} color="bg-amber-500" label="subgastando" />
+                    <StatusDot count={s.over} color="bg-rose-500" label="sobregastando" />
                   </div>
                   <span className="text-[11px] font-medium text-foreground flex items-center gap-1 group-hover:gap-2 transition-all">
-                    Open audit <ArrowRight className="h-3 w-3" />
+                    Abrir auditoría <ArrowRight className="h-3 w-3" />
                   </span>
                 </div>
               </div>
@@ -369,34 +369,34 @@ export default function ClientsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-foreground">
-              {editClient ? 'Edit Client' : 'New Client'}
+              {editClient ? 'Editar cliente' : 'Nuevo cliente'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label className="text-xs text-muted-foreground">Client / brand name</Label>
+              <Label className="text-xs text-muted-foreground">Nombre del cliente / marca</Label>
               <Input
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="e.g. Acme Corp"
+                placeholder="ej. Acme Corp"
                 maxLength={120}
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
                 autoFocus
               />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Description (optional)</Label>
+              <Label className="text-xs text-muted-foreground">Descripción (opcional)</Label>
               <Input
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                placeholder="e.g. E-commerce — Meta + Google"
+                placeholder="ej. E-commerce — Meta + Google"
                 maxLength={200}
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
               />
             </div>
             <Button onClick={handleSave} disabled={saving} className="w-full">
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {editClient ? 'Save Changes' : 'Create Client'}
+              {editClient ? 'Guardar cambios' : 'Crear cliente'}
             </Button>
           </div>
         </DialogContent>
@@ -406,20 +406,20 @@ export default function ClientsPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar "{deleteTarget?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This deletes the client and all of its audited campaigns. This action cannot be undone.
+              Esto elimina el cliente y todas sus campañas auditadas. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Delete
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

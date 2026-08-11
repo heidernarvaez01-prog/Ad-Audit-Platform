@@ -20,24 +20,24 @@ import { toast } from '@/hooks/use-toast';
 
 // What each rule does, for the toggle list
 const ALERT_TYPE_DESC: Record<AlertType, string> = {
-  OVERSPEND_50: 'Spending N%+ above what was expected by today.',
-  NOT_SPENDING: 'An active campaign stopped delivering (no spend in N consolidated days).',
-  ENDING_SOON: 'Campaign is N%+ through its schedule — plan renewal/closing.',
-  COST_SPIKE: 'CPC or CPM jumped more than N% vs the previous week.',
-  BUDGET_EARLY_DEPLETION: 'At the current pace the budget runs out N+ days before the end date.',
-  CREATIVE_FATIGUE: 'Frequency above N + CTR falling more than M% — time to rotate creatives.',
-  BUDGET_MISMATCH: "Meta's programmed daily budget diverges more than N% from the approved daily rate.",
+  OVERSPEND_50: 'Gasto N%+ por encima de lo esperado a la fecha.',
+  NOT_SPENDING: 'Una campaña activa dejó de entregar (sin gasto en N días consolidados).',
+  ENDING_SOON: 'La campaña va en N%+ de su cronograma — planea renovación/cierre.',
+  COST_SPIKE: 'El CPC o CPM subió más de N% vs. la semana anterior.',
+  BUDGET_EARLY_DEPLETION: 'Al ritmo actual el presupuesto se agota N+ días antes de la fecha de fin.',
+  CREATIVE_FATIGUE: 'Frecuencia por encima de N + CTR cayendo más de M% — momento de rotar creativos.',
+  BUDGET_MISMATCH: 'El presupuesto diario programado en Meta diverge más de N% de la tasa diaria aprobada.',
 };
 // Threshold input(s) shown per rule: label + unit for the primary number,
 // and an optional secondary number (only CREATIVE_FATIGUE has one today).
 const ALERT_TYPE_THRESHOLD_UI: Record<AlertType, { label: string; unit: string; secondaryLabel?: string; secondaryUnit?: string }> = {
-  OVERSPEND_50: { label: 'Overspend threshold', unit: '% above expected' },
-  NOT_SPENDING: { label: 'No-spend window', unit: 'consolidated days' },
-  ENDING_SOON: { label: 'Ending-soon threshold', unit: '% through schedule' },
-  COST_SPIKE: { label: 'Cost spike threshold', unit: '% CPC/CPM increase' },
-  BUDGET_EARLY_DEPLETION: { label: 'Early-depletion threshold', unit: 'days early' },
-  CREATIVE_FATIGUE: { label: 'Min. frequency', unit: 'freq.', secondaryLabel: 'CTR drop threshold', secondaryUnit: '% CTR drop' },
-  BUDGET_MISMATCH: { label: 'Mismatch threshold', unit: '% diverging from approved' },
+  OVERSPEND_50: { label: 'Umbral de sobregasto', unit: '% sobre lo esperado' },
+  NOT_SPENDING: { label: 'Ventana sin gasto', unit: 'días consolidados' },
+  ENDING_SOON: { label: 'Umbral de cierre próximo', unit: '% del cronograma' },
+  COST_SPIKE: { label: 'Umbral de pico de costo', unit: '% de aumento en CPC/CPM' },
+  BUDGET_EARLY_DEPLETION: { label: 'Umbral de agotamiento anticipado', unit: 'días de anticipación' },
+  CREATIVE_FATIGUE: { label: 'Frecuencia mín.', unit: 'frec.', secondaryLabel: 'Umbral de caída de CTR', secondaryUnit: '% de caída de CTR' },
+  BUDGET_MISMATCH: { label: 'Umbral de discrepancia', unit: '% de diferencia con lo aprobado' },
 };
 const ALL_ALERT_TYPES = Object.keys(ALERT_TYPE_LABELS) as AlertType[];
 
@@ -92,7 +92,7 @@ export default function AlertsPage() {
     setSavingRule(rule.type);
     const { error } = await saveRule({ ...rule, ...patch });
     setSavingRule(null);
-    if (error) toast({ title: 'Error saving rule', description: error.message, variant: 'destructive' });
+    if (error) toast({ title: 'Error al guardar la regla', description: error.message, variant: 'destructive' });
   };
 
   // Delivery channels — email, Slack, generic webhook (in-app is always on,
@@ -117,13 +117,13 @@ export default function AlertsPage() {
     const current = getChannel(type);
     const { error } = await saveChannel({ ...current, channel_type: type, config, enabled });
     setSavingChannel(null);
-    if (error) toast({ title: 'Error saving channel', description: error.message, variant: 'destructive' });
+    if (error) toast({ title: 'Error al guardar el canal', description: error.message, variant: 'destructive' });
   };
 
   const addEmailRecipient = () => {
     const e = emailInput.trim();
     if (!e) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast({ title: 'Invalid email', variant: 'destructive' }); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast({ title: 'Correo inválido', variant: 'destructive' }); return; }
     if (emailRecipients.includes(e)) return;
     persistChannel('email', { recipients: [...emailRecipients, e] }, true);
     setEmailInput('');
@@ -234,8 +234,8 @@ export default function AlertsPage() {
       { onConflict: 'user_id' },
     );
     setSaving(false);
-    if (error) toast({ title: 'Error saving', description: error.message, variant: 'destructive' });
-    else toast({ title: 'Settings saved' });
+    if (error) toast({ title: 'Error al guardar', description: error.message, variant: 'destructive' });
+    else toast({ title: 'Configuración guardada' });
   };
 
   const sendNow = async () => {
@@ -244,7 +244,7 @@ export default function AlertsPage() {
       ? visibleAlerts.filter(a => a.alert.severity === 'danger')
       : visibleAlerts.filter(a => a.alert.severity !== 'info');
     if (pool.length === 0) {
-      toast({ title: 'Nothing to send — no active critical or warning alerts' });
+      toast({ title: 'Nada que enviar — no hay alertas críticas o de advertencia activas' });
       return;
     }
     // alert-dispatch recomputes the same alerts server-side and delivers
@@ -255,16 +255,16 @@ export default function AlertsPage() {
       const { data, error } = await supabase.functions.invoke('alert-dispatch', { body: {} });
       const userResult = data?.results ? (Object.values(data.results)[0] as any) : null;
       if (error || (data && (data as any).error)) {
-        const msg = error?.message || (data as any)?.error || 'Unknown error';
-        toast({ title: 'Error sending', description: String(msg), variant: 'destructive' });
+        const msg = error?.message || (data as any)?.error || 'Error desconocido';
+        toast({ title: 'Error al enviar', description: String(msg), variant: 'destructive' });
       } else if (!userResult?.sent) {
-        toast({ title: 'Nothing sent — check that at least one channel is enabled below' });
+        toast({ title: 'No se envió nada — verifica que al menos un canal esté habilitado abajo' });
       } else {
         const channelList = (userResult.channels || []).map((c: any) => c.channel).join(', ');
-        toast({ title: `Sent ${userResult.sent} alert(s) via ${channelList || 'no channels'}` });
+        toast({ title: `${userResult.sent} alerta(s) enviada(s) por ${channelList || 'ningún canal'}` });
       }
     } catch (e: any) {
-      toast({ title: 'Error sending', description: e.message, variant: 'destructive' });
+      toast({ title: 'Error al enviar', description: e.message, variant: 'destructive' });
     } finally {
       setSending(false);
     }
@@ -279,34 +279,34 @@ export default function AlertsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <PageHero
         icon={Bell}
-        title="Alerts"
-        subtitle="Only the alerts that matter: we flag a campaign when it overspends, stops delivering, is about to end, gets more expensive, or its creatives wear out. No noise."
+        title="Alertas"
+        subtitle="Solo las alertas que importan: marcamos una campaña cuando sobregasta, deja de entregar, está por terminar, se encarece o sus creativos se desgastan. Sin ruido."
         gradient="from-rose-600 via-orange-500 to-amber-500"
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatTile
           icon={AlertCircle}
-          label="Critical"
+          label="Críticas"
           value={stats.danger}
           gradient="from-rose-500 to-red-700"
           pulse={stats.danger > 0}
         />
         <StatTile
           icon={AlertTriangle}
-          label="Warnings"
+          label="Advertencias"
           value={stats.warning}
           gradient="from-amber-500 to-orange-600"
         />
         <StatTile
           icon={Info}
-          label="Heads-up"
+          label="Atención"
           value={stats.info}
           gradient="from-sky-500 to-blue-700"
         />
         <StatTile
           icon={CheckCircle2}
-          label="Healthy"
+          label="Saludables"
           value={healthyCount}
           gradient="from-emerald-500 to-emerald-700"
         />
@@ -315,13 +315,13 @@ export default function AlertsPage() {
       <Tabs defaultValue="activity">
         <TabsList>
           <TabsTrigger value="activity" className="text-xs gap-1.5">
-            <Bell className="h-3.5 w-3.5" /> Activity
+            <Bell className="h-3.5 w-3.5" /> Actividad
           </TabsTrigger>
           <TabsTrigger value="rules" className="text-xs gap-1.5">
-            <SlidersHorizontal className="h-3.5 w-3.5" /> Rules
+            <SlidersHorizontal className="h-3.5 w-3.5" /> Reglas
           </TabsTrigger>
           <TabsTrigger value="channels" className="text-xs gap-1.5">
-            <Mail className="h-3.5 w-3.5" /> Channels
+            <Mail className="h-3.5 w-3.5" /> Canales
           </TabsTrigger>
         </TabsList>
 
@@ -331,9 +331,9 @@ export default function AlertsPage() {
           <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
             <Sparkles className="h-4 w-4 text-primary shrink-0" />
             <div>
-              <h2 className="font-semibold text-sm">AI insights</h2>
+              <h2 className="font-semibold text-sm">Insights de IA</h2>
               <p className="text-xs text-muted-foreground">
-                Campaigns whose numbers moved beyond their own baseline — checked daily, no fixed rule required
+                Campañas cuyos números se movieron fuera de su propia línea base — revisado a diario, sin regla fija
               </p>
             </div>
           </div>
@@ -341,11 +341,11 @@ export default function AlertsPage() {
             <div className="px-5 pb-4 pt-1">
               {aiInsightsLoading ? (
                 <div className="py-4 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
                 </div>
               ) : aiInsights.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">
-                  No AI findings yet — the daily deep-scan only flags campaigns whose metrics actually deviated from their own recent baseline.
+                  Aún no hay hallazgos de IA — el escaneo diario solo marca campañas cuyas métricas realmente se desviaron de su propia línea base reciente.
                 </p>
               ) : (
                 <div className="divide-y divide-border">
@@ -372,28 +372,28 @@ export default function AlertsPage() {
         <Card className="overflow-hidden">
           <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
             <Bell className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-sm">Active alerts ({searchedAlerts.length})</h2>
+            <h2 className="font-semibold text-sm">Alertas activas ({searchedAlerts.length})</h2>
           </div>
           <div className="px-5 pb-5 pt-4">
             {/* Client search */}
             {visibleAlerts.length > 0 && (
               <div className="relative max-w-sm mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input value={alertSearch} onChange={e => setAlertSearch(e.target.value)} placeholder="Search by client or campaign..." className="pl-9 h-9" />
+                <Input value={alertSearch} onChange={e => setAlertSearch(e.target.value)} placeholder="Buscar por cliente o campaña..." className="pl-9 h-9" />
               </div>
             )}
             {loading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
+                <Loader2 className="h-4 w-4 animate-spin" /> Calculando...
               </div>
             ) : searchedAlerts.length === 0 ? (
               <div className="text-center py-6 space-y-1">
                 <CheckCircle2 className="h-7 w-7 text-success mx-auto" />
                 <p className="text-sm text-foreground font-medium">
-                  {alertSearch ? `No alerts match "${alertSearch}"` : alerts.length > 0 ? 'No active alerts from enabled rules' : 'All campaigns are healthy'}
+                  {alertSearch ? `Ninguna alerta coincide con "${alertSearch}"` : alerts.length > 0 ? 'No hay alertas activas de las reglas habilitadas' : 'Todas las campañas están saludables'}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {alertSearch ? 'Try another client or campaign.' : alerts.length > 0 ? 'Some alerts are hidden by disabled rules above.' : 'No alert rule is currently triggered. That is the goal.'}
+                  {alertSearch ? 'Prueba con otro cliente o campaña.' : alerts.length > 0 ? 'Algunas alertas están ocultas por reglas deshabilitadas arriba.' : 'Ninguna regla de alerta está activa ahora mismo. Ese es el objetivo.'}
                 </p>
               </div>
             ) : (
@@ -415,7 +415,7 @@ export default function AlertsPage() {
                     </div>
                     <div className="text-right text-xs text-muted-foreground shrink-0">
                       <div>${a.spend.toLocaleString()} / ${a.budget.toLocaleString()}</div>
-                      <div>{a.spendPct}% spend · {a.timePct}% time</div>
+                      <div>{a.spendPct}% gasto · {a.timePct}% tiempo</div>
                     </div>
                   </div>
                 ))}
@@ -431,9 +431,9 @@ export default function AlertsPage() {
           <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
             <SlidersHorizontal className="h-4 w-4 text-primary shrink-0" />
             <div>
-              <h2 className="font-semibold text-sm">Alert rules</h2>
+              <h2 className="font-semibold text-sm">Reglas de alerta</h2>
               <p className="text-xs text-muted-foreground">
-                {enabledTypes.size} of {ALL_ALERT_TYPES.length} active · thresholds sync to your account
+                {enabledTypes.size} de {ALL_ALERT_TYPES.length} activas · los umbrales se sincronizan con tu cuenta
               </p>
             </div>
           </div>
@@ -441,7 +441,7 @@ export default function AlertsPage() {
             <div className="px-5 pb-4 pt-1 divide-y divide-border">
               {rulesLoading ? (
                 <div className="py-4 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading rules...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando reglas...
                 </div>
               ) : rules.map((rule) => {
                 const ui = ALERT_TYPE_THRESHOLD_UI[rule.type];
@@ -496,13 +496,13 @@ export default function AlertsPage() {
         <Card className="overflow-hidden">
         <div className="px-5 py-4 flex items-center gap-2 border-b border-border">
           <Mail className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold text-sm">Delivery &amp; channels</h2>
+          <h2 className="font-semibold text-sm">Entrega y canales</h2>
         </div>
         <div className="px-5 pb-5 pt-4 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <Label>Alerts enabled</Label>
-            <p className="text-xs text-muted-foreground">Master switch — turns off every channel below.</p>
+            <Label>Alertas habilitadas</Label>
+            <p className="text-xs text-muted-foreground">Interruptor maestro — apaga todos los canales de abajo.</p>
           </div>
           <Switch checked={settings.enabled} onCheckedChange={(v) => setSettings({ ...settings, enabled: v })} />
         </div>
@@ -510,7 +510,7 @@ export default function AlertsPage() {
         {/* Email channel */}
         <div className="space-y-2 rounded-lg border border-border p-3">
           <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</Label>
+            <Label className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Correo</Label>
             <Switch
               checked={emailChannel.enabled}
               onCheckedChange={(v) => persistChannel('email', emailChannel.config, v)}
@@ -520,7 +520,7 @@ export default function AlertsPage() {
           <div className="flex gap-2">
             <Input
               type="email"
-              placeholder="someone@company.com"
+              placeholder="alguien@empresa.com"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEmailRecipient(); } }}
@@ -539,7 +539,7 @@ export default function AlertsPage() {
               </Badge>
             ))}
             {emailRecipients.length === 0 && (
-              <p className="text-xs text-muted-foreground">Add at least one email to receive alerts.</p>
+              <p className="text-xs text-muted-foreground">Agrega al menos un correo para recibir alertas.</p>
             )}
           </div>
         </div>
@@ -547,7 +547,7 @@ export default function AlertsPage() {
         {/* Slack channel */}
         <div className="space-y-2 rounded-lg border border-border p-3">
           <div className="flex items-center justify-between">
-            <Label>Slack (incoming webhook)</Label>
+            <Label>Slack (webhook entrante)</Label>
             <Switch
               checked={slackChannel.enabled}
               onCheckedChange={(v) => persistChannel('slack_webhook', slackChannel.config, v)}
@@ -567,7 +567,7 @@ export default function AlertsPage() {
         {/* Generic webhook channel */}
         <div className="space-y-2 rounded-lg border border-border p-3">
           <div className="flex items-center justify-between">
-            <Label>Generic webhook</Label>
+            <Label>Webhook genérico</Label>
             <Switch
               checked={webhookChannel.enabled}
               onCheckedChange={(v) => persistChannel('generic_webhook', webhookChannel.config, v)}
@@ -576,20 +576,20 @@ export default function AlertsPage() {
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="https://your-endpoint.example.com/alerts"
+              placeholder="https://tu-endpoint.ejemplo.com/alertas"
               defaultValue={(webhookChannel.config.webhook_url as string) ?? ''}
               onChange={(e) => setWebhookUrlInput(e.target.value)}
               onBlur={() => webhookUrlInput && persistChannel('generic_webhook', { webhook_url: webhookUrlInput }, true)}
             />
           </div>
-          <p className="text-xs text-muted-foreground">POSTs a JSON payload with the active alerts — build your own integration (WhatsApp, SMS, etc.) on top of this.</p>
+          <p className="text-xs text-muted-foreground">Envía un JSON por POST con las alertas activas — construye tu propia integración (WhatsApp, SMS, etc.) sobre esto.</p>
         </div>
 
         {/* In-app is always available via the bell icon — no config needed */}
         <div className="flex items-center justify-between rounded-lg border border-border p-3">
           <div>
-            <Label className="flex items-center gap-1.5"><Bell className="h-3.5 w-3.5" /> In-app notifications</Label>
-            <p className="text-xs text-muted-foreground">Shown in the bell icon — no setup required.</p>
+            <Label className="flex items-center gap-1.5"><Bell className="h-3.5 w-3.5" /> Notificaciones en la app</Label>
+            <p className="text-xs text-muted-foreground">Se muestran en el ícono de campana — sin configuración necesaria.</p>
           </div>
           <Switch
             checked={getChannel('in_app').enabled}
@@ -600,23 +600,23 @@ export default function AlertsPage() {
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Frequency</Label>
+            <Label>Frecuencia</Label>
             <Select
               value={settings.notify_frequency}
               onValueChange={(v: AlertSettings['notify_frequency']) => setSettings({ ...settings, notify_frequency: v })}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="manual">Manual only</SelectItem>
+                <SelectItem value="daily">Diaria</SelectItem>
+                <SelectItem value="weekly">Semanal</SelectItem>
+                <SelectItem value="manual">Solo manual</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <Label>Critical only</Label>
-              <p className="text-xs text-muted-foreground">Ignore warnings on every channel.</p>
+              <Label>Solo críticas</Label>
+              <p className="text-xs text-muted-foreground">Ignora advertencias en todos los canales.</p>
             </div>
             <Switch checked={settings.only_critical} onCheckedChange={(v) => setSettings({ ...settings, only_critical: v })} />
           </div>
@@ -625,11 +625,11 @@ export default function AlertsPage() {
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={sendNow} disabled={sending || loading || !settings.enabled}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-            Send alerts now
+            Enviar alertas ahora
           </Button>
           <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Save settings
+            Guardar configuración
           </Button>
         </div>
         </div>
