@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2, ChevronDown, SlidersHorizontal, Search } from 'lucide-react';
+import { Bell, Mail, Plus, X, Save, AlertTriangle, AlertCircle, Info, Loader2, Send, CheckCircle2, ChevronDown, SlidersHorizontal, Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,15 @@ interface AlertSettings {
   enabled: boolean;
   only_critical: boolean;
   notify_frequency: 'daily' | 'weekly' | 'manual';
+}
+
+interface AiInsightRow {
+  id: string;
+  campaign_name: string;
+  severity: 'critical' | 'warning' | 'info';
+  finding: string;
+  recommendation: string;
+  created_at: string;
 }
 
 interface CampaignAlert {
@@ -119,6 +128,24 @@ export default function AlertsPage() {
   };
   const removeEmailRecipient = (e: string) =>
     persistChannel('email', { recipients: emailRecipients.filter(x => x !== e) }, emailChannel.enabled);
+
+  // AI deep-scan findings — campaigns flagged by comparing their own recent
+  // metrics against their own baseline, generated daily by alert-dispatch
+  // for anything the 6 fixed rules above don't cover (see
+  // supabase/functions/_shared/ai-insights.ts).
+  const [aiInsights, setAiInsights] = useState<AiInsightRow[]>([]);
+  const [aiInsightsLoading, setAiInsightsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    setAiInsightsLoading(true);
+    supabase.from('campaign_ai_insights').select('*')
+      .order('created_at', { ascending: false }).limit(20)
+      .then(({ data }) => {
+        setAiInsights((data || []) as AiInsightRow[]);
+        setAiInsightsLoading(false);
+      });
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -283,6 +310,52 @@ export default function AlertsPage() {
         />
       </div>
 
+      {/* AI deep-scan — findings beyond the 6 fixed rules, generated daily */}
+      <Collapsible defaultOpen>
+        <Card className="overflow-hidden">
+          <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="h-4 w-4 text-primary shrink-0" />
+              <div className="text-left">
+                <h2 className="font-semibold text-sm">AI insights</h2>
+                <p className="text-xs text-muted-foreground">
+                  Campaigns whose numbers moved beyond their own baseline — checked daily, no fixed rule required
+                </p>
+              </div>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-5 pb-4 pt-1">
+              {aiInsightsLoading ? (
+                <div className="py-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+                </div>
+              ) : aiInsights.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  No AI findings yet — the daily deep-scan only flags campaigns whose metrics actually deviated from their own recent baseline.
+                </p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {aiInsights.map((insight) => (
+                    <div key={insight.id} className="py-3 flex items-start gap-3">
+                      {severityIcon(insight.severity === 'critical' ? 'danger' : insight.severity === 'warning' ? 'warning' : 'info')}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm truncate">{insight.campaign_name}</span>
+                          <span className="text-[10px] text-muted-foreground">{new Date(insight.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-xs mt-1">{insight.finding}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">→ {insight.recommendation}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Alert rules — enable/disable + editable thresholds, synced per user */}
       <Collapsible>

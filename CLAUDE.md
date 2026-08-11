@@ -162,6 +162,7 @@ presupuesto de campaña/adset hoy **siempre null** (Windsor no los envía en el 
 | `alert_rules` | Umbral editable + enable/disable por regla y por usuario (`rule_type`, `enabled`, `threshold`, `secondary_threshold`). Reemplaza los umbrales hardcodeados que antes vivían en `src/lib/audit-alerts.ts`. |
 | `alert_events` | Deduplicación/cooldown: `campaign_name` + `alert_type` + `last_triggered_at`, usado por `alert-dispatch` (antes existía pero no se leía/escribía). |
 | `notification_channels` | Canales de entrega por usuario: `channel_type` (`email` \| `slack_webhook` \| `generic_webhook` \| `in_app`; `whatsapp` planeado), `config` jsonb, `enabled`. |
+| `campaign_ai_insights` | Hallazgos del AI deep-scan diario (ver más abajo): `severity`, `finding`, `recommendation`, `metrics_snapshot` jsonb por campaña. Se muestran en `/alerts` y también se entregan como alerta más (`alertType: 'AI_INSIGHT'`) por los mismos canales. |
 | `notifications` | Feed del centro de notificaciones in-app (campana en `AppShell`): `severity`, `campaign_name`, `alert_type`, `message`, `read_at`. |
 
 ### Infraestructura de correo
@@ -262,7 +263,7 @@ columnas (`42703`) para tolerar migraciones pendientes.
 | `metrics-ai-analysis` | (default) | Chat de análisis de métricas (`gpt-4o-mini`). | OpenAI |
 | `projection-cluster` | true | Genera la estrategia de marketing completa (`gpt-4o`). | OpenAI |
 | `weekly-report` | false | Arma y envía el reporte semanal HTML (`gpt-4o` para el resumen). | OpenAI, Resend |
-| `alert-dispatch` | false (auth manual) | Calcula y envía las alertas activas — manual ("Send now") o vía cron diario. Dedup/cooldown con `alert_events`, entrega multi-canal vía `notify.ts`, resumen narrativo con IA. Reemplaza a `send-alert-email`. | `_shared/alert-engine.ts`, `_shared/notify.ts`, `_shared/openai.ts` |
+| `alert-dispatch` | false (auth manual) | Calcula y envía las alertas activas — manual ("Send now") o vía cron diario. Dedup/cooldown con `alert_events`, entrega multi-canal vía `notify.ts`, resumen narrativo con IA. Además corre el **AI deep-scan** (`_shared/ai-insights.ts`): compara cada campaña activa contra su propia línea base (ROAS, CTR, CPM, frequency, quality/engagement/conversion rankings de Meta) y le pide a gpt-4o-mini que decida qué desviación vale la pena reportar — cubre lo que las 6 reglas fijas no anticipan, sin mandarle a la IA el dataset crudo completo. Los hallazgos se guardan en `campaign_ai_insights` y se entregan por los mismos canales. Reemplaza a `send-alert-email`. | `_shared/alert-engine.ts`, `_shared/ai-insights.ts`, `_shared/notify.ts`, `_shared/openai.ts` |
 | `send-transactional-email` | true | Encola un correo transaccional. | pgmq |
 | `process-email-queue` | true | Consume la cola pgmq y envía por Resend, con reintentos y DLQ. | Resend |
 | `preview-transactional-email` | false | Previsualiza plantillas React Email. | — |

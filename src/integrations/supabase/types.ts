@@ -324,6 +324,50 @@ export type Database = {
           },
         ]
       }
+      campaign_ai_insights: {
+        Row: {
+          campaign_name: string
+          client_id: string | null
+          created_at: string
+          finding: string
+          id: string
+          metrics_snapshot: Json
+          recommendation: string
+          severity: string
+          user_id: string
+        }
+        Insert: {
+          campaign_name: string
+          client_id?: string | null
+          created_at?: string
+          finding: string
+          id?: string
+          metrics_snapshot?: Json
+          recommendation: string
+          severity: string
+          user_id: string
+        }
+        Update: {
+          campaign_name?: string
+          client_id?: string | null
+          created_at?: string
+          finding?: string
+          id?: string
+          metrics_snapshot?: Json
+          recommendation?: string
+          severity?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_ai_insights_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "audit_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cluster_runs: {
         Row: {
           client_id: string

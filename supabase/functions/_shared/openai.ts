@@ -12,6 +12,10 @@ export interface ChatCompletionParams {
   messages: ChatMessage[];
   maxTokens?: number;
   temperature?: number;
+  /** Forces a valid-JSON response body (OpenAI's `response_format: json_object`).
+   *  The prompt must itself instruct the model to return JSON — this only
+   *  enforces it, it doesn't add the instruction. */
+  jsonMode?: boolean;
 }
 
 export interface ChatCompletionResult {
@@ -37,6 +41,7 @@ export async function chatCompletion(params: ChatCompletionParams): Promise<Chat
         model: params.model,
         max_tokens: params.maxTokens ?? 800,
         ...(params.temperature != null ? { temperature: params.temperature } : {}),
+        ...(params.jsonMode ? { response_format: { type: 'json_object' } } : {}),
         messages: params.messages,
       }),
     });
