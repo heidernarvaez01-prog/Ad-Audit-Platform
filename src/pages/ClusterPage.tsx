@@ -45,7 +45,7 @@ export default function ClusterPage() {
     if (!clientId) return;
     const { data: c, error } = await supabase.from('audit_clients').select('id, name, description').eq('id', clientId).maybeSingle();
     if (error || !c) {
-      toast.error('Client not found');
+      toast.error('Cliente no encontrado');
       navigate('/clusters', { replace: true });
       return;
     }
@@ -90,7 +90,7 @@ export default function ClusterPage() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Session expired — sign in again');
+      if (!session) throw new Error('Sesión expirada — vuelve a iniciar sesión');
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/projection-cluster`, {
         method: 'POST',
@@ -103,11 +103,11 @@ export default function ClusterPage() {
       });
 
       if (!res.ok) {
-        let msg = `Cluster failed (${res.status})`;
+        let msg = `Falló el cluster (${res.status})`;
         try { msg = (await res.json()).error || msg; } catch { /* not json */ }
         throw new Error(msg);
       }
-      if (!res.body) throw new Error('No response stream');
+      if (!res.body) throw new Error('Sin stream de respuesta');
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -141,10 +141,10 @@ export default function ClusterPage() {
 
       const parsed = parseFormulaStream(raw);
       if (!parsed.hero || parsed.sections.length < total) {
-        throw new Error(`Generation incomplete (${parsed.sections.length}/${total} sections) — try again`);
+        throw new Error(`Generación incompleta (${parsed.sections.length}/${total} secciones) — intenta de nuevo`);
       }
       const html = buildFormulaHtml(parsed.hero, parsed.sections.slice(0, total), def.navLabels);
-      const title = `${def.title} — ${client?.name ?? 'Client'}`;
+      const title = `${def.title} — ${client?.name ?? 'Cliente'}`;
 
       const { error: insertErr } = await supabase.from('cluster_runs').insert({
         user_id: user.id,
@@ -155,14 +155,14 @@ export default function ClusterPage() {
         output_html: html,
         model: 'claude-sonnet-4-6',
       });
-      if (insertErr) { console.error(insertErr); toast.error('Generated, but failed to save the run'); }
+      if (insertErr) { console.error(insertErr); toast.error('Generado, pero falló al guardar la corrida'); }
 
       setViewerHtml(html);
       setViewerTitle(title);
-      toast.success('Cluster completed');
+      toast.success('Cluster completado');
       loadAll();
     } catch (e: any) {
-      toast.error(e.message || 'Cluster failed');
+      toast.error(e.message || 'Falló el cluster');
     } finally {
       if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
       setRunningKey(null);
@@ -171,7 +171,7 @@ export default function ClusterPage() {
 
   const viewRun = async (run: RunRow) => {
     const { data } = await supabase.from('cluster_runs').select('output_html').eq('id', run.id).maybeSingle();
-    if (!data?.output_html) { toast.error('This run has no output'); return; }
+    if (!data?.output_html) { toast.error('Esta corrida no tiene resultado'); return; }
     setViewerHtml(data.output_html);
     setViewerTitle(run.title);
   };
@@ -190,17 +190,17 @@ export default function ClusterPage() {
     if (!deleteTarget) return;
     const { error } = await supabase.from('cluster_runs').delete().eq('id', deleteTarget.id);
     setDeleteTarget(null);
-    if (error) { toast.error('Error deleting run'); return; }
-    toast.success('Run deleted');
+    if (error) { toast.error('Error al eliminar la corrida'); return; }
+    toast.success('Corrida eliminada');
     loadAll();
   };
 
   const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    new Date(iso).toLocaleString('es-CO', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   const nextMonthLabel = () => {
     const d = new Date(); d.setMonth(d.getMonth() + 1, 1);
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    return d.toLocaleDateString('es-CO', { month: 'long', day: 'numeric' });
   };
 
   // Full-screen viewer
@@ -211,7 +211,7 @@ export default function ClusterPage() {
           <span className="text-sm font-semibold text-foreground truncate">{viewerTitle}</span>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => downloadHtml(viewerHtml, viewerTitle)}>
-              <Download className="h-3.5 w-3.5 mr-1.5" /> Download HTML
+              <Download className="h-3.5 w-3.5 mr-1.5" /> Descargar HTML
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setViewerHtml(null)}>
               <X className="h-4 w-4" />
@@ -228,14 +228,14 @@ export default function ClusterPage() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/clusters')}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Clients
+          <ArrowLeft className="h-4 w-4 mr-1" /> Clientes
         </Button>
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-foreground truncate">
-            {client ? `${client.name} — Projection Clusters` : 'Projection Clusters'}
+            {client ? `${client.name} — Clusters de proyección` : 'Clusters de proyección'}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Generate complete AI strategies for this client, ready to present. One run per cluster each month.
+            Genera estrategias completas de IA para este cliente, listas para presentar. Una corrida por cluster cada mes.
           </p>
         </div>
       </div>
@@ -245,12 +245,12 @@ export default function ClusterPage() {
         <div className="border border-warning/40 bg-warning/5 rounded-lg p-4 flex items-start gap-3">
           <FileText className="h-4 w-4 text-warning mt-0.5 shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-foreground">This client's Brand Brief is empty</p>
+            <p className="font-medium text-foreground">El Brief de marca de este cliente está vacío</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Clusters are built FROM the briefing — complete it first to unlock the runs.
+              Los clusters se construyen A PARTIR del brief — complétalo primero para desbloquear las corridas.
             </p>
             <Button size="sm" variant="outline" className="mt-2" asChild>
-              <Link to={`/brief/${clientId}`}>Complete the Brand Brief</Link>
+              <Link to={`/brief/${clientId}`}>Completar el Brief de marca</Link>
             </Button>
           </div>
         </div>
@@ -274,7 +274,7 @@ export default function ClusterPage() {
                       <h2 className="font-semibold text-foreground">{def.title}</h2>
                       <Badge variant="secondary" className="text-[10px]">{def.badge}</Badge>
                       {locked && (
-                        <Badge variant="outline" className="text-[10px] gap-1"><Lock className="h-2.5 w-2.5" /> Used this month</Badge>
+                        <Badge variant="outline" className="text-[10px] gap-1"><Lock className="h-2.5 w-2.5" /> Usado este mes</Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{def.description}</p>
@@ -284,10 +284,10 @@ export default function ClusterPage() {
                   onClick={() => runCluster(def.key)}
                   disabled={!!runningKey || hasBrief !== true || locked}
                   className="shrink-0"
-                  title={locked ? `Available again on ${nextMonthLabel()}` : undefined}
+                  title={locked ? `Disponible de nuevo el ${nextMonthLabel()}` : undefined}
                 >
                   {isRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : locked ? <Lock className="h-4 w-4 mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                  {isRunning ? 'Generating...' : locked ? 'Next month' : 'Run Cluster'}
+                  {isRunning ? 'Generando...' : locked ? 'Próximo mes' : 'Correr cluster'}
                 </Button>
               </div>
 
@@ -297,8 +297,8 @@ export default function ClusterPage() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
                       {progress.section === 0
-                        ? 'Analyzing brief and campaign data...'
-                        : `Writing ${def.navLabels[Math.min(progress.section - 1, total - 1)]} — section ${Math.min(progress.section, total)} of ${total}`}
+                        ? 'Analizando brief y datos de campaña...'
+                        : `Escribiendo ${def.navLabels[Math.min(progress.section - 1, total - 1)]} — sección ${Math.min(progress.section, total)} de ${total}`}
                     </span>
                     <span className="font-mono text-muted-foreground">
                       {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
@@ -309,14 +309,14 @@ export default function ClusterPage() {
                       style={{ width: `${Math.max(4, (progress.section / total) * 100)}%` }} />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    This takes a few minutes — keep this tab open while the AI builds it.
+                    Esto toma unos minutos — mantén esta pestaña abierta mientras la IA lo construye.
                   </p>
                 </div>
               )}
 
               {locked && !isRunning && (
                 <p className="mt-3 text-[11px] text-muted-foreground">
-                  Already generated this month. Available again on {nextMonthLabel()}.
+                  Ya se generó este mes. Disponible de nuevo el {nextMonthLabel()}.
                 </p>
               )}
             </Card>
@@ -326,10 +326,10 @@ export default function ClusterPage() {
 
       {/* Run history */}
       <Card className="p-5">
-        <h2 className="font-semibold mb-3">Runs ({runs.length})</h2>
+        <h2 className="font-semibold mb-3">Corridas ({runs.length})</h2>
         {runs.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            No runs yet. Run a cluster to generate this client's first strategy.
+            Aún no hay corridas. Corre un cluster para generar la primera estrategia de este cliente.
           </p>
         ) : (
           <div className="divide-y divide-border">
@@ -342,10 +342,10 @@ export default function ClusterPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => viewRun(run)} title="View">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => viewRun(run)} title="Ver">
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(run)} title="Delete">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(run)} title="Eliminar">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -359,15 +359,15 @@ export default function ClusterPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this run?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar esta corrida?</AlertDialogTitle>
             <AlertDialogDescription>
-              The generated strategy document will be permanently deleted.
+              El documento de estrategia generado se eliminará permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
