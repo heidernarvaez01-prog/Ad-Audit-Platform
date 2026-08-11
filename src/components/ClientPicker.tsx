@@ -67,7 +67,7 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
         if (!b.client_id) continue;
         const filled = briefKeys.filter(k => b[k] !== null && b[k] !== undefined && String(b[k]).trim() !== '').length;
         const pct = Math.round((filled / briefKeys.length) * 100);
-        map[b.client_id] = pct >= 80 ? 'Complete' : `${pct}% filled`;
+        map[b.client_id] = pct >= 80 ? 'Completo' : `${pct}% completado`;
       }
     } else if (mode === 'clusters') {
       const { data: runs } = await supabase.from('cluster_runs').select('client_id');
@@ -75,13 +75,13 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
         const n = (map[r.client_id] ? parseInt(map[r.client_id]) : 0) + 1;
         map[r.client_id] = `${n}`;
       }
-      for (const k of Object.keys(map)) map[k] = `${map[k]} run${map[k] === '1' ? '' : 's'}`;
+      for (const k of Object.keys(map)) map[k] = `${map[k]} corrida${map[k] === '1' ? '' : 's'}`;
     } else if (mode === 'weekly') {
       const { data: reports } = await supabase
         .from('weekly_reports').select('client_id, week_end')
         .order('week_end', { ascending: false });
       for (const r of reports || []) {
-        if (!map[r.client_id]) map[r.client_id] = `Last: ${r.week_end}`;
+        if (!map[r.client_id]) map[r.client_id] = `Último: ${r.week_end}`;
       }
     }
     setBadges(map);
@@ -93,14 +93,14 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
   const handleCreate = async () => {
     if (!user) return;
     const trimmed = name.trim();
-    if (!trimmed) { toast.error('Client name is required'); return; }
+    if (!trimmed) { toast.error('El nombre del cliente es obligatorio'); return; }
     setSaving(true);
     const { data, error } = await supabase.from('audit_clients')
       .insert({ user_id: user.id, name: trimmed, description: description.trim() || null })
       .select().single();
     setSaving(false);
-    if (error || !data) { toast.error('Error creating client'); return; }
-    toast.success('Client created');
+    if (error || !data) { toast.error('Error al crear el cliente'); return; }
+    toast.success('Cliente creado');
     setDialogOpen(false);
     navigate(`${basePath}/${data.id}`);
   };
@@ -109,11 +109,11 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
     return (
       <div className="max-w-2xl mx-auto mt-16 border border-dashed border-border rounded-lg p-8 text-center space-y-3">
         <Briefcase className="h-8 w-8 text-muted-foreground mx-auto" />
-        <h2 className="font-semibold text-foreground">Database update required</h2>
+        <h2 className="font-semibold text-foreground">Se requiere actualizar la base de datos</h2>
         <p className="text-sm text-muted-foreground">
-          Run the pending SQL migrations in the Supabase SQL Editor, then reload this page.
+          Corre las migraciones SQL pendientes en el editor SQL de Supabase, luego recarga esta página.
         </p>
-        <Button variant="outline" size="sm" onClick={loadAll}>Retry</Button>
+        <Button variant="outline" size="sm" onClick={loadAll}>Reintentar</Button>
       </div>
     );
   }
@@ -152,7 +152,7 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
             onClick={() => { setName(''); setDescription(''); setDialogOpen(true); }}
           >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            New Client
+            Nuevo cliente
           </Button>
         }
       />
@@ -164,7 +164,7 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search clients..."
+            placeholder="Buscar clientes..."
             className="pl-9 h-9"
           />
         </div>
@@ -177,15 +177,15 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
       ) : clients.length === 0 ? (
         <div className="border border-dashed border-border rounded-xl p-12 text-center text-muted-foreground space-y-2 bg-muted/20">
           <FolderOpen className="h-8 w-8 mx-auto" />
-          <p className="text-sm">No clients yet.</p>
-          <p className="text-xs">Clients are shared with Monitoring Audit — create one to get started.</p>
+          <p className="text-sm">Aún no hay clientes.</p>
+          <p className="text-xs">Los clientes se comparten con Auditoría de monitoreo — crea uno para empezar.</p>
           <Button size="sm" variant="outline" className="mt-2" onClick={() => { setName(''); setDescription(''); setDialogOpen(true); }}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> New Client
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Nuevo cliente
           </Button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="border border-dashed border-border rounded-xl p-10 text-center text-muted-foreground bg-muted/20">
-          <p className="text-sm">No clients match "{search}".</p>
+          <p className="text-sm">Ningún cliente coincide con "{search}".</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -215,7 +215,7 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
                   {c.description ? (
                     <p className="text-xs text-muted-foreground truncate mt-0.5">{c.description}</p>
                   ) : (
-                    <p className="text-xs text-muted-foreground/60 italic mt-0.5">No description</p>
+                    <p className="text-xs text-muted-foreground/60 italic mt-0.5">Sin descripción</p>
                   )}
                 </div>
                 {badges[c.id] && (
@@ -226,9 +226,9 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
               </div>
 
               <div className="relative flex items-center justify-between mt-4 pt-3 border-t border-border">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Workspace</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Espacio de trabajo</span>
                 <span className="text-[11px] font-medium text-foreground flex items-center gap-1 group-hover:gap-2 transition-all">
-                  Open <ArrowRight className="h-3 w-3" />
+                  Abrir <ArrowRight className="h-3 w-3" />
                 </span>
               </div>
             </button>
@@ -240,22 +240,22 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-foreground">New Client</DialogTitle>
+            <DialogTitle className="text-foreground">Nuevo cliente</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
-              <Label className="text-xs text-muted-foreground">Client / brand name</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Acme Corp" maxLength={120}
+              <Label className="text-xs text-muted-foreground">Nombre del cliente / marca</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="ej. Acme Corp" maxLength={120}
                 onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }} autoFocus />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Description (optional)</Label>
-              <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. E-commerce — Meta + Google" maxLength={200}
+              <Label className="text-xs text-muted-foreground">Descripción (opcional)</Label>
+              <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="ej. E-commerce — Meta + Google" maxLength={200}
                 onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }} />
             </div>
             <Button onClick={handleCreate} disabled={saving} className="w-full">
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create Client
+              Crear cliente
             </Button>
           </div>
         </DialogContent>

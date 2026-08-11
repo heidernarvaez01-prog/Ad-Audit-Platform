@@ -24,11 +24,11 @@ const severityIcon = (s: string) =>
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return 'justo ahora';
+  if (mins < 60) return `hace ${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return `hace ${hrs}h`;
+  return `hace ${Math.floor(hrs / 24)}d`;
 }
 
 /**
@@ -84,7 +84,7 @@ export default function NotificationCenter() {
           variant="secondary"
           size="icon"
           className="fixed top-3 right-3 z-50 h-10 w-10 rounded-full shadow-md"
-          aria-label="Notifications"
+          aria-label="Notificaciones"
         >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
@@ -96,16 +96,16 @@ export default function NotificationCenter() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0 max-h-[70vh] overflow-hidden flex flex-col">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <span className="text-sm font-semibold">Notifications</span>
+          <span className="text-sm font-semibold">Notificaciones</span>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={markAllRead}>
-              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+              <CheckCheck className="h-3.5 w-3.5" /> Marcar todas como leídas
             </Button>
           )}
         </div>
         <div className="overflow-y-auto divide-y divide-border">
           {items.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-8">No notifications yet.</p>
+            <p className="text-xs text-muted-foreground text-center py-8">Aún no hay notificaciones.</p>
           ) : items.map((n) => (
             <button
               key={n.id}

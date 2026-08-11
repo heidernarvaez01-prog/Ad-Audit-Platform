@@ -13,12 +13,12 @@ interface NavLeaf { to: string; label: string; icon: LucideIcon }
 
 // Main action menu — order requested by the team
 const mainNav: NavLeaf[] = [
-  { to: '/', label: 'Monitoring Audit', icon: ClipboardCheck },
-  { to: '/weekly-report', label: 'Weekly Performance Report', icon: CalendarClock },
-  { to: '/clusters', label: 'Projection Clusters', icon: Network },
-  { to: '/alerts', label: 'Alerts', icon: Bell },
-  { to: '/ask', label: 'Ask AI', icon: Sparkles },
-  { to: '/brief', label: 'Brand Brief', icon: FileText },
+  { to: '/', label: 'Auditoría de monitoreo', icon: ClipboardCheck },
+  { to: '/weekly-report', label: 'Reporte semanal de rendimiento', icon: CalendarClock },
+  { to: '/clusters', label: 'Clusters de proyección', icon: Network },
+  { to: '/alerts', label: 'Alertas', icon: Bell },
+  { to: '/ask', label: 'Preguntar a la IA', icon: Sparkles },
+  { to: '/brief', label: 'Brief de marca', icon: FileText },
 ];
 
 interface AppSidebarProps {
@@ -112,14 +112,14 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
           </div>
           <div className={`min-w-0 transition-opacity duration-200 ${labelCls}`}>
             <h1 className="text-sm font-semibold tracking-tight truncate text-white">Apache Studio</h1>
-            <p className="text-[11px] text-sidebar-foreground/70 truncate">Ad Audit</p>
+            <p className="text-[11px] text-sidebar-foreground/70 truncate">Auditoría de anuncios</p>
           </div>
           {!hideToggle && (
             <button
               onClick={() => setPinned(p => !p)}
               className={`ml-auto p-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground
                 hover:bg-sidebar-accent transition-opacity shrink-0 ${labelCls}`}
-              title={pinned ? 'Unpin menu' : 'Keep menu open'}
+              title={pinned ? 'Desanclar menú' : 'Mantener menú abierto'}
             >
               {pinned ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
             </button>
@@ -135,11 +135,11 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
         <div className="border-t border-sidebar-border p-2 space-y-1 shrink-0">
           <ActionRow
             icon={theme === 'dark' ? Sun : Moon}
-            label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
             onClick={toggle}
           />
-          <NavRow to="/how-it-works" label="How it works" icon={HelpCircle} />
-          {isAdmin && <NavRow to="/admin" label="Admin" icon={Shield} />}
+          <NavRow to="/how-it-works" label="Cómo funciona" icon={HelpCircle} />
+          {isAdmin && <NavRow to="/admin" label="Administración" icon={Shield} />}
 
           {user && (
             <>
@@ -148,7 +148,7 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
                   {user.email}
                 </p>
               </div>
-              <ActionRow icon={LogOut} label="Sign out" onClick={() => signOut()} danger />
+              <ActionRow icon={LogOut} label="Cerrar sesión" onClick={() => signOut()} danger />
             </>
           )}
         </div>
