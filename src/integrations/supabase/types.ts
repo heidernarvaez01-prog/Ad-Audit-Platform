@@ -465,6 +465,7 @@ export type Database = {
           adset_budget_remaining: number | null
           adset_daily_budget: number | null
           adset_end_date: string | null
+          adset_id: string | null
           adset_lifetime_budget: number | null
           adset_name: string | null
           adset_start_date: string | null
@@ -516,6 +517,7 @@ export type Database = {
           adset_budget_remaining?: number | null
           adset_daily_budget?: number | null
           adset_end_date?: string | null
+          adset_id?: string | null
           adset_lifetime_budget?: number | null
           adset_name?: string | null
           adset_start_date?: string | null
@@ -567,6 +569,7 @@ export type Database = {
           adset_budget_remaining?: number | null
           adset_daily_budget?: number | null
           adset_end_date?: string | null
+          adset_id?: string | null
           adset_lifetime_budget?: number | null
           adset_name?: string | null
           adset_start_date?: string | null
