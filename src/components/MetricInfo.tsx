@@ -35,7 +35,7 @@ export function MetricInfo({
           "ml-1 inline-flex items-center align-middle text-muted-foreground hover:text-foreground transition-colors",
           className,
         )}
-        aria-label="More information"
+        aria-label="Más información"
       >
         <InfoIcon className={cn("h-3.5 w-3.5", iconClassName)} />
       </PopoverTrigger>
