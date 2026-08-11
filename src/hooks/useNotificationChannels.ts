@@ -47,7 +47,7 @@ export function useNotificationChannels() {
     channels.find(c => c.channel_type === type) ?? { channel_type: type, config: {}, enabled: false };
 
   const saveChannel = async (channel: NotificationChannel) => {
-    if (!user) return { error: new Error('Not authenticated') };
+    if (!user) return { error: new Error('No has iniciado sesión') };
     const { error } = await supabase.from('notification_channels').upsert(
       { user_id: user.id, channel_type: channel.channel_type, config: channel.config as any, enabled: channel.enabled },
       { onConflict: 'user_id,channel_type' },

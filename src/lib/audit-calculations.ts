@@ -80,8 +80,8 @@ export function calculateAuditMetrics(
 
 export function getTipoCalendarioLabel(tipo: TipoCalendario): string {
   switch (tipo) {
-    case 'corridos': return 'Every day';
-    case 'lun_vie': return 'Monday to Friday';
-    case 'lun_sab': return 'Monday to Saturday';
+    case 'corridos': return 'Todos los días';
+    case 'lun_vie': return 'Lunes a viernes';
+    case 'lun_sab': return 'Lunes a sábado';
   }
 }

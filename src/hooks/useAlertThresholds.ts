@@ -70,7 +70,7 @@ export function useAlertThresholds() {
   }, [rules]);
 
   const saveRule = async (rule: UserAlertRule) => {
-    if (!user) return { error: new Error('Not authenticated') };
+    if (!user) return { error: new Error('No has iniciado sesión') };
     const { error } = await supabase.from('alert_rules').upsert(
       {
         user_id: user.id,
