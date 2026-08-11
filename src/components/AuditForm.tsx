@@ -35,7 +35,7 @@ interface Props {
 interface BulkCfg { presupuesto: string; inicio: string; fin: string; cal: string; expanded: boolean }
 
 const SCHEDULE_LABEL: Record<string, string> = {
-  corridos: 'Every day', lun_vie: 'Mon–Fri', lun_sab: 'Mon–Sat',
+  corridos: 'Todos los días', lun_vie: 'Lun–Vie', lun_sab: 'Lun–Sáb',
 };
 
 export default function AuditForm({ open, onClose, onSaved, apiData, clientId, editRecord }: Props) {
@@ -115,7 +115,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
 
   const handleSaveSingle = async () => {
     if (!user || !campaignName || !presupuesto || !fechaInicio || !fechaFin) {
-      toast.error('Please fill in all fields');
+      toast.error('Completa todos los campos');
       return;
     }
     setLoading(true);
@@ -127,8 +127,8 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
     let error;
     if (editRecord) ({ error } = await supabase.from('audit_records').update(record).eq('id', editRecord.id));
     else ({ error } = await supabase.from('audit_records').insert(record));
-    if (error) toast.error('Error saving record');
-    else { toast.success(editRecord ? 'Record updated' : 'Record created'); onSaved(); }
+    if (error) toast.error('Error al guardar el registro');
+    else { toast.success(editRecord ? 'Registro actualizado' : 'Registro creado'); onSaved(); }
     setLoading(false);
   };
 
@@ -178,18 +178,18 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
       }
       return next;
     });
-    toast.success('Applied to all selected');
+    toast.success('Aplicado a todas las seleccionadas');
   };
 
   const handleSaveBulk = async () => {
-    if (!user || !accountName) { toast.error('Select an account'); return; }
-    if (selectedNames.length === 0) { toast.error('Select at least one campaign'); return; }
+    if (!user || !accountName) { toast.error('Selecciona una cuenta'); return; }
+    if (selectedNames.length === 0) { toast.error('Selecciona al menos una campaña'); return; }
     const missing = selectedNames.filter(n => {
       const c = configs[n];
       return !c.presupuesto || !c.inicio || !c.fin;
     });
     if (missing.length) {
-      toast.error(`${missing.length} campaign(s) missing budget or dates`);
+      toast.error(`${missing.length} campaña(s) sin presupuesto o fechas`);
       // auto-expand the first incomplete one
       setCfg(missing[0], { expanded: true });
       return;
@@ -202,8 +202,8 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
       tipo_calendario: configs[name].cal, platform: platform || null,
     }));
     const { error } = await supabase.from('audit_records').insert(records);
-    if (error) toast.error('Error creating campaigns');
-    else { toast.success(`${records.length} campaign${records.length === 1 ? '' : 's'} added`); onSaved(); }
+    if (error) toast.error('Error al crear las campañas');
+    else { toast.success(`${records.length} campaña${records.length === 1 ? '' : 's'} agregada${records.length === 1 ? '' : 's'}`); onSaved(); }
     setLoading(false);
   };
 
@@ -212,7 +212,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">
-            {editRecord ? 'Edit Audit Record' : 'Add Campaigns'}
+            {editRecord ? 'Editar registro de auditoría' : 'Agregar campañas'}
           </DialogTitle>
         </DialogHeader>
 
@@ -228,7 +228,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
                   mode === m ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                {m === 'single' ? 'Single campaign' : 'Bulk (multiple)'}
+                {m === 'single' ? 'Una campaña' : 'Masivo (varias)'}
               </button>
             ))}
           </div>
@@ -238,18 +238,18 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
           {/* Platform + Account (both modes) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Platform</Label>
+              <Label className="text-xs text-muted-foreground">Plataforma</Label>
               <Select value={platform} onValueChange={(v) => { setPlatform(v); resetAccount(''); }}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
                 <SelectContent>
                   {platforms.map(p => <SelectItem key={p} value={p}><span className="capitalize">{p}</span></SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Account</Label>
+              <Label className="text-xs text-muted-foreground">Cuenta</Label>
               <Select value={accountName} onValueChange={resetAccount}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
                 <SelectContent>
                   {accountNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
                 </SelectContent>
@@ -260,22 +260,22 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
           {mode === 'single' ? (
             <>
               <div>
-                <Label className="text-xs text-muted-foreground">Campaign</Label>
+                <Label className="text-xs text-muted-foreground">Campaña</Label>
                 <Popover open={comboOpen} onOpenChange={setComboOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" aria-expanded={comboOpen} disabled={!accountName}
                       className="w-full justify-between font-normal text-sm h-9">
                       <span className="truncate">
-                        {campaignName || (accountName ? 'Search campaign...' : 'Select an account first')}
+                        {campaignName || (accountName ? 'Buscar campaña...' : 'Primero selecciona una cuenta')}
                       </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                     <Command>
-                      <CommandInput placeholder="Search campaign..." />
+                      <CommandInput placeholder="Buscar campaña..." />
                       <CommandList>
-                        <CommandEmpty>No campaigns found.</CommandEmpty>
+                        <CommandEmpty>No se encontraron campañas.</CommandEmpty>
                         <CommandGroup className="max-h-60 overflow-auto">
                           {filteredCampaigns.map(c => (
                             <CommandItem key={c} value={c} onSelect={() => handleCampaignSelect(c)}>
@@ -290,33 +290,33 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
                 </Popover>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Total Approved Budget</Label>
+                <Label className="text-xs text-muted-foreground">Presupuesto total aprobado</Label>
                 <Input type="number" value={presupuesto} onChange={e => setPresupuesto(e.target.value)} placeholder="0.00" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Start Date</Label>
+                  <Label className="text-xs text-muted-foreground">Fecha de inicio</Label>
                   <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">End Date</Label>
+                  <Label className="text-xs text-muted-foreground">Fecha de fin</Label>
                   <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
                 </div>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Schedule Type</Label>
+                <Label className="text-xs text-muted-foreground">Tipo de cronograma</Label>
                 <Select value={tipoCalendario} onValueChange={setTipoCalendario}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="corridos">Every day</SelectItem>
-                    <SelectItem value="lun_vie">Monday to Friday</SelectItem>
-                    <SelectItem value="lun_sab">Monday to Saturday</SelectItem>
+                    <SelectItem value="corridos">Todos los días</SelectItem>
+                    <SelectItem value="lun_vie">Lunes a viernes</SelectItem>
+                    <SelectItem value="lun_sab">Lunes a sábado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <Button onClick={handleSaveSingle} disabled={loading} className="w-full">
                 {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {editRecord ? 'Save Changes' : 'Create Record'}
+                {editRecord ? 'Guardar cambios' : 'Crear registro'}
               </Button>
             </>
           ) : (
@@ -325,27 +325,27 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <Label className="text-xs text-muted-foreground">
-                    Campaigns {selectedNames.length > 0 && <span className="text-primary font-medium">· {selectedNames.length} selected</span>}
+                    Campañas {selectedNames.length > 0 && <span className="text-primary font-medium">· {selectedNames.length} seleccionadas</span>}
                   </Label>
                   {filteredCampaigns.length > 0 && (
                     <button type="button" onClick={toggleAll} className="text-[11px] text-primary hover:underline">
-                      {allSelected ? 'Clear all' : 'Select all'}
+                      {allSelected ? 'Quitar todas' : 'Seleccionar todas'}
                     </button>
                   )}
                 </div>
                 {!accountName ? (
                   <p className="text-xs text-muted-foreground border border-dashed border-border rounded-md p-4 text-center">
-                    Select an account to list its campaigns.
+                    Selecciona una cuenta para listar sus campañas.
                   </p>
                 ) : filteredCampaigns.length === 0 ? (
                   <p className="text-xs text-muted-foreground border border-dashed border-border rounded-md p-4 text-center">
-                    No campaigns found for this account.
+                    No se encontraron campañas para esta cuenta.
                   </p>
                 ) : (
                   <div className="border border-border rounded-md">
                     <div className="relative p-2 border-b border-border">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                      <Input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)} placeholder="Filter campaigns..." className="pl-8 h-8 text-xs" />
+                      <Input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)} placeholder="Filtrar campañas..." className="pl-8 h-8 text-xs" />
                     </div>
                     <div className="max-h-40 overflow-y-auto p-1">
                       {bulkVisible.map(c => (
@@ -358,7 +358,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
                           <span className="truncate text-xs text-foreground">{c}</span>
                         </button>
                       ))}
-                      {bulkVisible.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">No matches.</p>}
+                      {bulkVisible.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Sin coincidencias.</p>}
                     </div>
                   </div>
                 )}
@@ -368,28 +368,28 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
                 <>
                   {/* Apply to all — quick fill */}
                   <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                    <p className="text-[11px] font-medium text-foreground">Quick fill — apply to all selected</p>
+                    <p className="text-[11px] font-medium text-foreground">Llenado rápido — aplicar a todas las seleccionadas</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <Input type="number" value={applyBudget} onChange={e => setApplyBudget(e.target.value)} placeholder="Budget" className="h-8 text-xs" />
+                      <Input type="number" value={applyBudget} onChange={e => setApplyBudget(e.target.value)} placeholder="Presupuesto" className="h-8 text-xs" />
                       <Select value={applyCal} onValueChange={setApplyCal}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
-                          <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
-                          <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
+                          <SelectItem value="corridos" className="text-xs">Todos los días</SelectItem>
+                          <SelectItem value="lun_vie" className="text-xs">Lun–Vie</SelectItem>
+                          <SelectItem value="lun_sab" className="text-xs">Lun–Sáb</SelectItem>
                         </SelectContent>
                       </Select>
                       <Input type="date" value={applyStart} onChange={e => setApplyStart(e.target.value)} className="h-8 text-xs" />
                       <Input type="date" value={applyEnd} onChange={e => setApplyEnd(e.target.value)} className="h-8 text-xs" />
                     </div>
                     <Button type="button" size="sm" variant="secondary" className="w-full h-8 text-xs" onClick={applyToAll}>
-                      Apply to all {selectedNames.length}
+                      Aplicar a las {selectedNames.length}
                     </Button>
                   </div>
 
                   {/* Per-campaign editable rows */}
                   <div className="space-y-1.5">
-                    <p className="text-[11px] text-muted-foreground">Each campaign keeps its own values — expand to fine-tune.</p>
+                    <p className="text-[11px] text-muted-foreground">Cada campaña conserva sus propios valores — expande para ajustar.</p>
                     {selectedNames.map(name => {
                       const c = configs[name];
                       const incomplete = !c.presupuesto || !c.inicio || !c.fin;
@@ -411,31 +411,31 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
                           {c.expanded && (
                             <div className="px-2.5 pb-2.5 pt-1 grid grid-cols-2 gap-2 border-t border-border">
                               <div className="col-span-2">
-                                <Label className="text-[10px] text-muted-foreground">Budget</Label>
+                                <Label className="text-[10px] text-muted-foreground">Presupuesto</Label>
                                 <Input type="number" value={c.presupuesto} onChange={e => setCfg(name, { presupuesto: e.target.value })} placeholder="0.00" className="h-8 text-xs" />
                               </div>
                               <div>
-                                <Label className="text-[10px] text-muted-foreground">Start</Label>
+                                <Label className="text-[10px] text-muted-foreground">Inicio</Label>
                                 <Input type="date" value={c.inicio} onChange={e => setCfg(name, { inicio: e.target.value })} className="h-8 text-xs" />
                               </div>
                               <div>
-                                <Label className="text-[10px] text-muted-foreground">End</Label>
+                                <Label className="text-[10px] text-muted-foreground">Fin</Label>
                                 <Input type="date" value={c.fin} onChange={e => setCfg(name, { fin: e.target.value })} className="h-8 text-xs" />
                               </div>
                               <div className="col-span-2">
-                                <Label className="text-[10px] text-muted-foreground">Schedule</Label>
+                                <Label className="text-[10px] text-muted-foreground">Cronograma</Label>
                                 <Select value={c.cal} onValueChange={v => setCfg(name, { cal: v })}>
                                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="corridos" className="text-xs">Every day</SelectItem>
-                                    <SelectItem value="lun_vie" className="text-xs">Mon–Fri</SelectItem>
-                                    <SelectItem value="lun_sab" className="text-xs">Mon–Sat</SelectItem>
+                                    <SelectItem value="corridos" className="text-xs">Todos los días</SelectItem>
+                                    <SelectItem value="lun_vie" className="text-xs">Lun–Vie</SelectItem>
+                                    <SelectItem value="lun_sab" className="text-xs">Lun–Sáb</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
                               <button type="button" onClick={() => toggleCampaign(name)}
                                 className="col-span-2 text-[11px] text-destructive hover:underline flex items-center gap-1 justify-center pt-0.5">
-                                <X className="h-3 w-3" /> Remove
+                                <X className="h-3 w-3" /> Quitar
                               </button>
                             </div>
                           )}
@@ -448,7 +448,7 @@ export default function AuditForm({ open, onClose, onSaved, apiData, clientId, e
 
               <Button onClick={handleSaveBulk} disabled={loading} className="w-full">
                 {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Add {selectedNames.length > 0 ? selectedNames.length : ''} campaign{selectedNames.length === 1 ? '' : 's'}
+                Agregar {selectedNames.length > 0 ? selectedNames.length : ''} campaña{selectedNames.length === 1 ? '' : 's'}
               </Button>
             </>
           )}
