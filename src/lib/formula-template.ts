@@ -4,9 +4,9 @@
 // deliverable is consistent and client-ready.
 
 export const FORMULA_NAV_LABELS = [
-  '01 Context', '02 Insights', '03 Objectives', '04 Audiences', '05 Brand',
-  '06 Benchmark', '07 Strategic Concept', '08 Creative', '09 Media Plan',
-  '10 Slogans', '11 Content Grid', '12 SEO / Ads', '13 Big Ideas', '14 Summary', '15 Closing',
+  '01 Contexto', '02 Insights', '03 Objetivos', '04 Audiencias', '05 Marca',
+  '06 Benchmark', '07 Concepto estratégico', '08 Creatividad', '09 Plan de medios',
+  '10 Slogans', '11 Parrilla de contenido', '12 SEO / Ads', '13 Big Ideas', '14 Resumen', '15 Cierre',
 ];
 
 // Catalog of available clusters. navLabels MUST match the section count the
@@ -23,31 +23,31 @@ export const CLUSTER_CATALOG: ClusterDef[] = [
   {
     key: 'la_formula_v2',
     title: 'La Fórmula',
-    badge: 'Brand Strategy',
+    badge: 'Estrategia de marca',
     description:
-      'A complete brand strategy in 15 sections: insights, SMART objectives, audiences, brand structure, benchmark, strategic & creative concepts, 360° media plan, content grid (20 pieces), SEO + Google Ads, big ideas and an executive summary. Briefing-centered, boosted with live data. Premium client-ready deliverable.',
+      'Una estrategia de marca completa en 15 secciones: insights, objetivos SMART, audiencias, estructura de marca, benchmark, conceptos estratégico y creativo, plan de medios 360°, parrilla de contenido (20 piezas), SEO + Google Ads, big ideas y un resumen ejecutivo. Centrada en el brief, potenciada con datos en vivo. Entregable premium listo para el cliente.',
     navLabels: FORMULA_NAV_LABELS,
   },
   {
     key: 'tactical_optimization',
-    title: 'Tactical Optimization',
-    badge: 'Weekly Optimization',
+    title: 'Optimización táctica',
+    badge: 'Optimización semanal',
     description:
-      "A media-buyer-grade optimization plan for the week: root-cause diagnosis by funnel layer, the exact moves to make (pause, scale, reallocate) with the numbers that justify them, what NOT to touch, and a watchlist. Built from this client's real campaign and ad-set data.",
+      'Un plan de optimización de la semana con nivel de media buyer: diagnóstico de causa raíz por capa del funnel, los movimientos exactos a hacer (pausar, escalar, reasignar) con los números que los justifican, qué NO tocar, y una lista de vigilancia. Construido desde los datos reales de campaña y conjunto de anuncios de este cliente.',
     navLabels: [
-      '01 Diagnosis', '02 Funnel Diagnosis', '03 Actions', '04 Don\'t Touch',
-      '05 Budget Reallocation', '06 Watchlist',
+      '01 Diagnóstico', '02 Diagnóstico de funnel', '03 Acciones', '04 No tocar',
+      '05 Reasignación de presupuesto', '06 Lista de vigilancia',
     ],
   },
   {
     key: 'keywords_google_ads',
-    title: 'Keywords & Google Ads',
+    title: 'Keywords y Google Ads',
     badge: 'SEM',
     description:
-      'A complete, ready-to-launch SEM plan: keyword clusters by intent, themed ad groups, negative keywords, 15 headlines and 15 descriptions within Google Ads limits, sitelinks & extensions, a SEM benchmark and quick wins. Built from the brief and any live Google Ads data.',
+      'Un plan SEM completo y listo para lanzar: clusters de keywords por intención, grupos de anuncios temáticos, palabras negativas, 15 títulos y 15 descripciones dentro de los límites de Google Ads, sitelinks y extensiones, un benchmark SEM y quick wins. Construido desde el brief y cualquier dato en vivo de Google Ads.',
     navLabels: [
-      '01 SEM Strategy', '02 Keyword Clusters', '03 Ad Groups', '04 Negatives',
-      '05 Headlines', '06 Descriptions', '07 Extensions', '08 SEM Benchmark', '09 Quick Wins',
+      '01 Estrategia SEM', '02 Clusters de keywords', '03 Grupos de anuncios', '04 Negativas',
+      '05 Títulos', '06 Descripciones', '07 Extensiones', '08 Benchmark SEM', '09 Quick wins',
     ],
   },
 ];
@@ -202,11 +202,11 @@ export function buildFormulaHtml(
   const secsJs = `const SECS = [\n${sections.map(s => JSON.stringify(s)).join(',\n')}\n];`;
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${escapeHtml(hero.title)} — Strategy</title>
+<title>${escapeHtml(hero.title)} — Estrategia</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>${FORMULA_CSS}</style>
 </head>
