@@ -13,47 +13,47 @@ type Brief = Record<string, any>;
 
 const SECTIONS: { title: string; fields: { key: string; label: string; hint?: string; type?: 'input' | 'textarea' | 'number' | 'url'; rows?: number }[] }[] = [
   {
-    title: 'Identification',
+    title: 'Identificación',
     fields: [
-      { key: 'marca', label: 'Brand' },
-      { key: 'sitio_web', label: 'Website', type: 'url' },
-      { key: 'mercado_objetivo', label: 'Target country or market', hint: 'Geographic areas only' },
-      { key: 'presupuesto_campana', label: 'Campaign budget', type: 'number' },
+      { key: 'marca', label: 'Marca' },
+      { key: 'sitio_web', label: 'Sitio web', type: 'url' },
+      { key: 'mercado_objetivo', label: 'País o mercado objetivo', hint: 'Solo áreas geográficas' },
+      { key: 'presupuesto_campana', label: 'Presupuesto de campaña', type: 'number' },
     ],
   },
   {
-    title: 'Strategy',
+    title: 'Estrategia',
     fields: [
-      { key: 'necesidad_principal', label: 'Main need', hint: 'The problem to face and solve with marketing', type: 'textarea', rows: 3 },
-      { key: 'descripcion_proyecto', label: 'Project overview', hint: 'What the company offers, benefits, audience and differentiators', type: 'textarea', rows: 5 },
-      { key: 'publico_objetivo', label: 'Target audience and buyer persona', hint: 'Types of people and situational descriptions', type: 'textarea', rows: 5 },
-      { key: 'fundamentos_marca', label: 'Brand fundamentals', hint: 'Products, services and brand mandatories', type: 'textarea', rows: 4 },
+      { key: 'necesidad_principal', label: 'Necesidad principal', hint: 'El problema a enfrentar y resolver con marketing', type: 'textarea', rows: 3 },
+      { key: 'descripcion_proyecto', label: 'Descripción del proyecto', hint: 'Qué ofrece la empresa, beneficios, audiencia y diferenciadores', type: 'textarea', rows: 5 },
+      { key: 'publico_objetivo', label: 'Público objetivo y buyer persona', hint: 'Tipos de personas y descripciones situacionales', type: 'textarea', rows: 5 },
+      { key: 'fundamentos_marca', label: 'Fundamentos de marca', hint: 'Productos, servicios y elementos obligatorios de marca', type: 'textarea', rows: 4 },
     ],
   },
   {
-    title: 'Verbal identity',
+    title: 'Identidad verbal',
     fields: [
-      { key: 'palabras_marca', label: '30 words that represent the brand', hint: 'Comma-separated', type: 'textarea', rows: 3 },
-      { key: 'frases_marca', label: '10 phrases that describe the brand', hint: 'One per line', type: 'textarea', rows: 5 },
-      { key: 'valores_marca', label: 'Brand values', hint: 'With an explanation for each', type: 'textarea', rows: 4 },
-      { key: 'promesa_marca', label: 'Brand promise', hint: 'Achievable rational and emotional promises', type: 'textarea', rows: 3 },
-      { key: 'reasons_why', label: 'Reasons Why / Reasons to believe', hint: 'Concrete reasons to believe the promise', type: 'textarea', rows: 3 },
+      { key: 'palabras_marca', label: '30 palabras que representan la marca', hint: 'Separadas por comas', type: 'textarea', rows: 3 },
+      { key: 'frases_marca', label: '10 frases que describen la marca', hint: 'Una por línea', type: 'textarea', rows: 5 },
+      { key: 'valores_marca', label: 'Valores de marca', hint: 'Con una explicación para cada uno', type: 'textarea', rows: 4 },
+      { key: 'promesa_marca', label: 'Promesa de marca', hint: 'Promesas racionales y emocionales alcanzables', type: 'textarea', rows: 3 },
+      { key: 'reasons_why', label: 'Reasons Why / Razones para creer', hint: 'Razones concretas para creer la promesa', type: 'textarea', rows: 3 },
     ],
   },
   {
-    title: 'Personality',
+    title: 'Personalidad',
     fields: [
-      { key: 'personalidad_marca', label: 'Brand personality', hint: 'Archetype if applicable', type: 'textarea', rows: 3 },
-      { key: 'estilo_tono', label: 'Style and tone', hint: 'How the brand speaks by customer and channel', type: 'textarea', rows: 3 },
-      { key: 'diferenciador', label: 'Main differentiator', hint: 'What no one else has in the local market', type: 'textarea', rows: 3 },
+      { key: 'personalidad_marca', label: 'Personalidad de marca', hint: 'Arquetipo si aplica', type: 'textarea', rows: 3 },
+      { key: 'estilo_tono', label: 'Estilo y tono', hint: 'Cómo habla la marca según cliente y canal', type: 'textarea', rows: 3 },
+      { key: 'diferenciador', label: 'Diferenciador principal', hint: 'Lo que nadie más tiene en el mercado local', type: 'textarea', rows: 3 },
     ],
   },
   {
-    title: 'Creative and references',
+    title: 'Creatividad y referencias',
     fields: [
-      { key: 'insights', label: 'Useful findings or insights', hint: 'Concepts, campaigns, slogans and previous learnings', type: 'textarea', rows: 4 },
-      { key: 'elementos_marca', label: 'Brand elements', hint: 'Colors, typography, graphic guidelines and manuals', type: 'textarea', rows: 4 },
-      { key: 'benchmark', label: 'Benchmark / References', hint: 'Relevant competitors to analyze', type: 'textarea', rows: 4 },
+      { key: 'insights', label: 'Hallazgos o insights útiles', hint: 'Conceptos, campañas, slogans y aprendizajes previos', type: 'textarea', rows: 4 },
+      { key: 'elementos_marca', label: 'Elementos de marca', hint: 'Colores, tipografía, lineamientos gráficos y manuales', type: 'textarea', rows: 4 },
+      { key: 'benchmark', label: 'Benchmark / Referencias', hint: 'Competidores relevantes a analizar', type: 'textarea', rows: 4 },
     ],
   },
 ];
@@ -74,7 +74,7 @@ export default function BriefPage() {
     (async () => {
       const { data: c, error } = await supabase.from('audit_clients').select('id, name').eq('id', clientId).maybeSingle();
       if (error || !c) {
-        toast.error('Client not found');
+        toast.error('Cliente no encontrado');
         navigate('/brief', { replace: true });
         return;
       }
@@ -89,7 +89,7 @@ export default function BriefPage() {
     if (!clientId) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('You must sign in to save');
+      toast.error('Debes iniciar sesión para guardar');
       return;
     }
     setSaving(true);
@@ -97,7 +97,7 @@ export default function BriefPage() {
     const { error } = await supabase.from('brand_briefs').upsert(payload, { onConflict: 'client_id' });
     setSaving(false);
     if (error) {
-      toast.error('Error saving brief');
+      toast.error('Error al guardar el brief');
     } else {
       setSavedAt(Date.now());
     }
@@ -128,29 +128,29 @@ export default function BriefPage() {
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex items-center gap-2">
           <Button variant="ghost" size="sm" className="shrink-0 -ml-2" onClick={() => navigate('/brief')}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Clients
+            <ArrowLeft className="h-4 w-4 mr-1" /> Clientes
           </Button>
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-foreground truncate">
-              {client ? `${client.name} — Brand Brief` : 'Brand Brief'}
+              {client ? `${client.name} — Brief de marca` : 'Brief de marca'}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Tell us about this brand. The more complete, the sharper the AI strategies will be.
+              Cuéntanos sobre esta marca. Entre más completo, más precisas serán las estrategias de IA.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {saving ? (
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Save className="h-3 w-3 animate-pulse" /> Saving...
+              <Save className="h-3 w-3 animate-pulse" /> Guardando...
             </span>
           ) : savedAt ? (
             <span className="text-xs text-success flex items-center gap-1.5">
-              <Check className="h-3 w-3" /> Saved
+              <Check className="h-3 w-3" /> Guardado
             </span>
           ) : null}
           <Button size="sm" onClick={saveNow} disabled={saving}>
-            <Save className="h-3.5 w-3.5 mr-1.5" /> Save brief
+            <Save className="h-3.5 w-3.5 mr-1.5" /> Guardar brief
           </Button>
         </div>
       </div>
@@ -164,7 +164,7 @@ export default function BriefPage() {
           />
         </div>
         <span className="text-xs text-muted-foreground shrink-0">
-          {filledCount}/{allKeys.length} fields · {pct >= 80 ? 'Complete' : pct >= 40 ? 'In progress' : 'Just started'}
+          {filledCount}/{allKeys.length} campos · {pct >= 80 ? 'Completo' : pct >= 40 ? 'En progreso' : 'Recién empezado'}
         </span>
       </div>
 

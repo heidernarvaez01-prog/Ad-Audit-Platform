@@ -39,7 +39,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <header className="md:hidden h-12 flex items-center justify-between px-3 border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-30">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open menu">
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Abrir menú">
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
@@ -86,8 +86,8 @@ function AppLayout() {
         <Route path="/audit/:id" element={<RequireAuth><AppShell><AuditDetailPage /></AppShell></RequireAuth>} />
         <Route path="/brief" element={<RequireAuth><AppShell>
           <ClientPicker
-            title="Brand Brief"
-            subtitle="The story of each brand: who they are, what they sell and who they talk to. It powers the AI strategies."
+            title="Brief de marca"
+            subtitle="La historia de cada marca: quiénes son, qué venden y a quién le hablan. Alimenta las estrategias de IA."
             basePath="/brief"
             icon={FileText}
             mode="brief"
@@ -96,8 +96,8 @@ function AppLayout() {
         <Route path="/brief/:clientId" element={<RequireAuth><AppShell><BriefPage /></AppShell></RequireAuth>} />
         <Route path="/clusters" element={<RequireAuth><AppShell>
           <ClientPicker
-            title="Projection Clusters"
-            subtitle="Full AI marketing strategies for each client, built from their brief and real campaign results."
+            title="Clusters de proyección"
+            subtitle="Estrategias completas de marketing con IA para cada cliente, construidas desde su brief y los resultados reales de campaña."
             basePath="/clusters"
             icon={Network}
             mode="clusters"
@@ -106,8 +106,8 @@ function AppLayout() {
         <Route path="/clusters/:clientId" element={<RequireAuth><AppShell><ClusterPage /></AppShell></RequireAuth>} />
         <Route path="/weekly-report" element={<RequireAuth><AppShell>
           <ClientPicker
-            title="Weekly Performance Report"
-            subtitle="A clear summary of how each client's campaigns did this week, delivered to their inbox every Monday."
+            title="Reporte semanal de rendimiento"
+            subtitle="Un resumen claro de cómo les fue a las campañas de cada cliente esta semana, entregado a su correo cada lunes."
             basePath="/weekly-report"
             icon={CalendarClock}
             mode="weekly"
