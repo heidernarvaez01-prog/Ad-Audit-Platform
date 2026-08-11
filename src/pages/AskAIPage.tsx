@@ -14,12 +14,12 @@ interface Msg { role: 'user' | 'assistant'; content: string }
 interface ClientOpt { id: string; name: string }
 
 const SUGGESTIONS = [
-  'How is this campaign performing this week?',
-  'Is the budget pacing on track?',
-  'Give me 3 actionable optimizations',
-  'Any cost or delivery red flags?',
-  'Which campaigns have the worst CTR and why?',
-  'Summarize overall performance this week',
+  '¿Cómo va esta campaña esta semana?',
+  '¿El ritmo de gasto va bien?',
+  'Dame 3 optimizaciones accionables',
+  '¿Hay alguna alerta de costo o entrega?',
+  '¿Qué campañas tienen el peor CTR y por qué?',
+  'Resume el rendimiento general de esta semana',
 ];
 
 const ALL_CLIENTS = '__all_clients__';
@@ -63,7 +63,7 @@ export default function AskAIPage() {
   }, [messages, loading]);
 
   const scopeLabel = useMemo(() => {
-    if (clientId === ALL_CLIENTS) return 'All clients';
+    if (clientId === ALL_CLIENTS) return 'Todos los clientes';
     const c = clients.find(c => c.id === clientId)?.name ?? '—';
     return campaignName === ALL_CAMPAIGNS ? c : `${c} · ${campaignName}`;
   }, [clientId, campaignName, clients]);
@@ -85,7 +85,7 @@ export default function AskAIPage() {
       if (data?.error) throw new Error(data.error);
       setMessages(m => [...m, { role: 'assistant', content: data.answer }]);
     } catch (e: any) {
-      toast.error(e.message ?? 'Analysis failed');
+      toast.error(e.message ?? 'Falló el análisis');
       setMessages(m => m.slice(0, -1));
     } finally {
       setLoading(false);
@@ -98,35 +98,35 @@ export default function AskAIPage() {
     <div className="max-w-4xl mx-auto space-y-5">
       <PageHero
         icon={Sparkles}
-        title="Ask AI"
-        subtitle="Ask anything about your campaigns — performance, pacing, red flags, optimizations. Scope it to a client and campaign for a sharper answer, or leave it open to compare across accounts."
+        title="Preguntar a la IA"
+        subtitle="Pregunta cualquier cosa sobre tus campañas — rendimiento, ritmo, alertas, optimizaciones. Acótalo a un cliente y campaña para una respuesta más precisa, o déjalo abierto para comparar entre cuentas."
         gradient="from-cyan-600 via-sky-500 to-indigo-600"
       />
 
       <Card className="p-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Client</span>
+          <span className="text-xs text-muted-foreground">Cliente</span>
           <Select value={clientId} onValueChange={setClientId}>
             <SelectTrigger className="w-48 h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_CLIENTS}>All clients</SelectItem>
+              <SelectItem value={ALL_CLIENTS}>Todos los clientes</SelectItem>
               {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Campaign</span>
+          <span className="text-xs text-muted-foreground">Campaña</span>
           <Select value={campaignName} onValueChange={setCampaignName} disabled={clientId === ALL_CLIENTS}>
             <SelectTrigger className="w-56 h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_CAMPAIGNS}>All campaigns</SelectItem>
+              <SelectItem value={ALL_CAMPAIGNS}>Todas las campañas</SelectItem>
               {campaigns.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         {messages.length > 0 && (
           <Button variant="ghost" size="sm" className="ml-auto h-8 text-xs gap-1.5" onClick={clearChat}>
-            <X className="h-3.5 w-3.5" /> Clear chat
+            <X className="h-3.5 w-3.5" /> Limpiar chat
           </Button>
         )}
       </Card>
@@ -148,7 +148,7 @@ export default function AskAIPage() {
         {messages.map((m, i) => (
           <Card key={i} className={`p-4 ${m.role === 'user' ? 'bg-muted' : ''}`}>
             <div className="text-xs font-medium text-muted-foreground mb-2">
-              {m.role === 'user' ? 'You' : 'AI Analysis'}
+              {m.role === 'user' ? 'Tú' : 'Análisis de IA'}
             </div>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown>{m.content}</ReactMarkdown>
@@ -157,7 +157,7 @@ export default function AskAIPage() {
         ))}
         {loading && (
           <Card className="p-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Analyzing {scopeLabel}...
+            <Loader2 className="h-4 w-4 animate-spin" /> Analizando {scopeLabel}...
           </Card>
         )}
       </div>
@@ -169,7 +169,7 @@ export default function AskAIPage() {
         <Textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder={`Ask about ${scopeLabel.toLowerCase()}...`}
+          placeholder={`Pregunta sobre ${scopeLabel.toLowerCase()}...`}
           rows={2}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(question); }
