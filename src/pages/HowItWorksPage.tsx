@@ -10,8 +10,8 @@ export default function HowItWorksPage() {
     <div className="space-y-6 w-full max-w-5xl mx-auto">
       <PageHero
         icon={BookOpen}
-        title="How Apache Studio works"
-        subtitle="Your command center for paid media: monitor, analyze, strategize and report — one workspace per client."
+        title="Cómo funciona Apache Studio"
+        subtitle="Tu centro de comando para medios pagados: monitorea, analiza, planea y reporta — un espacio de trabajo por cliente."
         gradient="from-violet-600 via-indigo-600 to-sky-500"
       />
 
@@ -22,89 +22,89 @@ export default function HowItWorksPage() {
             <Users className="h-4 w-4" />
           </div>
           <div className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">Everything is organized by client.</span> Each client (brand)
-            has its own isolated space — its audit, brief, strategies and reports never mix with another client's.
-            Create clients once in Monitoring Audit and they appear across every section.
+            <span className="font-semibold text-foreground">Todo está organizado por cliente.</span> Cada cliente (marca)
+            tiene su propio espacio aislado — su auditoría, brief, estrategias y reportes nunca se mezclan con los de otro cliente.
+            Crea clientes una vez en Auditoría de monitoreo y aparecen en todas las secciones.
           </div>
         </div>
       </div>
 
       {/* Sections grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <Step n="01" icon={ClipboardCheck} title="Monitoring Audit"
+        <Step n="01" icon={ClipboardCheck} title="Auditoría de monitoreo"
           gradient="from-indigo-500 to-violet-600"
-          desc="Track every campaign in real time. Budget pacing shows if a campaign is spending what it should by today; performance shows live results (impressions, reach, conversions, CTR, CPC and more)." />
-        <Step n="02" icon={CalendarClock} title="Weekly Performance Report"
+          desc="Da seguimiento a cada campaña en tiempo real. El ritmo de gasto muestra si una campaña está gastando lo que debería a la fecha; el rendimiento muestra resultados en vivo (impresiones, alcance, conversiones, CTR, CPC y más)." />
+        <Step n="02" icon={CalendarClock} title="Reporte semanal de rendimiento"
           gradient="from-sky-500 to-blue-700"
-          desc="A clean, client-ready summary of the week's results per campaign, with week-over-week changes and an AI summary. Sent automatically every Monday." />
-        <Step n="03" icon={Network} title="Projection Clusters"
+          desc="Un resumen limpio y listo para el cliente de los resultados de la semana por campaña, con cambios semana a semana y un resumen de IA. Se envía automáticamente cada lunes." />
+        <Step n="03" icon={Network} title="Clusters de proyección"
           gradient="from-fuchsia-500 to-purple-700"
-          desc="One click generates a complete brand strategy (La Fórmula): insights, objectives, audiences, creative concepts, media plan and more — built from the brief and boosted with live data." />
-        <Step n="04" icon={Bell} title="Alerts"
+          desc="Con un clic se genera una estrategia de marca completa (La Fórmula): insights, objetivos, audiencias, conceptos creativos, plan de medios y más — construida desde el brief y potenciada con datos en vivo." />
+        <Step n="04" icon={Bell} title="Alertas"
           gradient="from-rose-500 to-red-700"
-          desc="Six high-signal rules watch your campaigns: overspend, no delivery, ending soon, cost spikes, early budget depletion and creative fatigue — each with an editable threshold. Delivered by email, Slack, webhook or the in-app bell." />
-        <Step n="05" icon={FileText} title="Brand Brief"
+          desc="Seis reglas de alta señal vigilan tus campañas: sobregasto, sin entrega, cierre próximo, picos de costo, agotamiento anticipado del presupuesto y fatiga creativa — cada una con un umbral editable. Se entregan por correo, Slack, webhook o la campana en la app." />
+        <Step n="05" icon={FileText} title="Brief de marca"
           gradient="from-amber-500 to-orange-600"
-          desc="The strategic foundation of each client: who they are, what they sell, their voice and differentiators. The richer the brief, the sharper the AI strategies." />
-        <Step n="06" icon={Sparkles} title="Ask AI"
+          desc="La base estratégica de cada cliente: quiénes son, qué venden, su voz y diferenciadores. Entre más completo el brief, más precisas las estrategias de IA." />
+        <Step n="06" icon={Sparkles} title="Preguntar a la IA"
           gradient="from-cyan-500 to-sky-700"
-          desc="A dedicated chat to ask anything about your campaigns. Scope it to a client and campaign for a sharp answer, or leave it open to compare across accounts." />
-        <Step n="07" icon={Shield} title="Admin"
+          desc="Un chat dedicado para preguntar cualquier cosa sobre tus campañas. Acótalo a un cliente y campaña para una respuesta precisa, o déjalo abierto para comparar entre cuentas." />
+        <Step n="07" icon={Shield} title="Administración"
           gradient="from-slate-700 to-indigo-700"
-          desc="Invite your team, give each member access only to their assigned accounts, manage admins and send password-reset links. The owner keeps full control." />
+          desc="Invita a tu equipo, dale a cada miembro acceso solo a sus cuentas asignadas, gestiona administradores y envía enlaces de restablecimiento de contraseña. El dueño conserva el control total." />
       </div>
 
       {/* FAQ */}
       <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" /> Frequently asked questions
+          <FileText className="h-4 w-4 text-primary" /> Preguntas frecuentes
         </h2>
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="q1">
             <AccordionTrigger className="text-sm text-left">
-              <span className="flex items-center gap-2"><Gauge className="h-3.5 w-3.5 text-primary" /> What do "% Expected" and "% Actual" mean?</span>
+              <span className="flex items-center gap-2"><Gauge className="h-3.5 w-3.5 text-primary" /> ¿Qué significan "% Esperado" y "% Actual"?</span>
             </AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground">
-              <strong>% Expected</strong> is how much of the budget should be spent by today if pacing were perfect (based on
-              how much of the schedule has elapsed). <strong>% Actual</strong> is how much has really been spent. When Actual
-              is far above Expected the campaign is overspending (red); far below means underspending (amber); close means on track (green).
+              <strong>% Esperado</strong> es cuánto del presupuesto debería estar gastado hoy si el ritmo fuera perfecto (basado en
+              cuánto del cronograma ha transcurrido). <strong>% Actual</strong> es cuánto se ha gastado realmente. Cuando el Actual
+              está muy por encima del Esperado la campaña está sobregastando (rojo); muy por debajo significa subgastando (ámbar); cercano significa en ritmo (verde).
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="q2">
             <AccordionTrigger className="text-sm text-left">
-              <span className="flex items-center gap-2"><BarChart3 className="h-3.5 w-3.5 text-primary" /> How is the "Ideal Daily" budget calculated?</span>
+              <span className="flex items-center gap-2"><BarChart3 className="h-3.5 w-3.5 text-primary" /> ¿Cómo se calcula el presupuesto "Ideal diario"?</span>
             </AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground">
-              It's the remaining balance divided by the days left in the schedule. Spend that amount per day and the campaign
-              lands exactly on budget by its end date.
+              Es el saldo restante dividido entre los días que quedan en el cronograma. Gasta esa cantidad por día y la campaña
+              termina exactamente en presupuesto en su fecha de fin.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="q3">
-            <AccordionTrigger className="text-sm text-left">Why does spend exclude today and yesterday?</AccordionTrigger>
+            <AccordionTrigger className="text-sm text-left">¿Por qué el gasto excluye hoy y ayer?</AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground">
-              Ad platforms take up to 48 hours to finalize spend. Excluding those two days keeps pacing accurate and avoids
-              false alarms from incomplete data.
+              Las plataformas publicitarias tardan hasta 48 horas en finalizar el gasto. Excluir esos dos días mantiene el ritmo
+              preciso y evita falsas alarmas por datos incompletos.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="q4">
-            <AccordionTrigger className="text-sm text-left">Which platforms does it support?</AccordionTrigger>
+            <AccordionTrigger className="text-sm text-left">¿Qué plataformas soporta?</AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground">
-              Any platform synced through Windsor.ai. Meta and Google Ads are supported today; each campaign shows its platform
-              and new platforms appear automatically once connected.
+              Cualquier plataforma sincronizada a través de Windsor.ai. Meta y Google Ads están soportadas hoy; cada campaña muestra
+              su plataforma y las nuevas plataformas aparecen automáticamente al conectarse.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="q5">
-            <AccordionTrigger className="text-sm text-left">How do I give a teammate access to only one client?</AccordionTrigger>
+            <AccordionTrigger className="text-sm text-left">¿Cómo le doy acceso a un compañero de equipo a un solo cliente?</AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground">
-              In Admin: invite them by email, then assign the specific ad account(s) to them. They'll only see those accounts.
-              Admins and the owner see everything.
+              En Administración: invítalo por correo, luego asígnale la(s) cuenta(s) publicitaria(s) específica(s). Solo verá esas cuentas.
+              Los administradores y el dueño ven todo.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="q6">
-            <AccordionTrigger className="text-sm text-left">Are the AI strategies different for each client?</AccordionTrigger>
+            <AccordionTrigger className="text-sm text-left">¿Las estrategias de IA son diferentes para cada cliente?</AccordionTrigger>
             <AccordionContent className="text-sm text-muted-foreground">
-              Yes. The design and structure of the deliverable are always the same premium format, but the content is generated
-              uniquely from each client's brief and live campaign data.
+              Sí. El diseño y la estructura del entregable siempre son el mismo formato premium, pero el contenido se genera
+              de forma única a partir del brief de cada cliente y los datos de campaña en vivo.
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -116,8 +116,8 @@ export default function HowItWorksPage() {
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">Tip:</span> click any row in the audit to expand charts, the full
-            metric set and a one-click AI insight for that campaign.
+            <span className="font-semibold text-foreground">Tip:</span> haz clic en cualquier fila de la auditoría para expandir
+            gráficos, el set completo de métricas y un insight de IA con un clic para esa campaña.
           </div>
         </div>
       </div>
