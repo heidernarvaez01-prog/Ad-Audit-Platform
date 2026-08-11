@@ -35,8 +35,15 @@ const WINDSOR_FIELDS = [
   // creative-fatigue indicator than the frequency+CTR heuristic alone.
   "quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking",
   "unique_clicks", "unique_ctr",
-  // Placement + funnel step between click and conversion.
-  "publisher_platform", "actions_landing_page_view",
+  // Funnel step between click and conversion. NOTE: "publisher_platform" is
+  // deliberately NOT requested here — Windsor's facebook connector rejects
+  // any request that mixes a breakdown field (publisher_platform) with the
+  // "omni" (actions_omni_*) and "ranking" (quality_ranking, etc.) fields
+  // above, returning HTTP 400. Confirmed by direct API testing on 2026-08-11.
+  // Getting placement-level data back would require a SEPARATE sync (its own
+  // Windsor request without omni/ranking fields, written to a different
+  // table) rather than adding it to this one. See CLAUDE.md.
+  "actions_landing_page_view",
 ].join(",");
 const WINDSOR_ACCOUNTS = "204109401";
 
@@ -156,7 +163,7 @@ Deno.serve(async (req) => {
         conversion_rate_ranking: toStr(r["conversion_rate_ranking"]),
         unique_clicks: toInt(r["unique_clicks"]),
         unique_ctr: toNum(r["unique_ctr"]),
-        publisher_platform: toStr(r["publisher_platform"]),
+        // publisher_platform intentionally not requested/mapped — see WINDSOR_FIELDS comment above.
         landing_page_views: toInt(r["actions_landing_page_view"]),
       };
     });

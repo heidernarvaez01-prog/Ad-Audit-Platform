@@ -315,13 +315,15 @@ pg_cron 03:00 UTC
       ▼
 sync-meta-datos (Edge Function)
       │  GET connectors.windsor.ai/facebook
-      │     ?api_key=<HARDCODED>
+      │     ?api_key=<desde secretos, ver §5>
       │     &date_preset=last_30d
       │     &select_accounts=204109401     ← UNA sola cuenta, fija en el código
-      │     &fields=account_id,date,account_name,campaign,adset_name,
-      │             campaign_objective,spend,clicks,impressions,reach,ctr,
-      │             link_clicks,frequency,cpm,actions_post_engagement,
-      │             video_thruplay_watched_actions_video_view,conversions
+      │     &fields=<42 campos, ver WINDSOR_FIELDS en index.ts — identidad
+      │             (IDs de campaign/adset/ad), delivery, presupuesto,
+      │             fechas de programación, profundidad de conversión
+      │             (purchases/add_to_cart/checkout/ROAS), diagnósticos
+      │             de calidad de Meta (quality/engagement/conversion
+      │             ranking) y funnel (landing_page_view)>
       ▼
 mapeo campo a campo  (campaign→campaign_name, spend→total_cost, ctr→ctr_all,
                       cpc calculado = spend/clicks, plataforma="META")
@@ -331,6 +333,30 @@ INSERT por lotes de 500
       ▼
 meta_datos  ──► src/lib/api.ts (paginado + caché 5 min) ──► buildAuditRows() ──► UI
 ```
+
+### Restricción descubierta de la API de Windsor: breakdown vs. omni/ranking
+
+El connector `facebook` de Windsor **rechaza con HTTP 400** cualquier request que combine un
+campo de tipo *breakdown* (ej. `publisher_platform`, que desglosa cada fila por placement) con
+campos `actions_omni_*`/`action_values_omni_*` ("omni", atribución agregada) o con los rankings
+de calidad (`quality_ranking`, `engagement_rate_ranking`, `conversion_rate_ranking`). El mensaje
+de error de Windsor nombra explícitamente los campos en conflicto. Confirmado con pruebas directas
+contra la API el 2026-08-11.
+
+**Por eso `WINDSOR_FIELDS` en `sync-meta-datos/index.ts` NO pide `publisher_platform`** — se
+priorizaron los campos de conversión/calidad porque alimentan alertas y el AI deep-scan, sobre el
+desglose por placement (que hoy es solo una tarjeta informativa en `AuditDetailPage.tsx`, oculta
+mientras no haya datos reales). Si en el futuro se quiere desglose por placement, la única forma
+es un **segundo sync independiente** (su propio request a Windsor sin campos omni/ranking,
+escribiendo a otra tabla) — no se puede combinar en un solo request ni en `meta_datos`.
+
+Este bug (campo incompatible agregado sin probarlo contra la API real) hizo que **todo sync desde
+que se añadió `publisher_platform` fallara silenciosamente** (capturado por el try/catch de la
+función, sin romper `meta_datos` porque el `throw` ocurre antes del delete-then-insert, pero
+tampoco actualizando nada) — los 18+ campos nuevos (IDs, presupuestos, ROAS, rankings, funnel)
+quedaron en `NULL` para todas las filas hasta el fix. **Lección: probar cualquier campo nuevo de
+Windsor con un curl directo antes de agregarlo a `WINDSOR_FIELDS`**, sobre todo si es un campo de
+tipo breakdown/dimensión en vez de una métrica.
 
 ### Limitaciones críticas del flujo actual
 
@@ -343,14 +369,16 @@ meta_datos  ──► src/lib/api.ts (paginado + caché 5 min) ──► buildAu
 4. **Delete-then-insert**: el borrado total no es idempotente. Si el fetch a Windsor falla a mitad
    del insert, la tabla queda **vacía o parcial** y la app muestra gasto cero. No hay transacción,
    no hay reintento, no hay rollback.
-5. **API key en el repositorio**: cualquiera con acceso al código la ve.
+5. ~~**API key en el repositorio**~~ **Resuelto** — ver §6, ahora en secretos.
 6. **Sin observabilidad**: no existe tabla de estado de sincronización; si el cron falla nadie se
    entera hasta que un usuario ve números raros.
-7. **Campos de presupuesto vacíos**: `campaign_lifetime_budget`, `daily_budget`,
-   `budget_remaining`, etc. se insertan siempre como `null` — el presupuesto real de la plataforma
-   nunca se compara contra el aprobado en `audit_records`.
+7. ~~**Campos de presupuesto vacíos**~~ **Resuelto** (2026-08-11) — `campaign_daily_budget` y
+   afines ahora se piden y se mapean a `daily_budget`, y alimentan la regla `BUDGET_MISMATCH`.
+   Desglose por placement (`publisher_platform`) sigue sin datos por la incompatibilidad de la
+   API descrita arriba, no por falta de mapeo.
 8. **Match por nombre exacto**: si el media buyer renombra la campaña en Meta, la auditoría deja
-   de encontrar datos silenciosamente.
+   de encontrar datos silenciosamente. Mitigado parcialmente por `campaign_id`/`ad_id`, ahora
+   disponibles, pero el join principal sigue siendo por nombre.
 
 ---
 

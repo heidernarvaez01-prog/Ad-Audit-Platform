@@ -313,7 +313,10 @@ export default function AuditDetailPage() {
               <RankingBadge label="Engagement rate" value={rankings.engagement} />
               <RankingBadge label="Conversion rate" value={rankings.conversion} />
             </div>
-            {placements.length > 0 && (
+            {/* publisher_platform can't be requested together with the omni/ranking
+                fields above (Windsor API constraint — see sync-meta-datos), so this
+                is only ever real when a future dedicated placement sync exists. */}
+            {(placements.length > 1 || (placements.length === 1 && placements[0].name !== 'Unknown')) && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Spend by placement</p>
                 <div className="space-y-1.5">
