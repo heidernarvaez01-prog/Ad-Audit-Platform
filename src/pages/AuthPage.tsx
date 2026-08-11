@@ -104,7 +104,7 @@ export default function AuthPage() {
           if (!cancelled) setActionType(inferredType);
         }
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Invalid or expired link';
+        const message = e instanceof Error ? e.message : 'Link inválido o expirado';
         if (!cancelled) setLinkError(message);
       } finally {
         if (!cancelled) setProcessingLink(false);
@@ -133,15 +133,15 @@ export default function AuthPage() {
       setLoading(false);
       return;
     }
-    if (isSignUp) setError('Check your email to confirm your account before signing in.');
+    if (isSignUp) setError('Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.');
     setLoading(false);
   };
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
+    if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres.'); return; }
+    if (password !== confirmPassword) { setError('Las contraseñas no coinciden.'); return; }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     if (error) { setError(error.message); setLoading(false); return; }
@@ -163,7 +163,7 @@ export default function AuthPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
             <Loader2 className="h-7 w-7 text-primary animate-spin" />
           </div>
-          <p className="text-sm text-muted-foreground">Verifying your link…</p>
+          <p className="text-sm text-muted-foreground">Verificando tu link…</p>
         </div>
       </FloatingIconsHero>
     );
@@ -287,7 +287,7 @@ export default function AuthPage() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             Apache Studio
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Ad Audit Platform</p>
+          <p className="text-sm text-muted-foreground mt-1">Plataforma de auditoría de anuncios</p>
         </motion.div>
 
         <motion.div
@@ -301,15 +301,15 @@ export default function AuthPage() {
               <div className="flex items-center gap-2 mb-2">
                 <LogIn className="h-5 w-5 text-primary" />
                 <h2 className="text-lg font-semibold text-foreground">
-                  {isSignUp ? 'Create Account' : 'Sign In'}
+                  {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
                 </h2>
               </div>
               <form onSubmit={handleSubmit} className="space-y-3">
-                <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-background/50" />
-                <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-background/50" />
+                <Input type="email" placeholder="Correo" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-background/50" />
+                <Input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-background/50" />
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+                  {loading ? 'Cargando...' : isSignUp ? 'Registrarse' : 'Iniciar sesión'}
                 </Button>
               </form>
               <button
@@ -317,13 +317,13 @@ export default function AuthPage() {
                 onClick={() => setIsSignUp(!isSignUp)}
                 className="text-sm text-muted-foreground hover:text-foreground w-full text-center transition-colors duration-200"
               >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
               </button>
             </div>
           </Card>
         </motion.div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">Intelligent ad audit platform</p>
+        <p className="text-center text-xs text-muted-foreground mt-6">Plataforma inteligente de auditoría de anuncios</p>
       </div>
     </FloatingIconsHero>
   );
