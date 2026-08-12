@@ -2,20 +2,30 @@
 
 Solo se extiende lo existente: no se toca el motor de 7 reglas (se agrega una octava por el mismo mecanismo), ni la vista de campaña con gráficos, ni el sistema de canales.
 
+## Diagnóstico previo (ya verificado, sin cambios aplicados)
+
+Revisé el código del sync y los datos reales en la base:
+
+- **No hay bug de mapeo.** Cada campo de Windsor está asignado a su columna correcta: `actions_omni_purchase` → `purchases`, `action_values_omni_purchase` → `purchase_value`, `conversions` → `conversions`, `action_values_lead` → `lead_value`, y los dos ROAS a sus columnas.
+- **La última ejecución del sync corrió bien** (12 ago, 03:00 UTC, 2.051 filas del 12 jul al 10 ago) y trajo los campos nuevos con datos reales: identificadores de campaña/anuncio, rankings de calidad, presupuesto diario, clics únicos.
+- **Prueba de que los campos de conversión sí llegan:** `website_purchase_roas` viene con valor en 1.857 filas — pero siempre en 0. Y `landing_page_views` (que es un evento de acción igual que las compras) trae datos reales, 3.678 vistas. Es decir, el canal de acciones funciona; lo que no existe son eventos de compra.
+- **La causa real:** las campañas de esta cuenta son solo de reconocimiento, interacción y tráfico (`OUTCOME_AWARENESS`, `OUTCOME_ENGAGEMENT`, `OUTCOME_TRAFFIC`). No hay ninguna campaña de ventas o de leads, así que Meta no reporta compras, valor de compra ni leads. Windsor devuelve esos campos vacíos porque en Meta están vacíos.
+
+**Consecuencia para el plan:** una meta de ROAS o CPA no se puede evaluar hoy con estos datos. Por eso las metas de eficiencia se amplían para cubrir también los objetivos que sí tienen datos.
+
 ## 1. Metas de eficiencia por campaña
 
 Nueva tabla `campaign_goals` (una fila por auditoría):
 
 - `audit_record_id` (referencia a la auditoría), `user_id`
-- `goal_type`: `cpa` | `roas` | `cpl`
+- `goal_type`: `cpa` | `roas` | `cpl` (requieren eventos de conversión) y además `cpc`, `cpm`, `ctr`, `costo_por_visita_a_pagina`, `costo_por_thruplay` (evaluables ya mismo con los datos actuales)
 - `target_value` (numérico), `tolerance_pct` (por defecto 20)
 - `enabled`
 
-En el formulario de auditoría se agrega un bloque opcional "Meta de eficiencia": tipo de meta, valor objetivo y tolerancia.
+En el formulario de auditoría se agrega un bloque opcional "Meta de eficiencia": tipo de meta, valor objetivo y tolerancia. Los tipos que dependen de conversiones se muestran con la advertencia "esta cuenta aún no reporta eventos de conversión".
 
-Nueva regla `EFFICIENCY_GOAL_MISS` añadida al motor existente (mismo archivo compartido, misma forma que las demás, con su entrada en `alert_rules` y en las etiquetas): calcula CPA = gasto / conversiones, ROAS = valor de compra / gasto, CPL = gasto / leads sobre la ventana consolidada, y dispara cuando se desvía de la meta más allá de la tolerancia. Se muestra en la tabla de auditoría, en Alertas y se entrega por los canales ya configurados.
+Nueva regla `EFFICIENCY_GOAL_MISS` añadida al motor existente (mismo archivo compartido, misma forma que las demás, con su entrada en `alert_rules` y en las etiquetas): calcula la métrica de la meta sobre la ventana consolidada y dispara cuando se desvía más allá de la tolerancia. Si el tipo de meta depende de conversiones y no hay datos, la regla no dispara nada y la UI muestra "sin datos de conversión" en lugar de un número falso. Se muestra en la tabla de auditoría, en Alertas y se entrega por los canales ya configurados.
 
-**Punto crítico verificado:** hoy en la base de datos las columnas de conversión (`purchases`, `purchase_value`, `conversions`) están **vacías en las 4.102 filas** de métricas, aunque el sync sí pide esos campos a Windsor. Sin esos datos la regla no puede evaluar CPA/ROAS reales. Por eso el primer paso de este punto es diagnosticar el sync (respuesta real de Windsor para la cuenta) y, si la cuenta no tiene conversiones configuradas, dejar la regla activa pero silenciada con un aviso "sin datos de conversión" en vez de mostrar valores falsos.
 
 ## 2. Resumen ejecutivo consolidado
 
