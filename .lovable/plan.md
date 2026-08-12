@@ -61,10 +61,9 @@ Se define una única escala **Crítica / Advertencia / Atención / Saludable** e
 
 ## Orden de trabajo
 
-1. Diagnóstico de datos de conversión (bloquea la regla de eficiencia).
-2. Migración `campaign_goals` + regla nueva + campos en el formulario.
-3. Taxonomía de severidad unificada.
-4. Página de resumen ejecutivo + envío por correo.
-5. Verificación de entrega y reporte final.
+1. Migración `campaign_goals` + regla nueva + campos en el formulario (el diagnóstico de conversiones ya está hecho: ver arriba).
+2. Taxonomía de severidad unificada.
+3. Página de resumen ejecutivo + envío por correo.
+4. Verificación de entrega y reporte final.
 
 Los puntos 5-9 (media y baja prioridad) quedan fuera de esta entrega y se planifican después.
