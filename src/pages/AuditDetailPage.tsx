@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchCampaignData, type ApiCampaignRow } from '@/lib/api';
 import { calculateAuditMetrics, getTipoCalendarioLabel } from '@/lib/audit-calculations';
 import { generateAlerts } from '@/lib/audit-alerts';
+import { aggregateTotals, getPlacementBreakdown, getAdLeaderboard, getRankingSummary, getFunnelBreakdown, bucketRanking } from '@/lib/metrics';
 import { useAlertThresholds } from '@/hooks/useAlertThresholds';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,15 +21,6 @@ function fmtNum(n: number) {
   return n.toLocaleString('en-US');
 }
 
-// Meta's ranking values look like "ABOVE_AVERAGE", "AVERAGE",
-// "BELOW_AVERAGE_10/20/35/50", or "UNKNOWN" — collapse to 3 buckets.
-type RankingBucket = 'above' | 'average' | 'below' | 'unknown';
-function bucketRanking(v: string | null): RankingBucket {
-  if (!v || v === 'UNKNOWN') return 'unknown';
-  if (v.startsWith('ABOVE')) return 'above';
-  if (v.startsWith('BELOW')) return 'below';
-  return 'average';
-}
 function prettyRanking(v: string | null): string {
   if (!v || v === 'UNKNOWN') return 'Desconocido';
   return v.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
@@ -89,82 +81,42 @@ export default function AuditDetailPage() {
         r.date >= record.fecha_inicio &&
         r.date <= effectiveEnd,
     );
-    const cost = campaignApiData.reduce((s, r) => s + (isNaN(r.metrics.cost) ? 0 : r.metrics.cost), 0);
+    const totals = aggregateTotals(campaignApiData);
     const metrics = calculateAuditMetrics(
       Number(record.presupuesto_total),
       record.fecha_inicio,
       record.fecha_fin,
       record.tipo_calendario,
-      cost,
+      totals.cost,
     );
     const alerts = generateAlerts(metrics, campaignApiData, thresholds, enabledTypes);
 
-    const clicks = campaignApiData.reduce((s, r) => s + r.metrics.clicks, 0);
-    const impressions = campaignApiData.reduce((s, r) => s + r.metrics.impressions, 0);
-    const reach = campaignApiData.reduce((s, r) => s + r.metrics.reach, 0);
-    const totalCost = campaignApiData.reduce((s, r) => s + r.metrics.cost, 0);
-    const cpc = clicks > 0 ? totalCost / clicks : 0;
-    const cpm = impressions > 0 ? (totalCost / impressions) * 1000 : 0;
-    const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-
     // Spend/CTR split by placement (Facebook Feed, Instagram, Audience
     // Network, ...) — which of Meta's delivery surfaces is actually working.
-    const byPlacement = new Map<string, { cost: number; clicks: number; impressions: number }>();
-    for (const r of campaignApiData) {
-      const key = r.publisherPlatform || 'Desconocido';
-      const acc = byPlacement.get(key) ?? { cost: 0, clicks: 0, impressions: 0 };
-      acc.cost += r.metrics.cost;
-      acc.clicks += r.metrics.clicks;
-      acc.impressions += r.metrics.impressions;
-      byPlacement.set(key, acc);
-    }
-    const placements = Array.from(byPlacement.entries())
-      .map(([name, v]) => ({ name, ...v, ctr: v.impressions > 0 ? (v.clicks / v.impressions) * 100 : 0 }))
-      .sort((a, b) => b.cost - a.cost);
+    const placements = getPlacementBreakdown(campaignApiData);
 
     // Ad health = Meta's own 3 quality diagnostics from the most recent row.
-    const latestWithRankings = [...campaignApiData].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-    const rankings = {
-      quality: latestWithRankings?.qualityRanking ?? null,
-      engagement: latestWithRankings?.engagementRanking ?? null,
-      conversion: latestWithRankings?.conversionRanking ?? null,
-    };
+    const rankings = getRankingSummary(campaignApiData);
 
     // Ad-level leaderboard — which individual creative to keep/rotate, not
     // just "the campaign" in aggregate. Requires ad_id from Windsor; rows
     // without it (older syncs) are grouped under "Unknown ad".
-    const byAd = new Map<string, { name: string; cost: number; clicks: number; impressions: number; purchaseValue: number; quality: string | null }>();
-    for (const r of campaignApiData) {
-      const key = r.adId || r.adName || 'unknown';
-      const acc = byAd.get(key) ?? { name: r.adName || 'Anuncio desconocido', cost: 0, clicks: 0, impressions: 0, purchaseValue: 0, quality: null };
-      acc.cost += r.metrics.cost;
-      acc.clicks += r.metrics.clicks;
-      acc.impressions += r.metrics.impressions;
-      acc.purchaseValue += r.metrics.purchaseValue;
-      if (r.qualityRanking) acc.quality = r.qualityRanking;
-      byAd.set(key, acc);
-    }
-    const adLeaderboard = Array.from(byAd.values())
-      .map(a => ({
-        ...a,
-        ctr: a.impressions > 0 ? (a.clicks / a.impressions) * 100 : 0,
-        roas: a.cost > 0 ? a.purchaseValue / a.cost : null,
-      }))
-      .sort((a, b) => b.cost - a.cost)
-      .slice(0, 10);
+    const adLeaderboard = getAdLeaderboard(campaignApiData);
 
     // Funnel: where the drop-off actually happens between an impression and
     // a completed purchase — the diagnosis a flat CTR/ROAS number can't give.
-    const funnel = [
-      { label: 'Impresiones', value: impressions },
-      { label: 'Clics', value: clicks },
-      { label: 'Vistas de landing page', value: campaignApiData.reduce((s, r) => s + r.metrics.landingPageViews, 0) },
-      { label: 'Agregar al carrito', value: campaignApiData.reduce((s, r) => s + r.metrics.addToCart, 0) },
-      { label: 'Checkout iniciado', value: campaignApiData.reduce((s, r) => s + r.metrics.initiateCheckout, 0) },
-      { label: 'Compras', value: campaignApiData.reduce((s, r) => s + r.metrics.purchases, 0) },
-    ];
+    const funnel = getFunnelBreakdown(campaignApiData);
 
-    return { metrics, alerts, campaignApiData, perf: { clicks, impressions, reach, cpc, cpm, ctr }, placements, rankings, adLeaderboard, funnel };
+    return {
+      metrics,
+      alerts,
+      campaignApiData,
+      perf: { clicks: totals.clicks, impressions: totals.impressions, reach: totals.reach, cpc: totals.cpc, cpm: totals.cpm, ctr: totals.ctr },
+      placements,
+      rankings,
+      adLeaderboard,
+      funnel,
+    };
   }, [record, apiData, thresholds, enabledTypes]);
 
   const generateInsight = async () => {

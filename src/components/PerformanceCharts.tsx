@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'recharts';
 import type { ApiCampaignRow } from '@/lib/api';
+import { getTimeSeries } from '@/lib/metrics';
 
 function formatDateLabel(raw: string): string {
   // Try parsing different date formats
@@ -45,35 +46,18 @@ interface Props {
 }
 
 function buildChartData(rows: ApiCampaignRow[]): ChartDataPoint[] {
-  const byDate = new Map<string, ApiCampaignRow[]>();
-  for (const r of rows) {
-    if (!r.date) continue;
-    if (!byDate.has(r.date)) byDate.set(r.date, []);
-    byDate.get(r.date)!.push(r);
-  }
-
-  return [...byDate.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, dayRows]) => {
-      const spend = dayRows.reduce((s, r) => s + (r.metrics.cost || 0), 0);
-      const clicks = dayRows.reduce((s, r) => s + (r.metrics.clicks || 0), 0);
-      const impressions = dayRows.reduce((s, r) => s + (r.metrics.impressions || 0), 0);
-      const reach = dayRows.reduce((s, r) => s + (r.metrics.reach || 0), 0);
-      const cpc = clicks > 0 ? spend / clicks : 0;
-      const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
-      const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-
-      return {
-        date: formatDateLabel(date),
-        spend: +spend.toFixed(2),
-        clicks,
-        impressions,
-        reach,
-        ctr: +ctr.toFixed(2),
-        cpc: +cpc.toFixed(2),
-        cpm: +cpm.toFixed(2),
-      };
-    });
+  // Aggregation math lives in the shared metrics layer; this just renames
+  // cost→spend for the chart legend and formats the date label.
+  return getTimeSeries(rows).map((point) => ({
+    date: formatDateLabel(point.date),
+    spend: point.cost,
+    clicks: point.clicks,
+    impressions: point.impressions,
+    reach: point.reach,
+    ctr: point.ctr,
+    cpc: point.cpc,
+    cpm: point.cpm,
+  }));
 }
 
 const CHART_HEIGHT = 200;

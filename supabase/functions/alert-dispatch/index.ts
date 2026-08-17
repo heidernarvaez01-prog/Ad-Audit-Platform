@@ -22,12 +22,13 @@ import {
   ALERT_TYPE_LABELS,
   type AlertThresholds,
   type AlertType,
-  type AlertCampaignRow,
 } from '../_shared/alert-engine.ts';
 import { calculateAuditMetrics } from '../_shared/audit-calculations.ts';
 import { dispatchAlerts, type NotifyAlert } from '../_shared/notify.ts';
 import { chatCompletion } from '../_shared/openai.ts';
 import { findDeviatingCampaigns, generateAiInsights, type CampaignAiCandidate, type WindowAggregate } from '../_shared/ai-insights.ts';
+import { queryMetaDatos } from '../_shared/meta-datos-query.ts';
+import { aggregateTotals, type MetricsRow } from '../_shared/metrics.ts';
 
 // Short narrative summary on top of the raw alert table — reuses the same
 // OpenAI helper as audit-insight/weekly-report/metrics-ai-analysis. Best
@@ -78,16 +79,19 @@ function isoDaysAgo(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Sums the fields the AI deep-scan needs over [from, to] (inclusive).
-function aggregateWindow(rows: any[], from: string, to: string): WindowAggregate {
-  const inWindow = rows.filter((r) => r.fecha >= from && r.fecha <= to);
+// Sums the fields the AI deep-scan needs over [from, to] (inclusive) —
+// thin wrapper over the shared aggregateTotals(), which already tracks
+// cost/purchaseValue/clicks/impressions/frequencySum/frequencyDays.
+function aggregateWindow(rows: MetricsRow[], from: string, to: string): WindowAggregate {
+  const inWindow = rows.filter((r) => r.date >= from && r.date <= to);
+  const t = aggregateTotals(inWindow);
   return {
-    cost: inWindow.reduce((s, r) => s + (Number(r.total_cost) || 0), 0),
-    purchaseValue: inWindow.reduce((s, r) => s + (Number(r.purchase_value) || 0), 0),
-    clicks: inWindow.reduce((s, r) => s + (Number(r.clicks) || 0), 0),
-    impressions: inWindow.reduce((s, r) => s + (Number(r.impressions) || 0), 0),
-    frequencySum: inWindow.reduce((s, r) => s + (Number(r.frequency) || 0), 0),
-    frequencyDays: inWindow.filter((r) => r.frequency != null).length,
+    cost: t.cost,
+    purchaseValue: t.purchaseValue,
+    clicks: t.clicks,
+    impressions: t.impressions,
+    frequencySum: t.frequencySum,
+    frequencyDays: t.frequencyDays,
   };
 }
 
@@ -127,10 +131,10 @@ async function computeUserAlerts(
   supabase: ReturnType<typeof createClient>,
   userId: string,
 ): Promise<{ alerts: NotifyAlert[]; criticalCount: number; warningCount: number; onlyCritical: boolean; aiInsightRows: AiInsightRow[] }> {
-  const [{ data: clients }, { data: records }, { data: metaRows }, { thresholds, enabledTypes }] = await Promise.all([
+  const [{ data: clients }, { data: records }, metaRows, { thresholds, enabledTypes }] = await Promise.all([
     supabase.from('audit_clients').select('id, name').eq('user_id', userId),
     supabase.from('audit_records').select('*').eq('user_id', userId),
-    supabase.from('meta_datos').select('*'),
+    queryMetaDatos(supabase, {}),
     loadUserThresholds(supabase, userId),
   ]);
 
@@ -149,19 +153,15 @@ async function computeUserAlerts(
 
   for (const rec of records || []) {
     const effectiveEnd = rec.fecha_fin < cutoff ? rec.fecha_fin : cutoff;
-    const campaignRows = (metaRows || []).filter((r: any) =>
-      r.campaign_name === rec.campaign_name && r.fecha >= rec.fecha_inicio && r.fecha <= effectiveEnd);
-    const campaignApiData: AlertCampaignRow[] = campaignRows.map((r: any) => ({
-      date: r.fecha,
-      metrics: { cost: Number(r.total_cost) || 0, clicks: Number(r.clicks) || 0, impressions: Number(r.impressions) || 0, frequency: r.frequency, dailyBudget: r.daily_budget != null ? Number(r.daily_budget) : null },
-    }));
-    const cost = campaignApiData.reduce((s, r) => s + (isNaN(r.metrics.cost) ? 0 : r.metrics.cost), 0);
+    const campaignApiData: MetricsRow[] = metaRows.filter((r) =>
+      r.campaign_name === rec.campaign_name && r.date >= rec.fecha_inicio && r.date <= effectiveEnd);
+    const cost = aggregateTotals(campaignApiData).cost;
     const metrics = calculateAuditMetrics(Number(rec.presupuesto_total), rec.fecha_inicio, rec.fecha_fin, rec.tipo_calendario, cost);
     const alerts = generateAlerts(metrics, campaignApiData, thresholds, enabledTypes);
 
-    const first = campaignRows[0];
+    const first = campaignApiData[0];
     const account = `${clientName.get(rec.client_id) || '—'} · ${first?.account_name || rec.account_id || ''}`;
-    const platform = first?.plataforma ?? rec.platform ?? null;
+    const platform = first?.platform ?? rec.platform ?? null;
 
     for (const alert of alerts) {
       notifyAlerts.push({
@@ -184,8 +184,8 @@ async function computeUserAlerts(
     // so the baseline comparison has real data to work with.
     const inFlight = metrics.diasRestantes > 0 && metrics.diasTranscurridos > 0;
     if (inFlight) {
-      const allCampaignRows = (metaRows || []).filter((r: any) => r.campaign_name === rec.campaign_name);
-      const latest = [...allCampaignRows].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0];
+      const allCampaignRows = metaRows.filter((r) => r.campaign_name === rec.campaign_name);
+      const latest = [...allCampaignRows].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
       candidateMap.set(rec.campaign_name, {
         clientId: rec.client_id ?? null,
         account,
@@ -200,9 +200,9 @@ async function computeUserAlerts(
           platform,
           objective: latest?.objective ?? null,
           daysLeft: metrics.diasRestantes,
-          qualityRanking: latest?.quality_ranking ?? null,
-          engagementRanking: latest?.engagement_rate_ranking ?? null,
-          conversionRanking: latest?.conversion_rate_ranking ?? null,
+          qualityRanking: latest?.qualityRanking ?? null,
+          engagementRanking: latest?.engagementRanking ?? null,
+          conversionRanking: latest?.conversionRanking ?? null,
           recent: aggregateWindow(allCampaignRows, recentFrom, cutoff),
           prior: aggregateWindow(allCampaignRows, priorFrom, priorTo),
         },

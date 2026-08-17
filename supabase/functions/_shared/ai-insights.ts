@@ -7,6 +7,7 @@
 // whose numbers already moved (see DEVIATION_THRESHOLDS) — never sends the
 // full raw dataset to the model, just the deltas worth explaining.
 import { chatCompletion } from './openai.ts';
+import { computeCtr, computeCpm, computeRoas, pctChange } from './metrics.ts';
 
 export interface WindowAggregate {
   cost: number;
@@ -43,20 +44,8 @@ const DEVIATION_THRESHOLDS = {
   cpmIncreasePct: 25,
 };
 
-function rate(cost: number, purchaseValue: number): number | null {
-  return cost > 0 ? purchaseValue / cost : null;
-}
-function ctr(clicks: number, impressions: number): number | null {
-  return impressions > 0 ? (clicks / impressions) * 100 : null;
-}
-function cpm(cost: number, impressions: number): number | null {
-  return impressions > 0 ? (cost / impressions) * 1000 : null;
-}
 function isBelowAverage(ranking: string | null): boolean {
   return !!ranking && /below_average/i.test(ranking);
-}
-function pctChange(recent: number, prior: number): number {
-  return prior !== 0 ? ((recent - prior) / Math.abs(prior)) * 100 : 0;
 }
 
 // Returns only the campaigns worth sending to the model, each tagged with
@@ -67,28 +56,34 @@ export function findDeviatingCampaigns(
   const out: Array<CampaignAiCandidate & { reasons: string[] }> = [];
   for (const c of candidates) {
     const reasons: string[] = [];
-    const rRoas = rate(c.recent.cost, c.recent.purchaseValue);
-    const pRoas = rate(c.prior.cost, c.prior.purchaseValue);
+    const rRoas = computeRoas(c.recent.cost, c.recent.purchaseValue);
+    const pRoas = computeRoas(c.prior.cost, c.prior.purchaseValue);
     if (rRoas !== null && pRoas !== null && pRoas > 0) {
       const change = pctChange(rRoas, pRoas);
       if (change <= -DEVIATION_THRESHOLDS.roasDropPct) {
         reasons.push(`ROAS dropped ${Math.abs(change).toFixed(0)}% (${pRoas.toFixed(2)} → ${rRoas.toFixed(2)})`);
       }
     }
-    const rCtr = ctr(c.recent.clicks, c.recent.impressions);
-    const pCtr = ctr(c.prior.clicks, c.prior.impressions);
-    if (rCtr !== null && pCtr !== null && pCtr > 0) {
-      const change = pctChange(rCtr, pCtr);
-      if (change <= -DEVIATION_THRESHOLDS.ctrDropPct) {
-        reasons.push(`CTR dropped ${Math.abs(change).toFixed(0)}% (${pCtr.toFixed(2)}% → ${rCtr.toFixed(2)}%)`);
+    // computeCtr/computeCpm default to 0 (not null) when impressions are 0 —
+    // guard on impressions directly instead of a null sentinel (same net
+    // behavior as the old local ctr()/cpm() helpers, which returned null
+    // precisely when impressions <= 0).
+    if (c.recent.impressions > 0 && c.prior.impressions > 0) {
+      const rCtr = computeCtr(c.recent.clicks, c.recent.impressions);
+      const pCtr = computeCtr(c.prior.clicks, c.prior.impressions);
+      if (pCtr > 0) {
+        const change = pctChange(rCtr, pCtr);
+        if (change <= -DEVIATION_THRESHOLDS.ctrDropPct) {
+          reasons.push(`CTR dropped ${Math.abs(change).toFixed(0)}% (${pCtr.toFixed(2)}% → ${rCtr.toFixed(2)}%)`);
+        }
       }
-    }
-    const rCpm = cpm(c.recent.cost, c.recent.impressions);
-    const pCpm = cpm(c.prior.cost, c.prior.impressions);
-    if (rCpm !== null && pCpm !== null && pCpm > 0) {
-      const change = pctChange(rCpm, pCpm);
-      if (change >= DEVIATION_THRESHOLDS.cpmIncreasePct) {
-        reasons.push(`CPM up ${change.toFixed(0)}% ($${pCpm.toFixed(2)} → $${rCpm.toFixed(2)})`);
+      const rCpm = computeCpm(c.recent.cost, c.recent.impressions);
+      const pCpm = computeCpm(c.prior.cost, c.prior.impressions);
+      if (pCpm > 0) {
+        const change = pctChange(rCpm, pCpm);
+        if (change >= DEVIATION_THRESHOLDS.cpmIncreasePct) {
+          reasons.push(`CPM up ${change.toFixed(0)}% ($${pCpm.toFixed(2)} → $${rCpm.toFixed(2)})`);
+        }
       }
     }
     if (isBelowAverage(c.qualityRanking)) reasons.push(`Quality ranking: ${c.qualityRanking}`);
