@@ -260,7 +260,7 @@ columnas (`42703`) para tolerar migraciones pendientes.
 | `sync-meta-datos` | false | Trae Meta Ads desde Windsor.ai y **reemplaza por completo** `meta_datos`. | Windsor, service_role |
 | `admin-users` | (default) | Invitar, listar, eliminar usuarios y reset de contraseña. Valida rol `admin`. | service_role, Resend |
 | `audit-insight` | (default) | Diagnóstico de riesgo de presupuesto por campaña (`gpt-4o-mini`). | OpenAI |
-| `metrics-ai-analysis` | (default) | Chat de análisis de métricas (`gpt-4o-mini`). | OpenAI |
+| `metrics-ai-analysis` | (default) | Chat de análisis de métricas — **agéntico** (`gpt-4o-mini` + `_shared/openai.ts` `runToolLoop`): el modelo elige entre 7 tools (`list_campaigns`, `get_campaign_metrics`, `get_top_campaigns`, `compare_periods`, `get_funnel`, `get_ad_leaderboard`, `get_active_alerts`) sobre la capa semántica compartida en vez de recibir un JSON pre-agregado de hasta 800 filas. Permite rangos de fecha arbitrarios y drill-down a nivel anuncio, algo imposible con el patrón anterior. Ver §7. | OpenAI, `_shared/metrics.ts`, `_shared/meta-datos-query.ts`, `_shared/alert-thresholds.ts`, `_shared/alert-engine.ts` |
 | `projection-cluster` | true | Genera la estrategia de marketing completa (`gpt-4o`). | OpenAI |
 | `weekly-report` | false | Arma y envía el reporte semanal HTML (`gpt-4o` para el resumen). | OpenAI, Resend |
 | `alert-dispatch` | false (auth manual) | Calcula y envía las alertas activas — manual ("Send now") o vía cron diario. Dedup/cooldown con `alert_events`, entrega multi-canal vía `notify.ts`, resumen narrativo con IA. Además corre el **AI deep-scan** (`_shared/ai-insights.ts`): compara cada campaña activa contra su propia línea base (ROAS, CTR, CPM, frequency, quality/engagement/conversion rankings de Meta) y le pide a gpt-4o-mini que decida qué desviación vale la pena reportar — cubre lo que las 6 reglas fijas no anticipan, sin mandarle a la IA el dataset crudo completo. Los hallazgos se guardan en `campaign_ai_insights` y se entregan por los mismos canales. Reemplaza a `send-alert-email`. | `_shared/alert-engine.ts`, `_shared/ai-insights.ts`, `_shared/notify.ts`, `_shared/openai.ts` |
@@ -386,6 +386,30 @@ tipo breakdown/dimensión en vez de una métrica.
 8. **Match por nombre exacto**: si el media buyer renombra la campaña en Meta, la auditoría deja
    de encontrar datos silenciosamente. Mitigado parcialmente por `campaign_id`/`ad_id`, ahora
    disponibles, pero el join principal sigue siendo por nombre.
+
+### Capa semántica compartida y chat agéntico (2026-08-17)
+
+`meta_datos` ya no se lee ni se agrega en más de un lugar con lógica distinta. Tres módulos nuevos
+en `supabase/functions/_shared/`, todos consumidos tanto por Edge Functions como por el frontend
+(re-exportados en `src/lib/`, mismo patrón que `alert-engine.ts`/`audit-alerts.ts`):
+
+- **`metrics.ts`** — fórmulas de métrica derivada (`computeCtr/Cpc/Cpm/Roas`, `pctChange`,
+  `bucketRanking`) y funciones de agregación sobre filas ya traídas (`aggregateTotals`,
+  `getSpendByCampaign`, `getSpendByPlatform`, `getTopCampaigns`, `getPlacementBreakdown`,
+  `getAdLeaderboard`, `getRankingSummary`, `getFunnelBreakdown`, `getTimeSeries`,
+  `compareToPreviousPeriod`). TS puro, sin Supabase ni Deno — igual que `alert-engine.ts`.
+- **`meta-datos-query.ts`** — único punto que consulta `meta_datos` desde una Edge Function
+  (`queryMetaDatos(supabase, filters)`, filtros por plataforma/cuenta/campaña/fecha, paginado).
+- **`alert-thresholds.ts`** — `loadUserThresholds()`, umbrales de `alert_rules` de un usuario
+  mergeados sobre los defaults, usado por `alert-dispatch` y por el tool `get_active_alerts` de
+  `metrics-ai-analysis`.
+
+`AuditDetailPage.tsx`, `PerformanceCharts.tsx` y `alert-dispatch/index.ts` consumen estos módulos
+en vez de recalcular la misma matemática cada uno por su lado. `metrics-ai-analysis` los usa a
+través de 7 tools de OpenAI function-calling (`_shared/openai.ts` `runToolLoop`, ver §6) — el chat
+puede pedir cualquier rango de fecha o detalle a nivel anuncio en vez de estar limitado a un JSON
+pre-agregado. Diseño completo y decisiones (por qué TS en vez de RPCs de Postgres, por qué un
+archivo por plataforma en vez de un dispatcher genérico) en `ARQUITECTURA_DATOS_E_IA.md`.
 
 ---
 

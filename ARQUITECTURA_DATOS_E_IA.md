@@ -52,29 +52,37 @@ aprobó", antes de que se traduzca en sobregasto o subgasto real.
 
 ---
 
-## 3. IA con selección dinámica de métricas
+## 3. IA con selección dinámica de métricas — **Implementado** (2026-08-17)
 
-Hoy `audit-insight` y `metrics-ai-analysis` tienen un prompt fijo por función. Que la IA decida
-qué variables consultar según la necesidad del usuario en el frontend es **function calling**: en
-vez de mandarle al modelo un bloque de texto ya armado, se le da un menú de herramientas
-(funciones SQL seguras) y el modelo decide cuáles llamar según la pregunta.
+Hecho, con una desviación deliberada del diseño original de esta sección: en vez de exponer las
+tools como funciones RPC de Postgres `SECURITY DEFINER`, viven como módulos TS puros en
+`supabase/functions/_shared/` (`metrics.ts` + `meta-datos-query.ts`), siguiendo el patrón ya
+probado en este repo (`alert-engine.ts`, `audit-calculations.ts`) en vez de introducir SQL de
+negocio donde no había precedente. El filtro de cuenta sigue existiendo — se resuelve una vez por
+request contra `audit_records` filtrado por `user_id` (exactamente el mismo control de acceso que
+ya usaban `alert-dispatch` y la versión anterior de `metrics-ai-analysis`), no vía RLS de Postgres
+sobre las tools. Razonamiento completo en `CLAUDE.md` §7 ("Capa semántica compartida y chat
+agéntico") y en el comentario de cabecera de `metrics-ai-analysis/index.ts`.
 
-**Diseño propuesto** (evolucionar `metrics-ai-analysis`, que ya alimenta la pantalla `/ask`):
+**Lo implementado** (`_shared/openai.ts` `runToolLoop`, `metrics-ai-analysis/index.ts`):
 
-| Tool expuesta al modelo | Qué consulta | RLS |
-|---|---|---|
-| `get_pacing_summary(client_id, date_range)` | Estado de pacing por campaña (usa `audit-calculations.ts`) | Filtra por `account_assignments` del usuario |
-| `get_campaign_metrics(campaign_name, metrics[], date_range)` | Métricas puntuales de `meta_datos` (spend, ROAS, CTR, CPC, frequency, quality_ranking, etc. — el modelo elige cuáles) | Igual |
-| `get_budget_variance(client_id)` | Resultado de la regla `BUDGET_MISMATCH` (§2) | Igual |
-| `get_alert_history(client_id, severity?)` | Alertas disparadas recientes desde `alert_events`/`notifications` | Igual |
-| `search_campaign_insights(query_text)` | Búsqueda semántica en la memoria de campañas (§4) | Igual |
+| Tool expuesta al modelo | Qué consulta |
+|---|---|
+| `list_campaigns(clientId?)` | Campañas en el alcance del usuario (nombre, cliente, plataforma, presupuesto, fechas) |
+| `get_campaign_metrics(campaignName, dateFrom, dateTo)` | `queryMetaDatos` + `aggregateTotals` — spend/CTR/CPC/CPM/ROAS para cualquier rango de fechas |
+| `get_top_campaigns(metric, limit, dateFrom, dateTo)` | `queryMetaDatos` + `getTopCampaigns` |
+| `compare_periods(campaignName, rangos actual/anterior)` | `queryMetaDatos` (dos ventanas) + `compareToPreviousPeriod` |
+| `get_funnel(campaignName, dateFrom, dateTo)` | `queryMetaDatos` + `getFunnelBreakdown` |
+| `get_ad_leaderboard(campaignName, limit?)` | `queryMetaDatos` + `getAdLeaderboard` — detalle a nivel anuncio, antes imposible |
+| `get_active_alerts(clientId?, campaignName?)` | Reusa `generateAlerts` (`alert-engine.ts`) con los umbrales reales del usuario vía `alert-thresholds.ts` |
 
-Cada tool es una función RPC de Postgres (`SECURITY DEFINER`) que ya aplica el filtro de cuenta —
-así el modelo nunca puede leer datos fuera de lo que el usuario tiene asignado. Flujo: el frontend
-manda la pregunta en lenguaje natural → la Edge Function llama a OpenAI con las tools declaradas →
-el modelo decide cuáles ejecutar (puede encadenar varias) → se le devuelven los resultados → genera
-la respuesta final. Reemplaza los prompts fijos actuales por una IA que arma su propia consulta
-según lo que el usuario realmente pregunta.
+`get_pacing_summary`/`get_budget_variance`/`get_alert_history` del diseño original quedaron
+cubiertas por `get_active_alerts` (una sola tool que ya devuelve pacing + budget mismatch + el
+resto de las 6 reglas fijas, en vez de tres tools separadas — más simple para que el modelo elija
+bien). `search_campaign_insights` (búsqueda semántica) sigue pendiente — depende de §4, sin tocar.
+
+Verificado en vivo contra `/ask`: preguntas de rango de fecha arbitrario y de detalle a nivel
+anuncio (imposibles con el JSON pre-agregado anterior) responden con datos reales.
 
 ---
 
@@ -135,8 +143,8 @@ infraestructura que ya existe.
 | Fase | Qué incluye | Depende de | Estado |
 |---|---|---|---|
 | 1 | Query de Windsor ampliada (IDs, presupuestos, ROAS, conversiones, quality rankings) | §1 | **Hecho** |
-| 2 | Alerta `BUDGET_MISMATCH` sobre `alert-engine.ts` existente | §2 | Pendiente |
-| 3 | Copiloto de IA con function-calling, evolucionando `metrics-ai-analysis` | §3 | Pendiente |
+| 2 | Alerta `BUDGET_MISMATCH` sobre `alert-engine.ts` existente | §2 | **Hecho** |
+| 3 | Copiloto de IA con function-calling, evolucionando `metrics-ai-analysis` | §3 | **Hecho** (2026-08-17, diseño con TS en `_shared/` en vez de RPCs — ver §3) |
 | 4 | Memoria de campañas (`campaign_insights` + pgvector) integrada como tool del copiloto | §4, requiere Fase 3 | Pendiente |
 
 Cada fase es desplegable de forma independiente.
@@ -145,5 +153,6 @@ Cada fase es desplegable de forma independiente.
 
 ## 7. Próximo paso
 
-Si quieres, tomo cualquiera de las fases pendientes (§2, §3 o §4) y la implemento directamente:
-migraciones SQL + Edge Functions, para que las revises antes de aplicarlas.
+Queda §4 (memoria de campañas con pgvector) como la única pieza pendiente de este roadmap — se
+puede sumar como una tool más (`search_campaign_insights`) al copiloto ya implementado en §3, sin
+tocar nada de lo que ya funciona.
