@@ -17,10 +17,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2.45.0';
 import {
   generateAlerts,
-  DEFAULT_ALERT_THRESHOLDS,
-  ALERT_THRESHOLD_FIELDS,
   ALERT_TYPE_LABELS,
-  type AlertThresholds,
   type AlertType,
 } from '../_shared/alert-engine.ts';
 import { calculateAuditMetrics } from '../_shared/audit-calculations.ts';
@@ -29,6 +26,7 @@ import { chatCompletion } from '../_shared/openai.ts';
 import { findDeviatingCampaigns, generateAiInsights, type CampaignAiCandidate, type WindowAggregate } from '../_shared/ai-insights.ts';
 import { queryMetaDatos } from '../_shared/meta-datos-query.ts';
 import { aggregateTotals, type MetricsRow } from '../_shared/metrics.ts';
+import { loadUserThresholds } from '../_shared/alert-thresholds.ts';
 
 // Short narrative summary on top of the raw alert table — reuses the same
 // OpenAI helper as audit-insight/weekly-report/metrics-ai-analysis. Best
@@ -62,7 +60,6 @@ async function generateInsightSummary(alerts: NotifyAlert[]): Promise<string | u
   return result.ok ? result.content.trim() : undefined;
 }
 
-const ALL_ALERT_TYPES = Object.keys(ALERT_THRESHOLD_FIELDS) as AlertType[];
 const COOLDOWN_MS = { daily: 24 * 60 * 60 * 1000, weekly: 7 * 24 * 60 * 60 * 1000 } as const;
 
 function getConsolidationCutoff(): string {
@@ -93,25 +90,6 @@ function aggregateWindow(rows: MetricsRow[], from: string, to: string): WindowAg
     frequencySum: t.frequencySum,
     frequencyDays: t.frequencyDays,
   };
-}
-
-async function loadUserThresholds(supabase: ReturnType<typeof createClient>, userId: string) {
-  const { data } = await supabase.from('alert_rules').select('*').eq('user_id', userId);
-  const byType = new Map((data || []).map((r: any) => [r.rule_type as AlertType, r]));
-  const thresholds: AlertThresholds = { ...DEFAULT_ALERT_THRESHOLDS };
-  const enabledTypes = new Set<AlertType>();
-  for (const type of ALL_ALERT_TYPES) {
-    const row = byType.get(type);
-    const fields = ALERT_THRESHOLD_FIELDS[type];
-    (thresholds as any)[fields.primary] = row?.threshold != null ? Number(row.threshold) : DEFAULT_ALERT_THRESHOLDS[fields.primary];
-    if (fields.secondary) {
-      (thresholds as any)[fields.secondary] = row?.secondary_threshold != null
-        ? Number(row.secondary_threshold)
-        : DEFAULT_ALERT_THRESHOLDS[fields.secondary];
-    }
-    if (row?.enabled ?? true) enabledTypes.add(type);
-  }
-  return { thresholds, enabledTypes };
 }
 
 interface AiInsightRow {
