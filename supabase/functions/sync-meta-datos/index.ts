@@ -168,25 +168,27 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Reemplazo total
-    const { error: delErr } = await supabase
-      .from("meta_datos")
-      .delete()
-      .gte("id", 0);
-    if (delErr) throw delErr;
-
-    // Inserción por lotes
+    // Upsert por lotes sobre la llave natural (plataforma, account_id,
+    // campaign_id, adset_id, ad_id, fecha) — ver migración
+    // 20260817160100_meta_datos_multiplatform_upsert.sql. Reemplaza el
+    // patrón anterior de "borrar todo e insertar todo", que además de ser
+    // el P0 de CLAUDE.md era una bomba de tiempo multiplataforma: cada
+    // corrida de este sync borraba también las filas de cualquier otra
+    // plataforma (ej. un futuro sync-google-datos).
+    const NATURAL_KEY = "plataforma,account_id,campaign_id,adset_id,ad_id,fecha";
     const BATCH = 500;
-    let inserted = 0;
+    let upserted = 0;
     for (let i = 0; i < mapped.length; i += BATCH) {
       const chunk = mapped.slice(i, i + BATCH);
-      const { error } = await supabase.from("meta_datos").insert(chunk);
+      const { error } = await supabase
+        .from("meta_datos")
+        .upsert(chunk, { onConflict: NATURAL_KEY });
       if (error) throw error;
-      inserted += chunk.length;
+      upserted += chunk.length;
     }
 
     return new Response(
-      JSON.stringify({ success: true, inserted, total: mapped.length, source: "windsor" }),
+      JSON.stringify({ success: true, inserted: upserted, total: mapped.length, source: "windsor" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {

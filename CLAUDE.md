@@ -328,8 +328,9 @@ sync-meta-datos (Edge Function)
 mapeo campo a campo  (campaign→campaign_name, spend→total_cost, ctr→ctr_all,
                       cpc calculado = spend/clicks, plataforma="META")
       ▼
-DELETE FROM meta_datos WHERE id >= 0     ← borrado total
-INSERT por lotes de 500
+UPSERT por lotes de 500, onConflict = llave natural
+(plataforma, account_id, campaign_id, adset_id, ad_id, fecha)     ← resuelto 2026-08-17,
+                                                                     ver P0 #2 abajo
       ▼
 meta_datos  ──► src/lib/api.ts (paginado + caché 5 min) ──► buildAuditRows() ──► UI
 ```
@@ -352,7 +353,7 @@ escribiendo a otra tabla) — no se puede combinar en un solo request ni en `met
 
 Este bug (campo incompatible agregado sin probarlo contra la API real) hizo que **todo sync desde
 que se añadió `publisher_platform` fallara silenciosamente** (capturado por el try/catch de la
-función, sin romper `meta_datos` porque el `throw` ocurre antes del delete-then-insert, pero
+función, sin romper `meta_datos` porque el `throw` ocurre antes del insert, pero
 tampoco actualizando nada) — los 18+ campos nuevos (IDs, presupuestos, ROAS, rankings, funnel)
 quedaron en `NULL` para todas las filas hasta el fix. **Lección: probar cualquier campo nuevo de
 Windsor con un curl directo antes de agregarlo a `WINDSOR_FIELDS`**, sobre todo si es un campo de
@@ -366,9 +367,15 @@ tipo breakdown/dimensión en vez de una métrica.
    `ad_platform` y `PLATFORM_CONFIG` los contemplan.
 3. **Ventana de 30 días**: `date_preset=last_30d`. Cualquier auditoría con `fecha_inicio` anterior
    pierde histórico en cada sincronización, porque…
-4. **Delete-then-insert**: el borrado total no es idempotente. Si el fetch a Windsor falla a mitad
-   del insert, la tabla queda **vacía o parcial** y la app muestra gasto cero. No hay transacción,
-   no hay reintento, no hay rollback.
+4. ~~**Delete-then-insert**~~ **Resuelto** (2026-08-17) — `sync-meta-datos` ahora hace `upsert`
+   por lotes sobre la llave natural `(plataforma, account_id, campaign_id, adset_id, ad_id, fecha)`
+   (constraint `meta_datos_natural_key`, migración
+   `20260817160100_meta_datos_multiplatform_upsert.sql`). Si el fetch a Windsor falla a mitad del
+   upsert, las filas ya escritas se conservan (no hay ventana de tabla vacía) y, al ser upsert en
+   vez de insert, una corrida parcial se completa sola en la siguiente. La llave incluye
+   `plataforma`, así que un futuro `sync-google-datos` no puede pisar ni borrar filas de Meta.
+   La tabla también gana `platform_specific jsonb` como escape hatch para métricas propias de una
+   plataforma futura sin `ALTER TABLE` por cada una.
 5. ~~**API key en el repositorio**~~ **Resuelto** — ver §6, ahora en secretos.
 6. **Sin observabilidad**: no existe tabla de estado de sincronización; si el cron falla nadie se
    entera hasta que un usuario ve números raros.
@@ -467,7 +474,7 @@ account_assignments (user_id, account_id, account_name, platform)
 | # | Problema | Acción | Esfuerzo |
 |---|---|---|---|
 | 1 | ~~La API key de Windsor está hardcodeada en `sync-meta-datos`.~~ **Resuelto** en `20260810120000_security_cleanup.sql` — ahora lee `WINDSOR_API_KEY` de los secretos. Sigue pendiente **rotar la key real en Windsor.ai**, ya que la anterior quedó expuesta en el historial de git del repo público. | — | — |
-| 2 | `DELETE` + `INSERT` sin transacción: un fallo deja `meta_datos` vacía. | Cambiar a `upsert` con clave natural única `(account_id, campaign_name, adset_name, fecha)` y no borrar nada. | M |
+| 2 | ~~`DELETE` + `INSERT` sin transacción: un fallo deja `meta_datos` vacía.~~ **Resuelto** (2026-08-17) — `upsert` por lotes con constraint `meta_datos_natural_key` `(plataforma, account_id, campaign_id, adset_id, ad_id, fecha)`. | — | — |
 | 3 | ~~Cron `sync-sheet-hourly` huérfano y `sync-meta-datos-daily` duplicado.~~ **Resuelto** en `20260810120000_security_cleanup.sql`. | — | — |
 | 4 | `meta_datos` legible por cualquier usuario autenticado, sin filtrar por cuenta asignada. | Política RLS que cruce `account_id` con `account_assignments` (con bypass para `has_role(uid,'admin')`). | M |
 | 5 | Sin observabilidad de la ingesta. | Tabla `sync_runs` (fuente, inicio, fin, filas, estado, error) + alerta por correo si falla. | M |
