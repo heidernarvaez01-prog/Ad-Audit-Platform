@@ -540,6 +540,7 @@ export type Database = {
           objective: string | null
           optimization_goal: string | null
           plataforma: string | null
+          platform_specific: Json
           publisher_platform: string | null
           purchase_roas: number | null
           purchase_value: number | null
@@ -592,6 +593,7 @@ export type Database = {
           objective?: string | null
           optimization_goal?: string | null
           plataforma?: string | null
+          platform_specific?: Json
           publisher_platform?: string | null
           purchase_roas?: number | null
           purchase_value?: number | null
@@ -644,6 +646,7 @@ export type Database = {
           objective?: string | null
           optimization_goal?: string | null
           plataforma?: string | null
+          platform_specific?: Json
           publisher_platform?: string | null
           purchase_roas?: number | null
           purchase_value?: number | null
