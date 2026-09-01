@@ -6,60 +6,60 @@
 
 @layer base {
   :root {
-    /* Surfaces — soft slate canvas, crisp white cards */
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    /* Surfaces — "Aside" flat admin: light gray canvas, crisp white cards */
+    --background: 210 17% 97%;
+    --foreground: 210 24% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 210 24% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 210 24% 16%;
 
-    /* Primary — CoreUI indigo (#5856d6) */
-    --primary: 243 59% 60%;
+    /* Primary — flat Aside blue (#2196f3) */
+    --primary: 207 90% 54%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 243 59% 70%;
+    --primary-glow: 207 90% 66%;
 
-    --secondary: 262 83% 58%;
+    --secondary: 176 89% 41%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 17% 95%;
+    --muted-foreground: 210 9% 50%;
 
-    /* Accent — indigo-50/700 */
-    --accent: 226 100% 97%;
-    --accent-foreground: 231 56% 41%;
+    /* Accent — soft blue wash */
+    --accent: 207 90% 96%;
+    --accent-foreground: 207 79% 38%;
 
-    --destructive: 347 77% 50%;
+    --destructive: 350 91% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 243 59% 60%;
+    --border: 210 16% 90%;
+    --input: 210 16% 90%;
+    --ring: 207 90% 54%;
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
 
-    /* CoreUI Dark Sidebar */
-    --sidebar-background: 217 14% 20%;
-    --sidebar-foreground: 210 14% 62%;
-    --sidebar-primary: 243 59% 60%;
+    /* Dark navy sidebar (Aside) */
+    --sidebar-background: 208 33% 14%;
+    --sidebar-foreground: 210 14% 68%;
+    --sidebar-primary: 207 90% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 216 14% 24%;
+    --sidebar-accent: 208 30% 19%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 217 14% 22%;
-    --sidebar-ring: 243 59% 60%;
-    --sidebar-glow: 243 59% 60%;
-    --sidebar-hover: 216 14% 26%;
+    --sidebar-border: 208 30% 18%;
+    --sidebar-ring: 207 90% 54%;
+    --sidebar-glow: 207 90% 54%;
+    --sidebar-hover: 208 30% 21%;
 
-    /* Status tokens — CoreUI colors */
-    --success: 145 63% 49%;
+    /* Status tokens — flat Aside palette */
+    --success: 149 70% 45%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 97% 54%;
-    --warning-foreground: 0 0% 100%;
-    --danger: 4 90% 58%;
+    --warning: 42 100% 55%;
+    --warning-foreground: 210 24% 16%;
+    --danger: 350 91% 58%;
     --danger-foreground: 0 0% 100%;
-    --info: 204 100% 50%;
+    --info: 207 90% 54%;
     --info-foreground: 0 0% 100%;
 
     /* Social platform colors */
@@ -71,11 +71,11 @@
     --linkedin: 201 100% 35%;
     --instagram: 340 75% 54%;
 
-    /* Shadows — CoreUI style */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-    --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    /* Shadows — flat, hairline-first */
+    --shadow-sm: 0 1px 1px 0 rgba(16, 30, 46, 0.04);
+    --shadow-md: 0 1px 3px rgba(16, 30, 46, 0.07);
+    --shadow-lg: 0 6px 18px rgba(16, 30, 46, 0.10);
+    --card-shadow: 0 1px 2px rgba(16, 30, 46, 0.06);
 
     --font-mono: 'JetBrains Mono', monospace;
   }
