@@ -21,14 +21,14 @@ export default function PageHero({
   icon: Icon,
   title,
   subtitle,
-  gradient = 'from-indigo-600 via-indigo-500 to-violet-600',
+  gradient = 'from-sky-600 via-sky-500 to-cyan-500',
   actions,
   decoration,
 }: PageHeroProps) {
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient}
-        p-5 sm:p-7 text-white shadow-lg animate-fade-in`}
+      className={`relative overflow-hidden rounded-md bg-gradient-to-r ${gradient}
+        p-5 sm:p-6 text-white shadow-sm animate-fade-in`}
     >
       {/* Decorative blobs */}
       <div aria-hidden className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
