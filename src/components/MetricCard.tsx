@@ -53,57 +53,46 @@ export function MetricCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.4 }}
+      transition={{ delay: index * 0.06, duration: 0.3 }}
     >
-      <Card className={`relative overflow-hidden border-t-accent hover:shadow-md transition-shadow`}
-        style={{ borderTopColor: accentColor }}
-      >
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground font-medium mb-1">{title}</p>
-              <div className="flex items-baseline gap-2">
-                <motion.span
-                  className="text-3xl font-bold"
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 200, delay: index * 0.1 }}
-                >
-                  {displayValue.toLocaleString()}
-                </motion.span>
-                {unit && <span className="text-sm text-muted-foreground">{unit}</span>}
-              </div>
-            </div>
-            <div
-              className="h-12 w-12 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: `${accentColor}15` }}
-            >
-              <Icon className="h-6 w-6" style={{ color: accentColor }} />
+      <Card className="relative overflow-hidden border shadow-none hover:bg-muted/40 transition-colors rounded-md">
+        <div className="p-5 sm:p-6 flex flex-col items-center text-center">
+          {/* Top row: icon + trend marker */}
+          <div className="w-full flex items-center justify-between mb-3">
+            <Icon className="h-5 w-5 text-muted-foreground" style={{ color: accentColor }} />
+            <div className={`flex items-center gap-1 text-xs font-medium ${trendColor}`}>
+              <TrendIcon className="h-3.5 w-3.5" />
+              <span>{trendValue}</span>
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className={`flex items-center gap-1 text-sm font-medium ${trendColor}`}>
-              <TrendIcon className="h-4 w-4" />
-              <span>{trendValue}</span>
-            </div>
-            {sparklineData.length > 0 && (
-              <div className="flex items-end gap-0.5 h-8">
-                {sparklineData.map((height, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ height: 0 }}
-                    animate={{ height: `${height}%` }}
-                    transition={{ delay: index * 0.1 + i * 0.05, duration: 0.3 }}
-                    className="w-1 rounded-full"
-                    style={{ backgroundColor: accentColor, opacity: 0.7 }}
-                  />
-                ))}
-              </div>
+          <div className="flex items-baseline gap-1">
+            {unit === '$' && <span className="text-xl font-semibold">$</span>}
+            <span className="text-4xl font-bold tracking-tight font-mono-data">
+              {displayValue.toLocaleString()}
+            </span>
+            {unit && unit !== '$' && (
+              <span className="text-lg text-muted-foreground">{unit}</span>
             )}
           </div>
+          <p className="text-sm text-muted-foreground mt-1">{title}</p>
+
+          {sparklineData.length > 0 && (
+            <div className="mt-4 w-full flex items-end justify-center gap-1 h-8">
+              {sparklineData.map((height, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max(height, 6)}%` }}
+                  transition={{ delay: index * 0.06 + i * 0.03, duration: 0.3 }}
+                  className="flex-1 max-w-[8px] rounded-sm"
+                  style={{ backgroundColor: accentColor, opacity: 0.25 }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </Card>
     </motion.div>
