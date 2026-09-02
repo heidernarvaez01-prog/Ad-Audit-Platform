@@ -118,25 +118,33 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
     );
   }
 
-  // Color theme per section
-  const modeTheme: Record<typeof mode, { gradient: string; accent: string; badge: string }> = {
-    brief: {
-      gradient: 'from-amber-500 via-orange-500 to-rose-500',
-      accent: 'from-amber-500 to-orange-600',
-      badge: 'bg-amber-100 text-amber-800 border-amber-200',
-    },
-    clusters: {
-      gradient: 'from-fuchsia-600 via-purple-600 to-indigo-600',
-      accent: 'from-fuchsia-500 to-purple-700',
-      badge: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
-    },
-    weekly: {
-      gradient: 'from-sky-600 via-cyan-500 to-emerald-500',
-      accent: 'from-sky-500 to-blue-700',
-      badge: 'bg-sky-100 text-sky-800 border-sky-200',
-    },
+  // Color theme per section — semantic tokens only (mirrors AppSidebar's
+  // per-feature accent so the same section reads the same color everywhere).
+  type Accent = 'warning' | 'secondary' | 'info';
+  const ACCENT_TILE: Record<Accent, string> = {
+    warning: 'bg-gradient-to-br from-warning to-warning/80 text-warning-foreground',
+    secondary: 'bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground',
+    info: 'bg-gradient-to-br from-info to-info/80 text-info-foreground',
+  };
+  const ACCENT_BAR: Record<Accent, string> = {
+    warning: 'bg-gradient-to-r from-warning to-warning/80',
+    secondary: 'bg-gradient-to-r from-secondary to-secondary/80',
+    info: 'bg-gradient-to-r from-info to-info/80',
+  };
+  const ACCENT_BADGE: Record<Accent, string> = {
+    warning: 'bg-warning/10 text-warning border-warning/20',
+    secondary: 'bg-secondary/10 text-secondary border-secondary/20',
+    info: 'bg-info/10 text-info border-info/20',
+  };
+  const modeTheme: Record<typeof mode, { accent: Accent }> = {
+    brief: { accent: 'warning' },
+    clusters: { accent: 'secondary' },
+    weekly: { accent: 'info' },
   };
   const theme = modeTheme[mode];
+  const tileCls = ACCENT_TILE[theme.accent];
+  const barCls = ACCENT_BAR[theme.accent];
+  const badgeCls = ACCENT_BADGE[theme.accent];
 
   return (
     <div className="space-y-5 w-full min-w-0">
@@ -144,11 +152,10 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
         icon={Icon}
         title={title}
         subtitle={subtitle}
-        gradient={theme.gradient}
         actions={
           <Button
             size="sm"
-            className="bg-white text-foreground hover:bg-white/90 shadow-md"
+            className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-sm"
             onClick={() => { setName(''); setDescription(''); setDialogOpen(true); }}
           >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -198,16 +205,16 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
                 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-transparent
                 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
-              {/* Gradient accent bar */}
-              <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${theme.accent}`} />
-              {/* Decorative gradient blob */}
+              {/* Accent bar */}
+              <div className={`absolute inset-x-0 top-0 h-1 ${barCls}`} />
+              {/* Decorative blob */}
               <div
                 aria-hidden
-                className={`pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-gradient-to-br ${theme.accent} opacity-[0.08] group-hover:opacity-[0.18] transition-opacity blur-xl`}
+                className={`pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full ${tileCls} opacity-[0.08] group-hover:opacity-[0.18] transition-opacity blur-xl`}
               />
 
               <div className="relative flex items-start gap-3">
-                <div className={`shrink-0 h-10 w-10 rounded-lg bg-gradient-to-br ${theme.accent} text-white flex items-center justify-center shadow-sm`}>
+                <div className={`shrink-0 h-10 w-10 rounded-lg ${tileCls} flex items-center justify-center shadow-sm`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -219,7 +226,7 @@ export default function ClientPicker({ title, subtitle, basePath, icon: Icon, mo
                   )}
                 </div>
                 {badges[c.id] && (
-                  <span className={`text-[10px] font-medium shrink-0 px-2 py-0.5 rounded-full border ${theme.badge}`}>
+                  <span className={`text-[10px] font-medium shrink-0 px-2 py-0.5 rounded-full border ${badgeCls}`}>
                     {badges[c.id]}
                   </span>
                 )}

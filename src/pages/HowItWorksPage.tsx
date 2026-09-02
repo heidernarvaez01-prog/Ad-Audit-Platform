@@ -5,6 +5,31 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import PageHero from '@/components/PageHero';
 
+// Semantic accent tokens only — one per feature, matching the color that
+// feature already has in AppSidebar's nav chips so the same section reads
+// the same color everywhere in the app.
+type Accent = 'primary' | 'info' | 'secondary' | 'warning' | 'success' | 'destructive' | 'muted';
+
+const ACCENT_TILE: Record<Accent, string> = {
+  primary: 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground',
+  info: 'bg-gradient-to-br from-info to-info/80 text-info-foreground',
+  secondary: 'bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground',
+  warning: 'bg-gradient-to-br from-warning to-warning/80 text-warning-foreground',
+  success: 'bg-gradient-to-br from-success to-success/80 text-success-foreground',
+  destructive: 'bg-gradient-to-br from-destructive to-destructive/80 text-destructive-foreground',
+  muted: 'bg-muted text-muted-foreground',
+};
+
+const ACCENT_BAR: Record<Accent, string> = {
+  primary: 'bg-gradient-to-r from-primary to-primary/80',
+  info: 'bg-gradient-to-r from-info to-info/80',
+  secondary: 'bg-gradient-to-r from-secondary to-secondary/80',
+  warning: 'bg-gradient-to-r from-warning to-warning/80',
+  success: 'bg-gradient-to-r from-success to-success/80',
+  destructive: 'bg-gradient-to-r from-destructive to-destructive/80',
+  muted: 'bg-muted',
+};
+
 export default function HowItWorksPage() {
   return (
     <div className="space-y-6 w-full max-w-5xl mx-auto">
@@ -12,13 +37,12 @@ export default function HowItWorksPage() {
         icon={BookOpen}
         title="Cómo funciona Apache Studio"
         subtitle="Tu centro de comando para medios pagados: monitorea, analiza, planea y reporta — un espacio de trabajo por cliente."
-        gradient="from-violet-600 via-indigo-600 to-sky-500"
       />
 
       {/* Core idea */}
-      <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-indigo-50 to-violet-50 p-4 sm:p-5">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-primary/5 p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <div className={`h-9 w-9 rounded-lg ${ACCENT_TILE.primary} flex items-center justify-center shrink-0 shadow-sm`}>
             <Users className="h-4 w-4" />
           </div>
           <div className="text-sm text-muted-foreground">
@@ -32,25 +56,25 @@ export default function HowItWorksPage() {
       {/* Sections grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Step n="01" icon={ClipboardCheck} title="Auditoría de monitoreo"
-          gradient="from-indigo-500 to-violet-600"
+          accent="primary"
           desc="Da seguimiento a cada campaña en tiempo real. El ritmo de gasto muestra si una campaña está gastando lo que debería a la fecha; el rendimiento muestra resultados en vivo (impresiones, alcance, conversiones, CTR, CPC y más)." />
         <Step n="02" icon={CalendarClock} title="Reporte semanal de rendimiento"
-          gradient="from-sky-500 to-blue-700"
+          accent="info"
           desc="Un resumen limpio y listo para el cliente de los resultados de la semana por campaña, con cambios semana a semana y un resumen de IA. Se envía automáticamente cada lunes." />
         <Step n="03" icon={Network} title="Clusters de proyección"
-          gradient="from-fuchsia-500 to-purple-700"
+          accent="secondary"
           desc="Con un clic se genera una estrategia de marca completa (La Fórmula): insights, objetivos, audiencias, conceptos creativos, plan de medios y más — construida desde el brief y potenciada con datos en vivo." />
         <Step n="04" icon={Bell} title="Alertas"
-          gradient="from-rose-500 to-red-700"
+          accent="warning"
           desc="Seis reglas de alta señal vigilan tus campañas: sobregasto, sin entrega, cierre próximo, picos de costo, agotamiento anticipado del presupuesto y fatiga creativa — cada una con un umbral editable. Se entregan por correo, Slack, webhook o la campana en la app." />
         <Step n="05" icon={FileText} title="Brief de marca"
-          gradient="from-amber-500 to-orange-600"
+          accent="muted"
           desc="La base estratégica de cada cliente: quiénes son, qué venden, su voz y diferenciadores. Entre más completo el brief, más precisas las estrategias de IA." />
         <Step n="06" icon={Sparkles} title="Preguntar a la IA"
-          gradient="from-cyan-500 to-sky-700"
+          accent="success"
           desc="Un chat dedicado para preguntar cualquier cosa sobre tus campañas. Acótalo a un cliente y campaña para una respuesta precisa, o déjalo abierto para comparar entre cuentas." />
         <Step n="07" icon={Shield} title="Administración"
-          gradient="from-slate-700 to-indigo-700"
+          accent="destructive"
           desc="Invita a tu equipo, dale a cada miembro acceso solo a sus cuentas asignadas, gestiona administradores y envía enlaces de restablecimiento de contraseña. El dueño conserva el control total." />
       </div>
 
@@ -110,9 +134,9 @@ export default function HowItWorksPage() {
         </Accordion>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-50 to-rose-50 border border-amber-200/60 p-4 sm:p-5">
+      <div className="relative overflow-hidden rounded-xl bg-info/5 border border-info/20 p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-amber-500 to-rose-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <div className={`h-9 w-9 rounded-lg ${ACCENT_TILE.info} flex items-center justify-center shrink-0 shadow-sm`}>
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="text-sm text-muted-foreground">
@@ -126,20 +150,20 @@ export default function HowItWorksPage() {
 }
 
 function Step({
-  n, icon: Icon, title, desc, gradient,
+  n, icon: Icon, title, desc, accent,
 }: {
   n: string;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
-  gradient: string;
+  accent: Accent;
 }) {
   return (
     <div className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      {/* Gradient accent bar */}
-      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${gradient}`} />
+      {/* Accent bar */}
+      <div className={`absolute inset-x-0 top-0 h-1 ${ACCENT_BAR[accent]}`} />
       <div className="flex items-start gap-3">
-        <div className={`relative h-11 w-11 rounded-xl bg-gradient-to-br ${gradient} text-white flex items-center justify-center shrink-0 shadow-sm`}>
+        <div className={`relative h-11 w-11 rounded-xl ${ACCENT_TILE[accent]} flex items-center justify-center shrink-0 shadow-sm`}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">

@@ -17,6 +17,7 @@ import {
 import { Plus, Pencil, Trash2, Loader2, FolderOpen, Briefcase, ArrowRight, Search, Users, Megaphone, Wallet, TrendingUp, AlertTriangle, AlertCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHero from '@/components/PageHero';
+import dashboardIllustration from '@/assets/template/dashboard.png';
 import type { ApiCampaignRow } from '@/lib/api';
 import type { AuditRowData } from '@/components/AuditTable';
 import { toast } from 'sonner';
@@ -206,11 +207,13 @@ export default function ClientsPage() {
         icon={Users}
         title="Clientes"
         subtitle="Cada cliente tiene su propio espacio. Abre uno para dar seguimiento a sus campañas, presupuestos y resultados en tiempo real."
-        gradient="from-indigo-600 via-violet-600 to-fuchsia-600"
+        decoration={
+          <img src={dashboardIllustration} alt="" aria-hidden className="h-24 w-auto rounded-md opacity-90 object-cover" />
+        }
         actions={
           <Button
             size="sm"
-            className="bg-white text-indigo-700 hover:bg-white/90 shadow-md"
+            className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-sm"
             onClick={openCreate}
           >
             <Plus className="h-3.5 w-3.5 mr-1.5" /> Nuevo cliente
@@ -246,15 +249,15 @@ export default function ClientsPage() {
       {/* Global summary across all clients */}
       {clients.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <GradientStat icon={Users} label="Clientes" value={clients.length.toString()} gradient="from-indigo-500 to-indigo-700" />
-          <GradientStat icon={Megaphone} label="Campañas" value={totals.campaigns.toString()} gradient="from-sky-500 to-blue-700" />
-          <GradientStat icon={Wallet} label="Presupuesto total" value={fmt(totals.budget)} gradient="from-violet-500 to-purple-700" />
-          <GradientStat icon={TrendingUp} label="Gasto total" value={fmt(totals.spent)} gradient="from-emerald-500 to-teal-700" />
+          <GradientStat icon={Users} label="Clientes" value={clients.length.toString()} accent="primary" />
+          <GradientStat icon={Megaphone} label="Campañas" value={totals.campaigns.toString()} accent="info" />
+          <GradientStat icon={Wallet} label="Presupuesto total" value={fmt(totals.budget)} accent="secondary" />
+          <GradientStat icon={TrendingUp} label="Gasto total" value={fmt(totals.spent)} accent="success" />
           <GradientStat
             icon={AlertTriangle}
             label="En riesgo"
             value={(totals.over + totals.under).toString()}
-            gradient={totals.over + totals.under > 0 ? 'from-amber-500 to-rose-600' : 'from-emerald-500 to-emerald-700'}
+            accent={totals.over + totals.under > 0 ? 'warning' : 'success'}
             pulse={totals.over + totals.under > 0}
             hint="Campañas sobregastando o subgastando entre todos los clientes."
           />
@@ -296,16 +299,16 @@ export default function ClientsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredClients.map((c, idx) => {
             const s = summaries.get(c.id) || { campaigns: 0, budget: 0, spent: 0, ok: 0, under: 0, over: 0 };
-            // Rotate accent palette across cards
+            // Rotate accent palette across cards — driven by semantic tokens
             const palettes = [
-              'from-indigo-500 to-violet-600',
-              'from-sky-500 to-blue-700',
-              'from-emerald-500 to-teal-700',
-              'from-fuchsia-500 to-purple-700',
-              'from-amber-500 to-orange-600',
-              'from-rose-500 to-red-700',
+              { grad: 'from-primary to-primary/80', fg: 'text-primary-foreground' },
+              { grad: 'from-info to-info/80', fg: 'text-info-foreground' },
+              { grad: 'from-success to-success/80', fg: 'text-success-foreground' },
+              { grad: 'from-secondary to-secondary/80', fg: 'text-secondary-foreground' },
+              { grad: 'from-warning to-warning/80', fg: 'text-warning-foreground' },
+              { grad: 'from-destructive to-destructive/80', fg: 'text-destructive-foreground' },
             ];
-            const accent = palettes[idx % palettes.length];
+            const { grad: accent, fg: accentFg } = palettes[idx % palettes.length];
             const initials = c.name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || '·';
             return (
               <div
@@ -320,7 +323,7 @@ export default function ClientsPage() {
                 <div aria-hidden className={`pointer-events-none absolute -right-10 -bottom-10 h-32 w-32 rounded-full bg-gradient-to-br ${accent} opacity-[0.08] group-hover:opacity-[0.18] transition-opacity blur-xl`} />
 
                 <div className="relative flex items-start gap-3">
-                  <div className={`shrink-0 h-11 w-11 rounded-xl bg-gradient-to-br ${accent} text-white flex items-center justify-center font-bold text-sm shadow-sm`}>
+                  <div className={`shrink-0 h-11 w-11 rounded-lg bg-gradient-to-br ${accent} ${accentFg} flex items-center justify-center font-bold text-sm shadow-sm`}>
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -447,20 +450,29 @@ function StatusDot({ count, color, label }: { count: number; color: string; labe
   );
 }
 
+const GRADIENT_STAT_ACCENT_CLASS: Record<'primary' | 'info' | 'secondary' | 'success' | 'warning' | 'destructive', string> = {
+  primary: 'bg-primary text-primary-foreground',
+  info: 'bg-info text-info-foreground',
+  secondary: 'bg-secondary text-secondary-foreground',
+  success: 'bg-success text-success-foreground',
+  warning: 'bg-warning text-warning-foreground',
+  destructive: 'bg-destructive text-destructive-foreground',
+};
+
 function GradientStat({
-  icon: Icon, label, value, gradient, hint, pulse,
+  icon: Icon, label, value, accent, hint, pulse,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
-  gradient: string;
+  accent: keyof typeof GRADIENT_STAT_ACCENT_CLASS;
   hint?: string;
   pulse?: boolean;
 }) {
   const card = (
     <div
-      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md cursor-help
-        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+      className={`relative overflow-hidden rounded-lg p-4 shadow-sm cursor-help
+        ${GRADIENT_STAT_ACCENT_CLASS[accent]} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
     >
       <div aria-hidden className="absolute -right-3 -bottom-3 opacity-20">
         <Icon className="h-16 w-16" />
@@ -468,11 +480,11 @@ function GradientStat({
       <div className="relative flex items-center gap-1.5">
         {pulse && (
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-current" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-current" />
           </span>
         )}
-        <p className="text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+        <p className="text-[10px] uppercase tracking-wider opacity-85">{label}</p>
       </div>
       <p className="relative mt-1 text-2xl font-bold font-mono leading-none">{value}</p>
     </div>

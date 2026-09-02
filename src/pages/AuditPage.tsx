@@ -14,6 +14,7 @@ import AuditTable, { type AuditRowData } from '@/components/AuditTable';
 import AdSetTable from '@/components/AdSetTable';
 import { Sparkline } from '@/components/Sparkline';
 import PageHero from '@/components/PageHero';
+import chartIllustration from '@/assets/template/chart.png';
 import type { ApiCampaignRow } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -151,20 +152,22 @@ export default function AuditPage() {
           client?.description ||
           'Da seguimiento en tiempo real a si cada campaña gasta bien y rinde bien.'
         }
-        gradient="from-indigo-600 via-violet-600 to-fuchsia-600"
+        decoration={
+          <img src={chartIllustration} alt="" aria-hidden className="h-24 w-auto rounded-md opacity-90 object-cover" />
+        }
         actions={
           <>
             <Button
               variant="secondary"
               size="sm"
-              className="bg-white/15 hover:bg-white/25 text-white border-white/20"
+              className="bg-primary-foreground/15 hover:bg-primary-foreground/25 text-primary-foreground border-primary-foreground/20"
               onClick={() => navigate('/')}
             >
               <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Clientes
             </Button>
             <Button
               size="sm"
-              className="bg-white text-indigo-700 hover:bg-white/90 shadow-md"
+              className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-sm"
               onClick={() => { setEditRecord(null); setShowForm(true); }}
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" /> Nueva auditoría
@@ -181,33 +184,33 @@ export default function AuditPage() {
             label="Presupuesto total"
             value={`$${summary.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
             hint="Suma del presupuesto aprobado en todas las campañas auditadas."
-            gradient="from-indigo-500 to-indigo-700"
+            accent="primary"
           />
           <SummaryCard
             label="Gasto total"
             value={`$${summary.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
             hint="Suma del gasto real consolidado (excluye hoy y ayer). El sparkline muestra el gasto acumulado día a día."
             sparkline={summary.cumulativeSpend}
-            gradient="from-sky-500 to-sky-700"
+            accent="info"
           />
           <SummaryCard
             label="En ritmo"
             value={summary.ok.toString()}
             hint="Campañas dentro de ±10% del ritmo ideal."
             pulse={summary.ok > 0}
-            gradient="from-emerald-500 to-emerald-700"
+            accent="success"
           />
           <SummaryCard
             label="Subgastando"
             value={summary.under.toString()}
             hint="Campañas gastando menos del 90% de lo ideal — riesgo de no usar todo el presupuesto."
-            gradient="from-amber-500 to-orange-600"
+            accent="warning"
           />
           <SummaryCard
             label="Sobregastando"
             value={summary.over.toString()}
             hint="Campañas gastando más del 110% de lo ideal — riesgo de agotar el presupuesto antes de tiempo."
-            gradient="from-rose-500 to-red-700"
+            accent="destructive"
           />
         </div>
       )}
@@ -277,42 +280,52 @@ export default function AuditPage() {
   );
 }
 
+type SummaryAccent = 'primary' | 'info' | 'success' | 'warning' | 'destructive';
+
+const SUMMARY_ACCENT_CLASS: Record<SummaryAccent, string> = {
+  primary: 'bg-primary text-primary-foreground',
+  info: 'bg-info text-info-foreground',
+  success: 'bg-success text-success-foreground',
+  warning: 'bg-warning text-warning-foreground',
+  destructive: 'bg-destructive text-destructive-foreground',
+};
+
 function SummaryCard({
   label,
   value,
   hint,
   sparkline,
   pulse,
-  gradient,
+  accent,
 }: {
   label: string;
   value: string;
   hint?: string;
   sparkline?: number[];
   pulse?: boolean;
-  gradient?: string;
+  accent?: SummaryAccent;
 }) {
-  const isGradient = !!gradient;
+  const isAccent = !!accent;
   const card = (
     <div
-      className={`rounded-xl p-4 cursor-help relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 animate-fade-in
-        ${isGradient
-          ? `bg-gradient-to-br ${gradient} text-white shadow-md`
+      className={`rounded-lg p-4 cursor-help relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-fade-in
+        ${isAccent
+          ? `${SUMMARY_ACCENT_CLASS[accent]} shadow-sm`
           : 'border border-border bg-card text-foreground'}`}
     >
       <div className="flex items-center gap-1.5 relative z-10">
         {pulse && (
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-current" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-current" />
           </span>
         )}
-        <p className={`text-[10px] uppercase tracking-wider ${isGradient ? 'text-white/85' : 'text-muted-foreground'}`}>{label}</p>
+        <p className={`text-[10px] uppercase tracking-wider ${isAccent ? 'opacity-85' : 'text-muted-foreground'}`}>{label}</p>
       </div>
-      <p className={`text-2xl font-bold font-mono leading-tight mt-1 relative z-10 ${isGradient ? 'text-white' : ''}`}>{value}</p>
+      <p className="text-2xl font-bold font-mono leading-tight mt-1 relative z-10">{value}</p>
       {sparkline && sparkline.length > 1 && (
         <div className="absolute inset-x-0 bottom-0 h-10 opacity-80 pointer-events-none">
-          <Sparkline data={sparkline} width={300} height={40} className={isGradient ? 'text-white/70' : 'text-primary'} />
+          <Sparkline data={sparkline} width={300} height={40} className={isAccent ? 'opacity-70' : 'text-primary'} />
         </div>
       )}
     </div>

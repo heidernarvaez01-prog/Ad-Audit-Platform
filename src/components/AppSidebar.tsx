@@ -1,24 +1,39 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  ClipboardCheck, ChevronsLeft, ChevronsRight, FileText, Bell, LogOut, Moon, Sun,
-  Shield, HelpCircle, Network, CalendarClock, Sparkles, type LucideIcon,
+  ChevronsLeft, ChevronsRight, LogOut, Moon, Sun, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/apache-studio-logo.png.asset.json';
 
-interface NavLeaf { to: string; label: string; icon: LucideIcon }
+/** Accent for the item's circular icon chip — mirrors the "Aside" template's
+ *  colored nav icons (b-danger/b-success/b-info/b-default). */
+type ChipAccent = 'primary' | 'info' | 'secondary' | 'warning' | 'success' | 'danger' | 'neutral';
 
-// Main action menu — order requested by the team
+interface NavLeaf { to: string; label: string; ionIcon: string; accent: ChipAccent }
+
+const CHIP_CLASS: Record<ChipAccent, string> = {
+  primary: 'bg-primary text-primary-foreground',
+  info: 'bg-info text-info-foreground',
+  secondary: 'bg-secondary text-secondary-foreground',
+  warning: 'bg-warning text-warning-foreground',
+  success: 'bg-success text-success-foreground',
+  danger: 'bg-danger text-danger-foreground',
+  neutral: 'bg-sidebar-hover text-sidebar-foreground',
+};
+
+// Main action menu — order requested by the team. Icons are Ionicons (ported
+// from the "Aside" template) to match its sidebar look literally.
 const mainNav: NavLeaf[] = [
-  { to: '/', label: 'Auditoría de monitoreo', icon: ClipboardCheck },
-  { to: '/weekly-report', label: 'Reporte semanal de rendimiento', icon: CalendarClock },
-  { to: '/clusters', label: 'Clusters de proyección', icon: Network },
-  { to: '/alerts', label: 'Alertas', icon: Bell },
-  { to: '/ask', label: 'Preguntar a la IA', icon: Sparkles },
-  { to: '/brief', label: 'Brief de marca', icon: FileText },
+  { to: '/', label: 'Auditoría de monitoreo', ionIcon: 'ion-clipboard', accent: 'primary' },
+  { to: '/weekly-report', label: 'Reporte semanal de rendimiento', ionIcon: 'ion-calendar', accent: 'info' },
+  { to: '/clusters', label: 'Clusters de proyección', ionIcon: 'ion-network', accent: 'secondary' },
+  { to: '/alerts', label: 'Alertas', ionIcon: 'ion-android-notifications', accent: 'warning' },
+  { to: '/ask', label: 'Preguntar a la IA', ionIcon: 'ion-flash', accent: 'success' },
+  { to: '/brief', label: 'Brief de marca', ionIcon: 'ion-document-text', accent: 'neutral' },
+  { to: '/calendar', label: 'Calendario', ionIcon: 'ion-ios-calendar-outline', accent: 'danger' },
 ];
 
 interface AppSidebarProps {
@@ -54,20 +69,22 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
       ? location.pathname === '/' || location.pathname.startsWith('/client/') || location.pathname.startsWith('/audit/')
       : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
-  const NavRow = ({ to, label, icon: Icon }: NavLeaf) => {
+  const NavRow = ({ to, label, ionIcon, accent }: NavLeaf) => {
     const active = isActive(to);
     return (
       <NavLink
         to={to}
-        className={`group relative flex items-center gap-3 rounded-md px-3 h-10 text-sm font-normal
+        className={`group relative flex items-center gap-3 rounded-md px-2 h-11 text-sm font-normal
           transition-coreui overflow-hidden
           ${active
             ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-            : 'text-sidebar-foreground hover:text-white hover:bg-[hsl(var(--sidebar-hover))]'}`}
+            : 'text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-hover'}`}
         title={!open ? label : undefined}
       >
-        <Icon className={`h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110
-          ${active ? 'text-sidebar-primary' : ''}`} />
+        <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full
+          transition-transform duration-200 group-hover:scale-110 ${CHIP_CLASS[accent]}`}>
+          <i className={`${ionIcon} text-[15px] leading-none`} aria-hidden />
+        </span>
         <span className={`whitespace-nowrap transition-opacity duration-200 ${labelCls}`}>
           {label}
         </span>
@@ -106,12 +123,12 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
           ${open ? 'w-[240px]' : 'w-[60px] hover:w-[240px]'}`}
       >
         {/* Header */}
-        <div className="h-20 flex items-center gap-3 px-3 border-b border-sidebar-border shrink-0 bg-[#23272b]">
+        <div className="h-20 flex items-center gap-3 px-3 border-b border-sidebar-border shrink-0 bg-sidebar-background">
           <div className="h-12 w-12 shrink-0 rounded-xl bg-sidebar-primary/10 ring-1 ring-sidebar-primary/20 flex items-center justify-center overflow-hidden shadow-sm">
             <img src={logo.url} alt="Apache Studio" className="h-10 w-10 object-contain" />
           </div>
           <div className={`min-w-0 transition-opacity duration-200 ${labelCls}`}>
-            <h1 className="text-sm font-semibold tracking-tight truncate text-white">Apache Studio</h1>
+            <h1 className="text-sm font-semibold tracking-tight truncate text-sidebar-accent-foreground">Apache Studio</h1>
             <p className="text-[11px] text-sidebar-foreground/70 truncate">Auditoría de anuncios</p>
           </div>
           {!hideToggle && (
@@ -138,8 +155,8 @@ export default function AppSidebar({ forceExpanded = false, hideToggle = false }
             label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
             onClick={toggle}
           />
-          <NavRow to="/how-it-works" label="Cómo funciona" icon={HelpCircle} />
-          {isAdmin && <NavRow to="/admin" label="Administración" icon={Shield} />}
+          <NavRow to="/how-it-works" label="Cómo funciona" ionIcon="ion-help-circled" accent="neutral" />
+          {isAdmin && <NavRow to="/admin" label="Administración" ionIcon="ion-locked" accent="neutral" />}
 
           {user && (
             <>

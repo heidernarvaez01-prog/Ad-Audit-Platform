@@ -281,7 +281,7 @@ export default function AlertsPage() {
         icon={Bell}
         title="Alertas"
         subtitle="Solo las alertas que importan: marcamos una campaña cuando sobregasta, deja de entregar, está por terminar, se encarece o sus creativos se desgastan. Sin ruido."
-        gradient="from-rose-600 via-orange-500 to-amber-500"
+        gradient="from-destructive via-destructive to-warning"
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -289,26 +289,26 @@ export default function AlertsPage() {
           icon={AlertCircle}
           label="Críticas"
           value={stats.danger}
-          gradient="from-rose-500 to-red-700"
+          accent="destructive"
           pulse={stats.danger > 0}
         />
         <StatTile
           icon={AlertTriangle}
           label="Advertencias"
           value={stats.warning}
-          gradient="from-amber-500 to-orange-600"
+          accent="warning"
         />
         <StatTile
           icon={Info}
           label="Atención"
           value={stats.info}
-          gradient="from-sky-500 to-blue-700"
+          accent="info"
         />
         <StatTile
           icon={CheckCircle2}
           label="Saludables"
           value={healthyCount}
-          gradient="from-emerald-500 to-emerald-700"
+          accent="success"
         />
       </div>
 
@@ -640,23 +640,30 @@ export default function AlertsPage() {
   );
 }
 
+const STAT_TILE_ACCENT_CLASS: Record<'destructive' | 'warning' | 'info' | 'success', string> = {
+  destructive: 'bg-destructive text-destructive-foreground',
+  warning: 'bg-warning text-warning-foreground',
+  info: 'bg-info text-info-foreground',
+  success: 'bg-success text-success-foreground',
+};
+
 function StatTile({
   icon: Icon,
   label,
   value,
-  gradient,
+  accent,
   pulse,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
-  gradient: string;
+  accent: keyof typeof STAT_TILE_ACCENT_CLASS;
   pulse?: boolean;
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md
-        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+      className={`relative overflow-hidden rounded-lg p-4 shadow-sm
+        ${STAT_TILE_ACCENT_CLASS[accent]} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
     >
       <div aria-hidden className="absolute -right-4 -bottom-4 opacity-20">
         <Icon className="h-20 w-20" />
@@ -664,11 +671,11 @@ function StatTile({
       <div className="relative flex items-center gap-2">
         {pulse && (
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-white/80" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-current" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-current" />
           </span>
         )}
-        <p className="text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+        <p className="text-[10px] uppercase tracking-wider opacity-85">{label}</p>
       </div>
       <p className="relative mt-1 text-3xl font-bold font-mono leading-none">{value}</p>
     </div>

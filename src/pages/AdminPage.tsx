@@ -271,14 +271,14 @@ export default function AdminPage() {
         icon={Shield}
         title="Equipo"
         subtitle="Invita miembros por correo, asigna un rol y — cuando quieras — dales acceso a cuentas específicas."
-        gradient="from-slate-800 via-indigo-700 to-blue-600"
+        gradient="from-sidebar-background via-sidebar-background to-primary"
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <AdminStat icon={Users} label="Miembros" value={users.length} gradient="from-indigo-500 to-indigo-700" />
-        <AdminStat icon={ShieldCheck} label="Admins" value={adminIds.size} gradient="from-violet-500 to-purple-700" />
-        <AdminStat icon={Link2} label="Asignaciones" value={assignments.length} gradient="from-sky-500 to-blue-700" />
-        <AdminStat icon={Building2} label="Cuentas" value={accounts.length} gradient="from-emerald-500 to-teal-700" />
+        <AdminStat icon={Users} label="Miembros" value={users.length} accent="primary" />
+        <AdminStat icon={ShieldCheck} label="Admins" value={adminIds.size} accent="secondary" />
+        <AdminStat icon={Link2} label="Asignaciones" value={assignments.length} accent="info" />
+        <AdminStat icon={Building2} label="Cuentas" value={accounts.length} accent="success" />
       </div>
 
       {/* Añadir / actualizar miembro — flujo único, cuenta opcional */}
@@ -539,23 +539,30 @@ function InlineAssign({
   );
 }
 
+const ADMIN_STAT_ACCENT_CLASS: Record<'primary' | 'secondary' | 'info' | 'success', string> = {
+  primary: 'bg-primary text-primary-foreground',
+  secondary: 'bg-secondary text-secondary-foreground',
+  info: 'bg-info text-info-foreground',
+  success: 'bg-success text-success-foreground',
+};
+
 function AdminStat({
-  icon: Icon, label, value, gradient,
+  icon: Icon, label, value, accent,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
-  gradient: string;
+  accent: keyof typeof ADMIN_STAT_ACCENT_CLASS;
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-xl p-4 text-white shadow-md
-        bg-gradient-to-br ${gradient} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-fade-in`}
+      className={`relative overflow-hidden rounded-lg p-4 shadow-sm
+        ${ADMIN_STAT_ACCENT_CLASS[accent]} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
     >
       <div aria-hidden className="absolute -right-3 -bottom-3 opacity-20">
         <Icon className="h-16 w-16" />
       </div>
-      <p className="relative text-[10px] uppercase tracking-wider text-white/85">{label}</p>
+      <p className="relative text-[10px] uppercase tracking-wider opacity-85">{label}</p>
       <p className="relative mt-1 text-3xl font-bold font-mono leading-none">{value}</p>
     </div>
   );

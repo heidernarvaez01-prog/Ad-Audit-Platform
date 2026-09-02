@@ -19,6 +19,7 @@ import AuthPage from "@/pages/AuthPage";
 import BriefPage from "@/pages/BriefPage";
 import ClusterPage from "@/pages/ClusterPage";
 import AskAIPage from "@/pages/AskAIPage";
+import CalendarPage from "@/pages/CalendarPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AdminPage from "@/pages/AdminPage";
 import HowItWorksPage from "@/pages/HowItWorksPage";
@@ -115,6 +116,7 @@ function AppLayout() {
         </AppShell></RequireAuth>} />
         <Route path="/weekly-report/:clientId" element={<RequireAuth><AppShell><WeeklyReportPage /></AppShell></RequireAuth>} />
         <Route path="/ask" element={<RequireAuth><AppShell><AskAIPage /></AppShell></RequireAuth>} />
+        <Route path="/calendar" element={<RequireAuth><AppShell><CalendarPage /></AppShell></RequireAuth>} />
         <Route path="/alerts" element={<RequireAuth><AppShell><AlertsPage /></AppShell></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><AppShell><AdminPage /></AppShell></RequireAuth>} />
         <Route path="/how-it-works" element={<RequireAuth><AppShell><HowItWorksPage /></AppShell></RequireAuth>} />
