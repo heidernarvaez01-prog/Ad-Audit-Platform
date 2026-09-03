@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import EChartsReactCore from 'echarts-for-react/lib/core';
+// Use the ESM build: the CJS `lib/core` entry resolves to a namespace object
+// after Rollup interop in production builds, which React rejects (error #130).
+import EChartsReactCore from 'echarts-for-react/esm/core';
 import type { EChartsOption } from 'echarts';
 import type { ApiCampaignRow } from '@/lib/api';
 import { getTimeSeries } from '@/lib/metrics';
